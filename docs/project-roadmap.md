@@ -15,18 +15,19 @@ Date: 2026-05-06
 - 2026-05-05 hard-priority plan and Phase 04 pilot hardening backlog.
 - First Spec Kit feature completed: `001-normalize-pilot-artifact` normalized pilot artifact labels, linkage warnings, preview availability copy, and storage-decision documentation without adding object storage.
 - Spec Kit feature `002-laixi-gateway-live-proof` created and current outcome recorded: gateway health OK, no Laixi sessions, clean-path proof blocked until Laixi VIP/API access is available.
+- Spec Kit feature `003-artifact-storage-thresholds` created to define numeric inline artifact and object-storage trigger policy without implementing storage.
 
 ## Now
 - Keep Mobile MCP as pilot-default backend while Laixi remains future-compatible until VIP/API access and a live session are available.
 - Use `docs/backend-capability-matrix.md` as the pilot backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
 - Run manual run-detail smoke for `001-normalize-pilot-artifact` when an authenticated UI session and artifact-bearing completed run are available.
-- Select the next real Spec Kit feature/spec from the baseline after Laixi clean-path proof was deferred by external availability.
+- Use the artifact storage thresholds before approving larger screenshot volume, longer retention, or external sharing.
 
 ## Next
 - Normalize docs/spec workflow around `specs/` for new work.
 - Modularize oversized UI files after runtime proof remains stable.
-- Decide numeric artifact storage thresholds before larger screenshot volume, longer retention, or external sharing.
+- Implement object storage only if artifact thresholds are exceeded or external sharing/audit packages become required.
 - Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
 - Keep authenticated route lazy-loading in place; main Vite chunk is now below warning threshold.
 

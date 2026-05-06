@@ -38,6 +38,22 @@ This inline artifact-row path is the default for small pilot validation runs and
 
 Object storage, such as Supabase Storage, is deferred until the product needs higher screenshot volume, longer retention, or external artifact sharing.
 
+Inline artifact rows remain acceptable when all conditions are true:
+- Single inline preview payload is at or below 512,000 bytes.
+- A normal run produces 10 or fewer artifacts total.
+- A normal run produces 5 or fewer screenshots.
+- Artifact retention is 30 days or less.
+- Artifacts are viewed only inside authenticated app run-detail pages.
+
+Object storage becomes required before scaling when any condition is true:
+- Full-fidelity retrieval is needed for an artifact above 512,000 bytes.
+- A normal run is expected to produce more than 10 artifacts or more than 5 screenshots.
+- Artifact retention must exceed 30 days.
+- Artifacts need external links, exports, customer sharing, or audit packages.
+- Database row size, query performance, or Supabase billing shows artifact payloads are becoming operationally visible.
+
+The 512,000-byte limit is a UI inline-preview ceiling, not a full storage migration trigger by itself. Oversized inline preview omission can remain acceptable if metadata is readable and full-fidelity retrieval is not required.
+
 ## Multi-Target Decision
 
 Current pilot decision: sequential multi-target execution is acceptable for small pilot validation.
