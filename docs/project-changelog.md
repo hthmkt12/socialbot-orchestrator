@@ -2,6 +2,8 @@
 
 ## 2026-05-06
 
+- Created Spec Kit feature `002-laixi-gateway-live-proof` and recorded current Laixi outcome: gateway health is OK locally, sessions are empty, and clean-path proof is blocked until Laixi VIP/API access and a live device session are available.
+- Updated backend/pilot docs to keep Mobile MCP as the pilot-default backend while Laixi remains future-compatible rather than pilot-blocking.
 - Completed Spec Kit feature `001-normalize-pilot-artifact`: run artifacts now expose friendly screenshot/log/JSON/unknown labels, linkage status, inline preview availability, and pilot storage status through the run evidence UI.
 - Added focused coverage for artifact normalization in `src/lib/run-artifacts.test.ts` and verified with `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run build`.
 - Kept artifact storage policy unchanged: inline `artifacts` row previews remain the pilot default, while object storage stays deferred until higher screenshot volume, longer retention, or external sharing.
