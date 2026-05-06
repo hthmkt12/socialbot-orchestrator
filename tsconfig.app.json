@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Path aliases */
+    "baseUrl": ".",
+    "paths": {
+      "@contracts/*": ["packages/contracts/src/*"],
+      "@contracts": ["packages/contracts/src/index.ts"],
+      "@shared/*": ["packages/shared/src/*"],
+      "@shared": ["packages/shared/src/index.ts"],
+      "@laixi-adapter/*": ["packages/laixi-adapter/src/*"],
+      "@laixi-adapter": ["packages/laixi-adapter/src/index.ts"],
+      "@workflow-engine/*": ["packages/workflow-engine/src/*"],
+      "@workflow-engine": ["packages/workflow-engine/src/index.ts"]
+    },
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src", "packages"]
+}

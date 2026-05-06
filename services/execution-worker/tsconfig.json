@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "dist",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../packages/shared/src/**/*.ts",
+    "../../packages/laixi-adapter/src/**/*.ts",
+    "../../src/contracts/**/*.ts",
+    "../../src/engine/resolver.ts",
+    "../../src/engine/step-timeout.ts",
+    "../../src/lib/database.types.ts"
+  ]
+}

@@ -1,0 +1,135 @@
+import { describe, expect, it } from 'vitest';
+import type { MacroDefinition } from '../contracts/macro';
+import { buildRunPreflightSummary, targetModeToTargetType } from './run-preflight';
+
+const baseDefinition: MacroDefinition = {
+  version: 1,
+  meta: { key: 'smoke', name: 'Smoke' },
+  inputs: { appName: { type: 'string', required: true } },
+  target: { mode: 'single_device' },
+  execution: { defaultTimeoutMs: 10000, maxRetries: 1, onError: 'stop' },
+  steps: [
+    { id: 'launch', type: 'launch_app', params: { appName: '{{appName}}' } },
+    { id: 'current', type: 'get_current_app', params: {} },
+  ],
+};
+
+function buildSummary(overrides: Partial<Parameters<typeof buildRunPreflightSummary>[0]> = {}) {
+  return buildRunPreflightSummary({
+    definition: baseDefinition,
+    targetType: 'SINGLE_DEVICE',
+    profileRole: 'OPERATOR',
+    selectedDeviceIds: ['device-1'],
+    selectedGroupId: '',
+    targetDevicesCount: 1,
+    totalDevicesCount: 1,
+    groupMemberCount: 0,
+    runnableDeviceCount: 1,
+    dispatchableDeviceCount: 1,
+    staleDeviceCount: 0,
+    lockedTargetDevicesCount: 0,
+    expiredLockedTargetDevicesCount: 0,
+    inputValues: { appName: 'settings' },
+    ...overrides,
+  });
+}
+
+describe('run preflight', () => {
+  it('maps macro target modes to database target types', () => {
+    expect(targetModeToTargetType('single_device')).toBe('SINGLE_DEVICE');
+    expect(targetModeToTargetType('device_group')).toBe('DEVICE_GROUP');
+    expect(targetModeToTargetType('multi_device')).toBe('MULTI_DEVICE');
+    expect(targetModeToTargetType('all_devices')).toBe('ALL_DEVICES');
+  });
+
+  it('returns a blocking issue when the definition is missing', () => {
+    const summary = buildSummary({ definition: undefined });
+
+    expect(summary.declaredTargetType).toBe('SINGLE_DEVICE');
+    expect(summary.blockingIssues.map((issue) => issue.id)).toContain('missing-definition');
+    expect(summary.sensitiveStepCount).toBe(0);
+    expect(summary.approvalStepCount).toBe(0);
+  });
+
+  it('blocks viewer role, missing required inputs, and target mode mismatch', () => {
+    const summary = buildSummary({
+      inputValues: {},
+      profileRole: 'VIEWER',
+      targetType: 'MULTI_DEVICE',
+    });
+
+    expect(summary.blockingIssues.map((issue) => issue.id)).toEqual(
+      expect.arrayContaining(['viewer-role-block', 'input-required-appName', 'target-mode-mismatch'])
+    );
+  });
+
+  it('blocks unresolved input refs and step refs that point forward', () => {
+    const definition: MacroDefinition = {
+      ...baseDefinition,
+      inputs: {},
+      steps: [
+        { id: 'guard', type: 'conditional', params: { left: '{{steps.current.appPackage}}', operator: 'equals', right: '{{missingInput}}' } },
+        { id: 'current', type: 'get_current_app', params: {} },
+      ],
+    };
+
+    const summary = buildSummary({ definition, inputValues: {} });
+
+    expect(summary.blockingIssues.map((issue) => issue.id)).toEqual(
+      expect.arrayContaining([
+        'missing-step-ref-guard-steps.current.appPackage',
+        'missing-input-ref-guard-missingInput',
+      ])
+    );
+  });
+
+  it('blocks sensitive steps without approval gates and warns for duplicate approval gates', () => {
+    const unguarded = buildSummary({
+      definition: {
+        ...baseDefinition,
+        steps: [{ id: 'adb', type: 'adb', params: { command: 'shell input keyevent 3' } }],
+      },
+    });
+
+    expect(unguarded.sensitiveStepCount).toBe(1);
+    expect(unguarded.blockingIssues.map((issue) => issue.id)).toContain('sensitive-step-unguarded-adb');
+
+    const duplicateGated = buildSummary({
+      definition: {
+        ...baseDefinition,
+        steps: [
+          { id: 'approval', type: 'approval_checkpoint', params: { reason: 'ADB review' } },
+          { id: 'adb', type: 'adb', params: { command: 'shell input keyevent 3' }, policy: { requiresApproval: true } },
+        ],
+      },
+    });
+
+    expect(duplicateGated.sensitiveStepCount).toBe(1);
+    expect(duplicateGated.approvalStepCount).toBe(1);
+    expect(duplicateGated.warnings.map((issue) => issue.id)).toEqual(
+      expect.arrayContaining(['sensitive-steps-present', 'possible-duplicate-approval'])
+    );
+  });
+
+  it('reports degraded dispatchability and lock visibility as warnings', () => {
+    const summary = buildSummary({
+      targetDevicesCount: 3,
+      runnableDeviceCount: 2,
+      dispatchableDeviceCount: 1,
+      staleDeviceCount: 1,
+      lockedTargetDevicesCount: 1,
+      expiredLockedTargetDevicesCount: 1,
+      deviceLocksError: 'device_locks query failed',
+    });
+
+    expect(summary.warnings.map((issue) => issue.id)).toEqual(
+      expect.arrayContaining([
+        'device-lock-visibility-degraded',
+        'partial-dispatchability',
+        'stale-target-devices',
+        'partial-lock-contention',
+        'expired-lock-history',
+      ])
+    );
+  });
+});

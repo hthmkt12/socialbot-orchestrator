@@ -1,0 +1,87 @@
+{
+  "dryRun": false,
+  "serial": "R58MC1XNTLR",
+  "executedSteps": [
+    {
+      "id": "launch_app",
+      "action": "launch_app",
+      "output": {
+        "appName": "com.brave.browser",
+        "backend": "mobile-mcp",
+        "serial": "R58MC1XNTLR",
+        "bridge": {
+          "success": true,
+          "message": "✅ 应用启动成功: com.brave.browser"
+        }
+      }
+    },
+    {
+      "id": "wait_home",
+      "action": "wait",
+      "output": {
+        "waited": 2500
+      }
+    },
+    {
+      "id": "open_composer",
+      "action": "tap",
+      "output": {
+        "x": 0.5,
+        "y": 0.92,
+        "backend": "mobile-mcp",
+        "serial": "R58MC1XNTLR",
+        "bridge": {
+          "success": true,
+          "message": "✅ 坐标点击成功: (360, 1472)"
+        }
+      }
+    },
+    {
+      "id": "wait_composer",
+      "action": "wait",
+      "output": {
+        "waited": 1500
+      }
+    },
+    {
+      "id": "enter_caption",
+      "action": "input_text",
+      "output": {
+        "text": "Draft from Laixi recorder - review only",
+        "x": 0.5,
+        "y": 0.35,
+        "backend": "mobile-mcp",
+        "serial": "R58MC1XNTLR",
+        "bridge": {
+          "success": true,
+          "message": "✅ 坐标输入成功: (360, 560)"
+        }
+      }
+    },
+    {
+      "id": "capture_draft",
+      "action": "screenshot",
+      "output": {
+        "captured": true,
+        "backend": "mobile-mcp",
+        "serial": "R58MC1XNTLR",
+        "bridge": {
+          "success": true,
+          "screenshot_path": "F:\\project-bolt-sb1-keyopwhy\\project\\services\\mobile-mcp-bridge\\artifacts\\R58MC1XNTLR\\screenshot_R58MC1XNTLR_capture_draft_1777905239187.png"
+        }
+      }
+    },
+    {
+      "id": "review_before_publish",
+      "action": "review_gate",
+      "skipped": true,
+      "reason": "review gate is recorded, not executed"
+    },
+    {
+      "id": "publish_post",
+      "action": "publish",
+      "skipped": true,
+      "reason": "publish blocked by default"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@laixi/execution-worker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup src/index.ts --format esm --out-dir dist",
+    "doctor:adb": "tsx src/tools/doctor-adb.ts",
+    "doctor:adb:recover": "tsx src/tools/doctor-adb.ts",
+    "record:social-macro": "tsx src/tools/record-social-macro.ts",
+    "smoke": "tsx src/smoke/run-resilience-smoke.ts",
+    "smoke:social-macro": "tsx src/smoke/social-macro-exporter-smoke.ts",
+    "smoke:mobile-mcp": "tsx src/smoke/mobile-mcp-device-smoke.ts",
+    "smoke:mobile-mcp:multi": "tsx src/smoke/mobile-mcp-multi-device-smoke.ts",
+    "smoke:mobile-mcp:db-multi": "tsx src/smoke/mobile-mcp-db-multi-device-smoke.ts",
+    "smoke:mobile-mcp:db-queue": "tsx src/smoke/mobile-mcp-db-queue-worker-smoke.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "ws": "^8.18.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.13",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.5.3"
+  }
+}

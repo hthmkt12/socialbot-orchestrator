@@ -1,0 +1,11 @@
+{
+  "name": "@laixi/mobile-mcp-bridge",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "setup": "powershell -ExecutionPolicy Bypass -File scripts/ensure-python-env.ps1",
+    "dev": ".\\.venv\\Scripts\\python.exe src\\bridge_server.py",
+    "start": ".\\.venv\\Scripts\\python.exe src\\bridge_server.py"
+  }
+}
