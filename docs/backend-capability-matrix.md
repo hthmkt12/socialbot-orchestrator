@@ -30,9 +30,11 @@ Laixi remains supported architecture, but Laixi-specific live proof is separate 
 
 ## Artifact Decision
 
-Current pilot decision: keep screenshot/text-log artifacts in artifact rows with inline metadata/previews.
+Current pilot decision: keep screenshot, text-log, and JSON result previews in `artifacts` rows with inline metadata/previews.
 
-Move to Supabase Storage before higher screenshot volume, long retention, or external artifact sharing.
+This inline artifact-row path is the default for small pilot validation runs and is not a blocker for current Mobile MCP proof.
+
+Object storage, such as Supabase Storage, is deferred until the product needs higher screenshot volume, longer retention, or external artifact sharing.
 
 ## Multi-Target Decision
 

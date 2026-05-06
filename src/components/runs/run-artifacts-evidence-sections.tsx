@@ -68,7 +68,9 @@ export function RunArtifactsUnlinked({
     <div className="space-y-3">
       <div>
         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Unlinked Artifacts</h4>
-        <p className="text-xs text-gray-500 mt-1">Stored evidence that does not match a current step row by `device_id + stepId`.</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Stored evidence with missing device/step metadata or no current step match by <span className="font-mono">device_id + stepId</span>.
+        </p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {artifacts.map((artifact) => (

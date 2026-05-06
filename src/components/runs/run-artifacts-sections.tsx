@@ -15,6 +15,8 @@ export function RunArtifactsStats({
     screenshots: number;
     stepsWithEvidence: number;
     total: number;
+    unknown: number;
+    unlinked: number;
   };
 }) {
   return (
@@ -22,7 +24,9 @@ export function RunArtifactsStats({
       <div className="px-5 py-4 border-b border-gray-100">
         <h3 className="text-sm font-semibold text-gray-900">Run Evidence</h3>
         <p className="text-xs text-gray-500 mt-0.5">
-          {stats.total} artifact{stats.total !== 1 ? 's' : ''} linked to {stats.stepsWithEvidence} step{stats.stepsWithEvidence !== 1 ? 's' : ''}
+          {stats.total} artifact{stats.total !== 1 ? 's' : ''} · {stats.stepsWithEvidence} linked step{stats.stepsWithEvidence !== 1 ? 's' : ''}
+          {stats.unlinked > 0 ? ` · ${stats.unlinked} unlinked` : ''}
+          {stats.unknown > 0 ? ` · ${stats.unknown} unknown` : ''}
         </p>
         {focusStepId && (
           <p className="text-xs text-amber-700 mt-2">

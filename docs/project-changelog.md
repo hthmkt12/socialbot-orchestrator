@@ -1,5 +1,12 @@
 # Project Changelog
 
+## 2026-05-06
+
+- Completed Spec Kit feature `001-normalize-pilot-artifact`: run artifacts now expose friendly screenshot/log/JSON/unknown labels, linkage status, inline preview availability, and pilot storage status through the run evidence UI.
+- Added focused coverage for artifact normalization in `src/lib/run-artifacts.test.ts` and verified with `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run build`.
+- Kept artifact storage policy unchanged: inline `artifacts` row previews remain the pilot default, while object storage stays deferred until higher screenshot volume, longer retention, or external sharing.
+- Deferred manual run-detail smoke until a running UI session with Supabase auth and an artifact-bearing completed run is available.
+
 ## 2026-05-05
 
 - Initialized local ClaudeKit Engineer baseline with `ck.cmd init --yes`.
@@ -122,4 +129,5 @@
 
 ## Unresolved Questions
 
-- First Spec Kit feature/spec still needs selection.
+- Next Spec Kit feature/spec still needs selection.
+- Manual run-detail smoke for artifact evidence display is pending a suitable authenticated artifact-bearing run.
