@@ -49,10 +49,10 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Mobile MCP V1 does not execute `run_autox`.
 - Multi-target execution is sequential inside one worker claim.
 - Inline artifact storage is acceptable for small pilot volume; object storage is deferred until higher screenshot volume, longer retention, or external sharing.
+- Artifact storage thresholds are explicit: inline is acceptable at or below 512,000-byte preview payloads, 10 artifacts/run, 5 screenshots/run, 30-day retention, and authenticated-app-only viewing.
 - Manual run-detail smoke for normalized artifact evidence remains deferred until a suitable authenticated artifact-bearing run is available.
 - Laixi clean-path proof cannot run without VIP/API access and a live Laixi-compatible device session.
 
 ## Unresolved Questions
 - Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
-- What numeric screenshot volume or retention target should trigger object storage?
 - What is the next Spec Kit feature after `002-laixi-gateway-live-proof`?
