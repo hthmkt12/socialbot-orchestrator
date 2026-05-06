@@ -17,11 +17,13 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - `packages/shared/`: shared execution contracts and lifecycle helpers.
 - `supabase/migrations/`: database schema and seed functions.
 - `plans/`: hard plans, status reports, runtime evidence.
+- `.specify/`: Spec Kit bootstrap templates.
+- `docs/`: project summary, roadmap, changelog, standards, and operational notes.
 
 ## Current Verification Baseline
 - `npm.cmd run typecheck`: pass on 2026-05-05.
 - `npm.cmd run lint`: pass on 2026-05-05.
-- `npm.cmd run build`: pass on 2026-05-05, with Vite large chunk warning.
+- `npm.cmd run build`: pass on 2026-05-05; route lazy-loading later removed the main-chunk warning per changelog.
 - `npm.cmd run build:worker`: pass on 2026-05-05.
 - `npm.cmd run build:gateway`: pass on 2026-05-05.
 - `npm.cmd run smoke:backend`: pass on 2026-05-05.
@@ -36,12 +38,12 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 
 ## Known Risks
 - Several UI files exceed 200 lines and should be modularized only after runtime proof is stable.
-- Main Vite bundle is above 500 kB after minification.
+- Main Vite chunk is below the 500 kB warning threshold after authenticated route lazy-loading.
 - Mobile MCP V1 does not execute `run_autox`.
 - Multi-target execution is sequential inside one worker claim.
-- Artifact storage strategy is still open.
+- Inline artifact storage is acceptable for small pilot volume; Supabase Storage before higher volume/retention/sharing.
 
 ## Unresolved Questions
 - Is Laixi gateway needed for pilot, or only future backend compatibility?
-- Should screenshots move to Supabase Storage before larger runs?
+- When should screenshots move to Supabase Storage before larger runs?
 - Should Spec Kit feature specs become the primary planning source going forward?

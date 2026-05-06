@@ -4,6 +4,8 @@ Date: 2026-05-05
 
 Purpose: reduce large-file risk without destabilizing verified Mobile MCP runtime.
 
+Status: active backlog. Many large-file slices are already complete; continue only from touched surfaces and existing verification evidence.
+
 ## Current Largest Source Files
 
 | File | Lines | Priority | Refactor Boundary |

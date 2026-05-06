@@ -47,7 +47,7 @@ PowerShell scripts are the primary Windows path:
 ## Current Caveat
 No feature spec has been created yet. Running `/specify` will create a numbered feature branch and `specs/<branch>/spec.md`.
 
-This repo was initialized with no commits. If branch behavior is odd, create an initial baseline commit before running the first real `/specify`.
+Baseline commits now exist, so the next `/specify` can start from `master` once the first feature is selected.
 
 Verification:
 - expected Spec Kit paths exist
@@ -62,5 +62,4 @@ Use the first real spec for one of:
 - `split device setup page into maintainable panels`
 
 ## Unresolved Questions
-- Should the initial baseline commit be created now or left to the user?
 - Should future hard plans live under `specs/` instead of `plans/`?

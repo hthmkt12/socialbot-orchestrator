@@ -34,15 +34,13 @@ Status: completed
 
 ## Current Git State
 - Git repo exists at `F:\project-bolt-sb1-keyopwhy\project`.
-- There is no initial commit yet.
+- Baseline commits exist: `4ec0de0 feat: harden agent instructions`; `881a3ac feat: add project baseline`.
 - Current branch is `master`.
 - First real `/specify` command will create a numbered feature branch and `specs/<branch>/spec.md`.
 
 ## Caveats
 - No first feature spec has been created yet.
-- No baseline commit has been created.
 - Spec Kit templates are from installed `@letuscode/spec-kit`, and some template text has encoding artifacts from the package.
 
 ## Unresolved Questions
-- Should we create a baseline commit before the first `/specify`?
 - What is the first real feature spec: artifact storage, UI modularization, or Laixi validation?

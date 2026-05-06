@@ -1,10 +1,10 @@
 ---
 title: "Specify Gap Hard Priority Plan"
 description: "Re-baseline current Laixi/Mobile MCP truth, close OPS-08 honestly, then stabilize Spec Kit/docs and pilot hardening."
-status: pending
+status: completed
 priority: P1
 effort: 3d
-branch: no-git-repo
+branch: master
 tags: [specify, gap-analysis, mobile-mcp, ops-08, pilot-readiness]
 created: 2026-05-05
 ---
@@ -13,7 +13,8 @@ created: 2026-05-05
 
 ## Context
 - Current app root: `F:\project-bolt-sb1-keyopwhy\project`.
-- Current repo state: app root is not a git repo.
+- Current repo state: app root is a git repo on `master`.
+- Current baseline commits: `4ec0de0 feat: harden agent instructions`; `881a3ac feat: add project baseline`.
 - Current plan source: `plans/20260504-1000-cto-hard-plan-laixi-platform/`.
 - Current blocker: none inside the 2026-05-04 hard backlog after Mobile MCP OPS-08 closure.
 - Current preflight: passing after smoke operator ensure and ADB device sync.
@@ -32,7 +33,7 @@ created: 2026-05-05
    Priority: P1
    Goal: decide and create the canonical Spec Kit/docs workflow.
 4. [Phase 04: Pilot Hardening Backlog](./phase-04-pilot-hardening-backlog.md)
-   Status: pending
+   Status: completed
    Priority: P2
    Goal: address maintainability, bundle, artifact, and backend capability risks.
 
@@ -49,6 +50,5 @@ created: 2026-05-05
 - Gate D: plan/backlog/OPS-08 status updated to match evidence. Completed.
 
 ## Unresolved Questions
-- Should `speckit init --here --ai claude` be run in this folder after git/root decision?
+- Should first real Spec Kit feature create `specs/` from this baseline?
 - Is separate Laixi gateway proof still needed after Mobile MCP OPS-08 closure?
-- Should a baseline commit be created before the first real `/specify`?

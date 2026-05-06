@@ -11,13 +11,15 @@ Date: 2026-05-05
 - `OPS-08` closure for Mobile MCP pilot backend.
 - Spec Kit local bootstrap.
 - Repo-local agent instruction hardening with common-issue logging, bug-fix rules, Karpathy coding principles, and verified plan rules.
+- Project baseline commit.
+- 2026-05-05 hard-priority plan and Phase 04 pilot hardening backlog.
 
 ## Now
 - Decide whether Laixi gateway proof is required for pilot.
 - Decide whether first Spec Kit feature should cover artifact storage, UI modularization, or Laixi validation.
 - Use `docs/backend-capability-matrix.md` as the pilot backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
-- Decide whether to create a baseline commit before first `/specify`.
+- Select the first real Spec Kit feature/spec from the baseline.
 
 ## Next
 - Normalize docs/spec workflow around `specs/` for new work.

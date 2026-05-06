@@ -8,7 +8,7 @@
 - Date: 2026-05-05
 - Priority: P2
 - Implementation status: completed
-- Review status: static checks passed
+- Review status: completed from existing lint/typecheck/build evidence
 - Purpose: reduce pilot risks after live proof is stable.
 
 ## Key Insights
@@ -16,7 +16,7 @@
 - Authenticated page routes are lazy-loaded; main Vite chunk is now below the 500 kB warning threshold.
 - Mobile MCP V1 does not support `run_autox`.
 - Multi-target execution is sequential inside one worker claim.
-- Artifact storage stays inline for small pilot volume; Supabase Storage is required before higher screenshot volume, long retention, or external sharing.
+- Artifact storage stays inline for small pilot volume; move to Supabase Storage before higher screenshot volume, long retention, or external sharing.
 - Sequential multi-target execution is acceptable for small pilot validation; parallelism is a later feature if fleet-speed SLA appears.
 
 ## Requirements
@@ -27,7 +27,7 @@
 ## Architecture
 - UI decomposition: page -> panels -> hooks -> shared helpers.
 - Runtime decomposition: backend-specific capabilities must be explicit.
-- Evidence storage: inline now vs Supabase Storage before pilot.
+- Evidence storage: inline for small pilot; Supabase Storage before larger volume/retention/sharing.
 
 ## Related Code Files
 - `src/pages/DeviceSetupPage.tsx`
@@ -41,10 +41,10 @@
 ## Implementation Steps
 1. Split `DeviceSetupPage` into focused panels and hooks.
 2. Split `RunWizard` by target selection, preflight, macro inputs, submit flow.
-3. Add lazy route/code splitting for heavy pages if bundle warning remains.
+3. Keep authenticated route lazy-loading in place to prevent bundle warning regression.
 4. Document backend capability matrix: Laixi vs Mobile MCP.
-5. Decide artifact storage path before larger screenshot volume.
-6. Decide if sequential multi-target is acceptable for pilot.
+5. Keep inline artifacts for small pilot; move to Supabase Storage before larger volume/retention/sharing.
+6. Keep sequential multi-target execution for small pilot validation.
 
 ## Todo List
 - [x] File-size refactor plan.
@@ -67,4 +67,4 @@
 - Artifact storage must preserve access control.
 
 ## Next Steps
-- Turn `DeviceSetupPage` refactor into a formal implementation plan if large-file cleanup is selected next.
+- Phase 04 is closed. Next work should start from a new Spec Kit feature/spec.

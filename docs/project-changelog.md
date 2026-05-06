@@ -118,7 +118,8 @@
 - Extracted Run Monitor loading/not-found shell states and progress aggregation into `run-monitor-page-shell.tsx` and `run-monitor-progress.ts`, keeping `RunMonitorPage.tsx` as a thinner page shell while preserving the existing polling, cancel flow, approval modal wiring, auto-refresh toggle, and per-device expansion behavior.
 - Extracted runner failure-screenshot capture and lock-renewal helpers into `runner-failure-screenshot.ts` and `runner-lock-renewal.ts`, reducing `runner.ts` to 128 lines while preserving the existing `WorkflowRunner` class contract used by runtime code and runner tests.
 - Hardened repo-local agent instructions by updating `AGENTS.md`, `CLAUDE.md`, `docs/common-issues.md`, `docs/code-standards.md`, `docs/specify-workflow.md`, and `.claude/rules/` with bug-fix pre-checks, common-issue logging format, Karpathy coding principles, and plan verification rules adapted from `nextlevelbuilder/goclaw`.
+- Synced the hard-priority plan/docs to the current git baseline and marked Phase 04 plus parent plan complete.
 
 ## Unresolved Questions
 
-- First Spec Kit feature branch still needs selection.
+- First Spec Kit feature/spec still needs selection.
