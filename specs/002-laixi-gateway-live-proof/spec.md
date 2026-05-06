@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-laixi-gateway-live-proof`<br>
 **Created**: 2026-05-06<br>
-**Status**: Draft<br>
+**Status**: Blocked by external Laixi VIP/API availability<br>
 **Input**: User direction: "prepare the next best feature after Mobile MCP proof"
 
 ## User Scenarios & Testing _(mandatory)_
@@ -59,6 +59,14 @@ As a pilot decision maker, I need a clear Laixi gateway live-proof gate so the t
 - The existing worker defaults to Laixi unless `DEVICE_BACKEND=mobile-mcp` is set.
 - Real clean-path proof requires an external Laixi-compatible device session connected over WebSocket; if that is unavailable, only health and expected failure-path evidence can be captured.
 
+## Current Outcome
+
+- Gateway service health was proven locally: `GET http://127.0.0.1:8080/health` returned status `200` with `service: "laixi-gateway"`, `status: "ok"`, `protocolVersion: "1"`, `connectedDevices: 0`, `pendingDispatches: 0`, and `sessions: []`.
+- Gateway sessions were proven empty: `GET http://127.0.0.1:8080/sessions` returned status `200` with `devices: []`.
+- Clean-path dispatch is blocked because the operator does not currently have Laixi VIP/API access, so no Laixi-compatible device session can connect to the gateway.
+- Worker-backed full proof is also blocked in the current shell because `SUPABASE_URL` is not available in process/user/machine env, while `SUPABASE_SERVICE_ROLE_KEY` is present.
+- Pilot decision: Mobile MCP remains the current pilot-default backend; Laixi remains future-compatible until VIP/API access and a live Laixi session are available.
+
 ---
 
 ## Review & Acceptance Checklist
@@ -89,3 +97,4 @@ As a pilot decision maker, I need a clear Laixi gateway live-proof gate so the t
 - [x] Requirements generated
 - [x] Entities identified
 - [x] Review checklist passed
+- [x] Current blocked/future-only outcome recorded

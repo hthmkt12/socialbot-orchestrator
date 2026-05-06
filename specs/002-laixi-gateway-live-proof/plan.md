@@ -2,12 +2,14 @@
 
 **Branch**: `002-laixi-gateway-live-proof`<br>
 **Spec**: `specs/002-laixi-gateway-live-proof/spec.md`<br>
-**Status**: Draft<br>
+**Status**: Blocked / Future-only<br>
 **Created**: 2026-05-06
 
 ## Summary
 
 Create a reproducible Laixi gateway live-proof gate that decides whether Laixi is required for pilot readiness or should remain future-compatible after the Mobile MCP proof. This first slice is intentionally evidence/documentation focused; implementation code should only be added later if a verification gap is found.
+
+Current outcome: Laixi clean-path proof is blocked by external Laixi VIP/API availability. Local gateway health and empty-session evidence were captured; no code fix is indicated. Mobile MCP remains the pilot-default backend.
 
 ## Technical Context
 
@@ -67,8 +69,13 @@ Planned checks:
 
 Exit outcomes:
 - **Clean-path available**: at least one live Laixi session exists.
-- **Blocked clean-path**: gateway works but no external Laixi session exists.
+- **Blocked clean-path**: gateway works but no external Laixi session exists. This is the current outcome because Laixi VIP/API access is not available.
 - **Runtime blocked**: gateway/worker cannot start or required env is unavailable.
+
+Captured evidence:
+- `GET http://127.0.0.1:8080/health`: status `200`, gateway OK, protocol `1`, `connectedDevices: 0`, `pendingDispatches: 0`, persistence disabled, empty sessions.
+- `GET http://127.0.0.1:8080/sessions`: status `200`, `devices: []`.
+- Env presence check: `SUPABASE_URL.present=False`, `SUPABASE_SERVICE_ROLE_KEY.present=True`.
 
 ## Phase 1: Proof Harness Decision
 
@@ -89,6 +96,8 @@ Non-goals:
 ## Phase 2: Clean-Path Evidence
 
 Goal: capture a Laixi-backed completed run.
+
+Current status: blocked until Laixi VIP/API access and a connected Laixi-compatible device session are available.
 
 Required evidence:
 - Gateway health JSON.
@@ -119,6 +128,8 @@ Decision states:
 - `pilot-required`: Laixi proof passed and product needs Laixi for pilot.
 - `future-only`: Mobile MCP remains pilot default; Laixi proof is not pilot-blocking.
 - `blocked`: Laixi clean path cannot be proven due missing external device/gateway availability.
+
+Current decision: `future-only` with clean-path proof blocked by missing external Laixi VIP/API/session availability.
 
 ## Validation Gates
 

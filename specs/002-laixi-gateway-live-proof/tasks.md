@@ -2,33 +2,35 @@
 
 **Input**: `specs/002-laixi-gateway-live-proof/spec.md` and `plan.md`<br>
 **Branch**: `002-laixi-gateway-live-proof`<br>
-**Status**: Draft
+**Status**: Blocked / Future-only
 
 ## Phase 1: Setup & Baseline
 
-- [ ] T001 Confirm repo is on `002-laixi-gateway-live-proof` with a clean starting status.
-- [ ] T002 Run `npm.cmd run build:gateway` and record result.
-- [ ] T003 Run `npm.cmd run build:worker` and record result.
+- [x] T001 Confirm repo is on `002-laixi-gateway-live-proof` with a clean starting status.
+- [x] T002 Run `npm.cmd run build:gateway` and record result.
+- [x] T003 Run `npm.cmd run build:worker` and record result.
 - [ ] T004 Run `npm.cmd test`, `npm.cmd run typecheck`, `npm.cmd run lint`, and `npm.cmd run build` as the static baseline.
 
 ## Phase 2: Gateway Runtime Evidence
 
-- [ ] T005 Start or attach to Laixi gateway runtime on `http://127.0.0.1:8080` without reading or printing `.env` secrets.
-- [ ] T006 Capture `GET /health` evidence, including service status, protocol version, connected-device count, pending dispatch count, persistence flag, and sessions snapshot.
-- [ ] T007 Capture `GET /sessions` evidence and classify state as connected, zero-session, stale-session, or runtime-blocked.
+- [x] T005 Start or attach to Laixi gateway runtime on `http://127.0.0.1:8080` without reading or printing `.env` secrets.
+- [x] T006 Capture `GET /health` evidence, including service status, protocol version, connected-device count, pending dispatch count, persistence flag, and sessions snapshot.
+- [x] T007 Capture `GET /sessions` evidence and classify state as connected, zero-session, stale-session, or runtime-blocked.
+
+Evidence: gateway health returned status `200` with protocol `1`, zero connected devices, zero pending dispatches, persistence disabled, and empty sessions. Gateway sessions returned status `200` with `devices: []`. State classified as zero-session due missing external Laixi VIP/API/session availability.
 
 ## Phase 3: Worker Backend Evidence
 
-- [ ] T008 Start or attach to the execution worker with `DEVICE_BACKEND=laixi`.
+- [ ] T008 Start or attach to the execution worker with `DEVICE_BACKEND=laixi`. Blocked in current shell because `SUPABASE_URL` is unavailable.
 - [ ] T009 Capture worker `GET /health` evidence showing `deviceBackend: "laixi"`, `gatewayBaseUrl`, protocol version, command timeout, lease settings, and claim state.
 - [ ] T010 Verify the worker is not accidentally running in Mobile MCP mode before any Laixi proof run.
 
 ## Phase 4: Clean-Path Proof
 
-- [ ] T011 Confirm a live Laixi device session exists and identify the matching `devices.laixi_device_id` row without exposing secrets.
-- [ ] T012 Execute a minimal Laixi-backed run with `launch_app`, `screenshot`, and `get_current_app`.
-- [ ] T013 Capture Supabase evidence for final run status, successful step count, failed step count, artifact count, screenshot count, and current-app output.
-- [ ] T014 If authenticated UI is available, manually smoke the run detail evidence view for the Laixi proof run.
+- [ ] T011 Confirm a live Laixi device session exists and identify the matching `devices.laixi_device_id` row without exposing secrets. Blocked until Laixi VIP/API access is available.
+- [ ] T012 Execute a minimal Laixi-backed run with `launch_app`, `screenshot`, and `get_current_app`. Blocked until T011 is unblocked.
+- [ ] T013 Capture Supabase evidence for final run status, successful step count, failed step count, artifact count, screenshot count, and current-app output. Blocked until T012 is unblocked.
+- [ ] T014 If authenticated UI is available, manually smoke the run detail evidence view for the Laixi proof run. Blocked until T012 is unblocked.
 
 ## Phase 5: Failure-Path Proof
 
@@ -37,9 +39,9 @@
 
 ## Phase 6: Decision Sync
 
-- [ ] T017 Update `docs/backend-capability-matrix.md` with Laixi proof result and pilot backend decision.
-- [ ] T018 Update `docs/codebase-summary.md`, `docs/project-roadmap.md`, and `docs/project-changelog.md` with current truth.
-- [ ] T019 If clean-path proof is blocked by no external Laixi session, mark the feature outcome as blocked/future-only rather than complete-ready.
+- [x] T017 Update `docs/backend-capability-matrix.md` with Laixi proof result and pilot backend decision.
+- [x] T018 Update `docs/codebase-summary.md`, `docs/project-roadmap.md`, and `docs/project-changelog.md` with current truth.
+- [x] T019 If clean-path proof is blocked by no external Laixi session, mark the feature outcome as blocked/future-only rather than complete-ready.
 
 ## Phase 7: Final Verification
 

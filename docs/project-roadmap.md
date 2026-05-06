@@ -14,13 +14,14 @@ Date: 2026-05-06
 - Project baseline commit.
 - 2026-05-05 hard-priority plan and Phase 04 pilot hardening backlog.
 - First Spec Kit feature completed: `001-normalize-pilot-artifact` normalized pilot artifact labels, linkage warnings, preview availability copy, and storage-decision documentation without adding object storage.
+- Spec Kit feature `002-laixi-gateway-live-proof` created and current outcome recorded: gateway health OK, no Laixi sessions, clean-path proof blocked until Laixi VIP/API access is available.
 
 ## Now
-- Decide whether Laixi gateway proof is required for pilot.
+- Keep Mobile MCP as pilot-default backend while Laixi remains future-compatible until VIP/API access and a live session are available.
 - Use `docs/backend-capability-matrix.md` as the pilot backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
 - Run manual run-detail smoke for `001-normalize-pilot-artifact` when an authenticated UI session and artifact-bearing completed run are available.
-- Select the next real Spec Kit feature/spec from the baseline.
+- Select the next real Spec Kit feature/spec from the baseline after Laixi clean-path proof was deferred by external availability.
 
 ## Next
 - Normalize docs/spec workflow around `specs/` for new work.
@@ -31,9 +32,9 @@ Date: 2026-05-06
 
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
-- Add Laixi-specific live proof if that backend becomes mandatory.
+- Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
 
 ## Unresolved Questions
-- Which backend is pilot-default long term: Mobile MCP, Laixi, or both?
+- When will Laixi VIP/API access be available for clean-path proof?
 - What is the next real Spec Kit feature branch?
 - What authenticated artifact-bearing run should be used for the deferred run-detail smoke?

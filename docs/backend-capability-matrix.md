@@ -8,7 +8,9 @@ Purpose: make pilot backend support explicit before adding more workflows.
 
 Mobile MCP is the current pilot validation backend.
 
-Laixi remains supported architecture, but Laixi-specific live proof is separate from the Mobile MCP OPS-08 closure.
+Laixi remains supported architecture and future-compatible, but Laixi-specific clean-path proof is blocked until Laixi VIP/API access and a live Laixi device session are available.
+
+Current Laixi evidence: local gateway health is OK on `http://127.0.0.1:8080/health`, but `/sessions` returns no devices. This is an external availability blocker, not a code failure.
 
 ## Capability Matrix
 
@@ -52,7 +54,10 @@ Use these checks before claiming pilot readiness:
 - `npm.cmd run smoke:mobile-mcp:db-queue`
 - `npm.cmd run smoke:mobile-mcp:ui`
 
+For Laixi compatibility checks, use `npm.cmd run dev:gateway`, then verify `GET /health` and `GET /sessions`. Do not claim Laixi pilot readiness unless `/sessions` shows a live device and the worker health confirms `deviceBackend: "laixi"` before a completed backend run.
+
 ## Unresolved Questions
 
 - What screenshot volume or retention target requires Supabase Storage?
 - What target fleet size makes sequential multi-target execution unacceptable?
+- When will Laixi VIP/API access be available for clean-path proof?

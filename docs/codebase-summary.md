@@ -38,9 +38,10 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Worker claim/lease path exists.
 - Mobile MCP real-device UI smoke passed.
 - `OPS-08` is closed for Mobile MCP proof.
-- Laixi gateway live proof remains separate.
+- Laixi gateway health proof is documented separately; clean-path proof is blocked by missing external Laixi VIP/API/session availability.
 - Spec Kit feature `001-normalize-pilot-artifact` is implemented for artifact display normalization and storage-decision documentation.
 - Run evidence UI now uses normalized artifact fields for friendly evidence labels, linkage warnings, inline preview availability, and storage status.
+- Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
 
 ## Known Risks
 - Several UI files exceed 200 lines and should be modularized only after runtime proof is stable.
@@ -49,8 +50,9 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Multi-target execution is sequential inside one worker claim.
 - Inline artifact storage is acceptable for small pilot volume; object storage is deferred until higher screenshot volume, longer retention, or external sharing.
 - Manual run-detail smoke for normalized artifact evidence remains deferred until a suitable authenticated artifact-bearing run is available.
+- Laixi clean-path proof cannot run without VIP/API access and a live Laixi-compatible device session.
 
 ## Unresolved Questions
-- Is Laixi gateway needed for pilot, or only future backend compatibility?
+- Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
 - What numeric screenshot volume or retention target should trigger object storage?
-- What is the next Spec Kit feature after `001-normalize-pilot-artifact`?
+- What is the next Spec Kit feature after `002-laixi-gateway-live-proof`?
