@@ -44,10 +44,10 @@ PowerShell scripts are the primary Windows path:
 - `scripts/powershell/check-task-prerequisites.ps1`
 - `scripts/powershell/check-implementation-prerequisites.ps1`
 
-## Current Caveat
-No feature spec has been created yet. Running `/specify` will create a numbered feature branch and `specs/<branch>/spec.md`.
+## Current State
+Spec Kit feature specs now exist under `specs/` and should be the default path for new scoped work.
 
-Baseline commits now exist, so the next `/specify` can start from `master` once the first feature is selected.
+New `/specify` work can start from `master` after selecting the next concrete feature.
 
 Verification:
 - expected Spec Kit paths exist
@@ -55,11 +55,10 @@ Verification:
 - `get-feature-paths.ps1` now correctly rejects `master` because it is not a numbered feature branch
 - `npm.cmd run typecheck` passes
 
-## Recommended First Spec
-Use the first real spec for one of:
-- `persist mobile mcp pilot runner environment`
-- `normalize pilot artifact storage`
-- `split device setup page into maintainable panels`
+## Completed Feature Specs
+- `001-normalize-pilot-artifact`
+- `002-laixi-gateway-live-proof`
+- `003-artifact-storage-thresholds`
 
 ## Unresolved Questions
 - Should future hard plans live under `specs/` instead of `plans/`?

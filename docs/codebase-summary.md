@@ -42,6 +42,7 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Spec Kit feature `001-normalize-pilot-artifact` is implemented for artifact display normalization and storage-decision documentation.
 - Run evidence UI now uses normalized artifact fields for friendly evidence labels, linkage warnings, inline preview availability, and storage status.
 - Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
+- Spec Kit feature `003-artifact-storage-thresholds` is completed and merged; it documents numeric artifact thresholds without adding object storage.
 
 ## Known Risks
 - Several UI files exceed 200 lines and should be modularized only after runtime proof is stable.
@@ -55,4 +56,4 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 
 ## Unresolved Questions
 - Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
-- What is the next Spec Kit feature after `002-laixi-gateway-live-proof`?
+- What is the next Spec Kit feature after artifact threshold policy?

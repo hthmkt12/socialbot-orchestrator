@@ -74,6 +74,6 @@ For Laixi compatibility checks, use `npm.cmd run dev:gateway`, then verify `GET 
 
 ## Unresolved Questions
 
-- What screenshot volume or retention target requires Supabase Storage?
+- What real pilot telemetry should revise the current artifact thresholds?
 - What target fleet size makes sequential multi-target execution unacceptable?
 - When will Laixi VIP/API access be available for clean-path proof?

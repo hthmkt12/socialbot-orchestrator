@@ -2,7 +2,7 @@
 
 **Input**: `specs/003-artifact-storage-thresholds/spec.md` and `plan.md`<br>
 **Branch**: `003-artifact-storage-thresholds`<br>
-**Status**: Draft
+**Status**: Completed
 
 ## Phase 1: Setup & Fact Check
 
@@ -28,8 +28,8 @@
 ## Phase 4: Finish
 
 - [x] T013 Review diff for accidental object-storage implementation.
-- [ ] T014 Commit only intended spec/docs changes after forbidden-path and sensitive-value checks pass.
-- [ ] T015 Merge completed branch to `master` after verification passes.
+- [x] T014 Commit only intended spec/docs changes after forbidden-path and sensitive-value checks pass.
+- [x] T015 Merge completed branch to `master` after verification passes.
 
 ## Notes
 

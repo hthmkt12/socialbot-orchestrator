@@ -15,7 +15,7 @@ Date: 2026-05-06
 - 2026-05-05 hard-priority plan and Phase 04 pilot hardening backlog.
 - First Spec Kit feature completed: `001-normalize-pilot-artifact` normalized pilot artifact labels, linkage warnings, preview availability copy, and storage-decision documentation without adding object storage.
 - Spec Kit feature `002-laixi-gateway-live-proof` created and current outcome recorded: gateway health OK, no Laixi sessions, clean-path proof blocked until Laixi VIP/API access is available.
-- Spec Kit feature `003-artifact-storage-thresholds` created to define numeric inline artifact and object-storage trigger policy without implementing storage.
+- Spec Kit feature `003-artifact-storage-thresholds` completed to define numeric inline artifact and object-storage trigger policy without implementing storage.
 
 ## Now
 - Keep Mobile MCP as pilot-default backend while Laixi remains future-compatible until VIP/API access and a live session are available.
@@ -37,5 +37,5 @@ Date: 2026-05-06
 
 ## Unresolved Questions
 - When will Laixi VIP/API access be available for clean-path proof?
-- What is the next real Spec Kit feature branch?
+- What is the next real Spec Kit feature branch after artifact threshold policy?
 - What authenticated artifact-bearing run should be used for the deferred run-detail smoke?
