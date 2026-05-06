@@ -59,14 +59,17 @@ export default function RunArtifactsPanel({ artifacts, steps, focusStepId = null
     const screenshots = normalizedArtifacts.filter((artifact) => artifact.artifact.type === 'SCREENSHOT').length;
     const logs = normalizedArtifacts.filter((artifact) => artifact.artifact.type === 'LOG_BLOB').length;
     const json = normalizedArtifacts.filter((artifact) => artifact.artifact.type === 'JSON_RESULT').length;
-    return {
-      total: normalizedArtifacts.length,
-      screenshots,
-      logs,
-      json,
-      stepsWithEvidence: stepEvidence.length,
-    };
-  }, [normalizedArtifacts, stepEvidence.length]);
+    const unknown = normalizedArtifacts.filter((artifact) => artifact.evidenceKind === 'unknown').length;
+      return {
+        total: normalizedArtifacts.length,
+        screenshots,
+        logs,
+        json,
+        unknown,
+        unlinked: unlinkedArtifacts.length,
+        stepsWithEvidence: stepEvidence.length,
+      };
+  }, [normalizedArtifacts, stepEvidence.length, unlinkedArtifacts.length]);
 
   if (normalizedArtifacts.length === 0) return null;
 

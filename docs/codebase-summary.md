@@ -1,6 +1,6 @@
 # Codebase Summary
 
-Date: 2026-05-05
+Date: 2026-05-06
 
 ## Product
 Laixi Orchestration Platform controls Android automation workflows through Supabase, a backend worker, and device bridges.
@@ -9,7 +9,7 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - `src/`: React/Vite SPA.
 - `src/pages/`: app routes for devices, setup, runs, approvals, audit, demo, Mobile MCP orchestrator.
 - `src/hooks/`: Supabase React Query hooks.
-- `src/lib/`: Supabase client, run control fallback, role access, preflight, device setup helpers.
+- `src/lib/`: Supabase client, run control fallback, role access, preflight, device setup helpers, run artifact normalization.
 - `src/contracts/`: macro JSON contracts, samples, Social Macro DSL.
 - `services/execution-worker/`: backend run claim, lease, execution, Mobile MCP/Laixi dispatch, smoke tests.
 - `services/laixi-gateway/`: Laixi device session manager and HTTP dispatch service.
@@ -28,6 +28,10 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - `npm.cmd run build:gateway`: pass on 2026-05-05.
 - `npm.cmd run smoke:backend`: pass on 2026-05-05.
 - `npm.cmd run verify:mobile-mcp`: pass on 2026-05-05 with `QC4DKJUO6PW4FMQW`.
+- `npm.cmd test`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
+- `npm.cmd run typecheck`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
+- `npm.cmd run lint`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
+- `npm.cmd run build`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
 
 ## Current Product State
 - Backend-owned run execution exists.
@@ -35,15 +39,18 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Mobile MCP real-device UI smoke passed.
 - `OPS-08` is closed for Mobile MCP proof.
 - Laixi gateway live proof remains separate.
+- Spec Kit feature `001-normalize-pilot-artifact` is implemented for artifact display normalization and storage-decision documentation.
+- Run evidence UI now uses normalized artifact fields for friendly evidence labels, linkage warnings, inline preview availability, and storage status.
 
 ## Known Risks
 - Several UI files exceed 200 lines and should be modularized only after runtime proof is stable.
 - Main Vite chunk is below the 500 kB warning threshold after authenticated route lazy-loading.
 - Mobile MCP V1 does not execute `run_autox`.
 - Multi-target execution is sequential inside one worker claim.
-- Inline artifact storage is acceptable for small pilot volume; Supabase Storage before higher volume/retention/sharing.
+- Inline artifact storage is acceptable for small pilot volume; object storage is deferred until higher screenshot volume, longer retention, or external sharing.
+- Manual run-detail smoke for normalized artifact evidence remains deferred until a suitable authenticated artifact-bearing run is available.
 
 ## Unresolved Questions
 - Is Laixi gateway needed for pilot, or only future backend compatibility?
-- When should screenshots move to Supabase Storage before larger runs?
-- Should Spec Kit feature specs become the primary planning source going forward?
+- What numeric screenshot volume or retention target should trigger object storage?
+- What is the next Spec Kit feature after `001-normalize-pilot-artifact`?
