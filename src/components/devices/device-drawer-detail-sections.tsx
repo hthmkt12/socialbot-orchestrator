@@ -2,6 +2,11 @@ import { getDeviceHealthSummary } from '../../lib/device-health';
 import type { DeviceLockState } from '../../lib/device-locks';
 import type { Device } from '../../lib/database.types';
 
+function deviceOsLabel(device: Device): string {
+  const p = device.metadata_json?.platform;
+  return p === 'ios' ? 'iOS' : 'Android';
+}
+
 interface DeviceDrawerFactsProps {
   device: Device;
   health: ReturnType<typeof getDeviceHealthSummary>;
@@ -20,7 +25,7 @@ export function DeviceDrawerFacts({
     ['Laixi ID', device.laixi_device_id],
     ['Model', device.model],
     ['Brand', device.brand],
-    ['Android Version', device.android_version || '--'],
+    ['OS', `${deviceOsLabel(device)} ${device.android_version || '--'}`],
     ['Screen Resolution', `${device.screen_width} x ${device.screen_height}`],
     ['Last Seen', health.lastSeenLabel],
     ['Lock State', lockState.activeLock ? 'Locked' : lockState.latestExpiredLock ? 'Expired lock' : 'Clear'],

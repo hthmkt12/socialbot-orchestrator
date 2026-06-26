@@ -8,6 +8,11 @@ import DeviceLockBadge from './DeviceLockBadge';
 import { DeviceBatteryIcon } from './DeviceBatteryIcon';
 import type { DeviceCardModel } from './devices-page-types';
 
+function devicePlatform(device: Device): string {
+  const p = device.metadata_json?.platform;
+  return p === 'ios' ? 'iOS' : 'Android';
+}
+
 interface DeviceGridProps {
   devices: Device[] | undefined;
   filtered: DeviceCardModel[];
@@ -32,7 +37,7 @@ export function DeviceGrid({
       <EmptyState
         icon={<Smartphone className="w-6 h-6" />}
         title="No devices found"
-        description="Connect Laixi and sync to discover your Android devices."
+        description="Connect Laixi or start the Mobilerun bridge and sync to discover your devices."
         action={
           <button onClick={onSync} className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors">
             Sync Devices
@@ -97,7 +102,7 @@ function DeviceCard({
         </div>
       </div>
       <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs mb-3">
-        <div className="text-gray-500">Android <span className="text-gray-700 font-medium">{device.android_version || '--'}</span></div>
+        <div className="text-gray-500">{devicePlatform(device)} <span className="text-gray-700 font-medium">{device.android_version || '--'}</span></div>
         <div className="text-gray-500">Screen <span className="text-gray-700 font-medium">{device.screen_width}x{device.screen_height}</span></div>
       </div>
       <div className="flex items-center justify-between pt-3 border-t border-gray-100">

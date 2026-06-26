@@ -1,6 +1,7 @@
 export interface MobileMcpFleetDevice {
   id: string;
   status: string;
+  platform?: string;
 }
 
 export interface MobileMcpFleetHealth {
@@ -58,11 +59,14 @@ export async function loadMobileMcpFleet(baseUrl: string): Promise<MobileMcpFlee
 
   return {
     health,
-    devices: (deviceResponse.output?.devices ?? []).map((device) => (
-      typeof device === 'string'
-        ? { id: device, status: 'device' }
-        : { id: String(device.id ?? ''), status: String(device.status ?? 'unknown') }
-    )).filter((device) => device.id),
+    devices: (deviceResponse.output?.devices ?? []).map((device) => {
+      if (typeof device === 'string') return { id: device, status: 'device' };
+      return {
+        id: String(device.id ?? ''),
+        status: String(device.status ?? 'unknown'),
+        platform: String(device.platform ?? 'android'),
+      };
+    }).filter((device) => device.id),
     checkedAt: new Date().toISOString(),
   };
 }

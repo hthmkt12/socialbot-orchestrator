@@ -13,6 +13,10 @@ function formatJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
 }
 
+function platformLabel(device: MobileMcpFleetDevice): string {
+  return device.platform === 'ios' ? 'iOS' : 'Android';
+}
+
 export default function MobileMcpDeviceCard({ device, selected, result, onToggle }: Props) {
   const statusVariant = device.status === 'device' ? 'green' : 'yellow';
   const resultIcon = result?.success
@@ -28,7 +32,7 @@ export default function MobileMcpDeviceCard({ device, selected, result, onToggle
           <MonitorSmartphone className="w-5 h-5 text-gray-500 mt-0.5" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 truncate">{device.id}</p>
-            <p className="text-xs text-gray-500 mt-1">Android serial</p>
+            <p className="text-xs text-gray-500 mt-1">{platformLabel(device)} serial</p>
           </div>
         </button>
         <Badge variant={statusVariant}>{device.status}</Badge>
