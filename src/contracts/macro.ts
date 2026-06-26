@@ -12,7 +12,8 @@ export type StepType =
   | 'conditional'
   | 'foreach_device'
   | 'group'
-  | 'stop';
+  | 'stop'
+  | 'ai_task';
 
 export type OnErrorPolicy = 'stop' | 'continue' | 'skip';
 export type TargetMode = 'single_device' | 'device_group' | 'multi_device' | 'all_devices';
@@ -103,7 +104,7 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
   const validStepTypes: StepType[] = [
     'wait', 'launch_app', 'input_text', 'tap', 'swipe', 'screenshot',
     'get_current_app', 'adb', 'run_autox', 'approval_checkpoint',
-    'conditional', 'foreach_device', 'group', 'stop',
+    'conditional', 'foreach_device', 'group', 'stop', 'ai_task',
   ];
 
   if (d.steps && Array.isArray(d.steps)) {

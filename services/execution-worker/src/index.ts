@@ -13,7 +13,11 @@ function readRequiredEnv(name: string): string {
 }
 
 function readConfig(): WorkerConfig {
-  const deviceBackend = process.env.DEVICE_BACKEND === 'mobile-mcp' ? 'mobile-mcp' : 'laixi';
+  const rawBackend = process.env.DEVICE_BACKEND;
+  const deviceBackend: WorkerConfig['deviceBackend'] =
+    rawBackend === 'mobilerun' ? 'mobilerun' :
+    rawBackend === 'mobile-mcp' ? 'mobile-mcp' :
+    'laixi';
   return {
     port: Number(process.env.WORKER_PORT ?? 4310),
     pollIntervalMs: Number(process.env.RUN_POLL_INTERVAL_MS ?? 2000),

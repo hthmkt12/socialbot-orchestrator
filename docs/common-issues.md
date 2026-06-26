@@ -1,6 +1,6 @@
 # Common Issues
 
-Date: 2026-05-05
+Date: 2026-05-06
 
 Before fixing any bug, always check `docs/common-issues.md` first to see whether the symptom, root cause, or known workaround is already documented.
 
@@ -93,6 +93,33 @@ Four guardrails against common LLM coding failures.
 - Use `npm.cmd run recover:mobile-mcp:adb` when ADB transports disappear.
 - Use `npm.cmd run preflight:mobile-mcp` before expensive full verification.
 - Use `npm.cmd run verify:mobile-mcp` only when bridge, worker, UI, Supabase login, and device mapping are expected to be ready.
+
+## Android USB Device Not Visible To ADB
+
+Symptoms:
+- `npm.cmd run status:mobile-mcp` shows no online ADB devices.
+- Expected serial, such as `QC4DKJUO6PW4FMQW`, is missing from ADB and bridge checks.
+- `npm.cmd run diagnose:mobile-mcp:devices` reports `Windows does not see an Android USB device`.
+
+Root Cause:
+- The phone is not visible to Windows USB/PnP or ADB, so Mobile MCP cannot discover or run against it.
+
+Common Triggers:
+- Phone unplugged, locked, or in charge-only USB mode.
+- USB debugging prompt not accepted on the phone.
+- Bad cable, bad port, missing driver, or stale ADB transport.
+- `MOBILE_MCP_EXPECTED_SERIALS` still points at a device that is not currently connected.
+
+Solutions:
+- Replug the phone with a data-capable cable and unlock it.
+- Select file transfer/data USB mode and accept the USB debugging authorization prompt.
+- Try another USB port/cable or reinstall the Android/OEM driver if Windows still does not see the device.
+- Run `npm.cmd run recover:mobile-mcp:adb`, then `npm.cmd run diagnose:mobile-mcp:devices`.
+- Update `MOBILE_MCP_EXPECTED_SERIALS` only if the pilot device serial changed.
+
+Verification:
+- `npm.cmd run diagnose:mobile-mcp:devices` reports the expected serial with no missing devices.
+- `npm.cmd run status:mobile-mcp` shows the expected serial online before running `npm.cmd run preflight:mobile-mcp`.
 
 ## Frontend And Build Checks
 

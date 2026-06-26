@@ -1,34 +1,44 @@
 # Backend Capability Matrix
 
-Date: 2026-05-05
+Date: 2026-06-26
 
 Purpose: make pilot backend support explicit before adding more workflows.
+
+## Backend Selection
+
+Three backends available, configured via `DEVICE_BACKEND` env var on the worker:
+
+| Env value | Worker class | Use case |
+|-----------|-------------|----------|
+| `laixi` | `LaixiStepBackend` | Laixi Gateway sessions |
+| `mobile-mcp` | `MobileMcpStepBackend` | Mobilerun AndroidDriver/IOSDriver (basic steps) |
+| `mobilerun` | `MobilerunStepBackend` | Same + `ai_task` LLM-driven steps |
 
 ## Pilot Default
 
 Mobile MCP is the current pilot validation backend.
 
-Laixi remains supported architecture and future-compatible, but Laixi-specific clean-path proof is blocked until Laixi VIP/API access and a live Laixi device session are available.
-
-Current Laixi evidence: local gateway health is OK on `http://127.0.0.1:8080/health`, but `/sessions` returns no devices. This is an external availability blocker, not a code failure.
-
 ## Capability Matrix
 
-| Capability | Mobile MCP | Laixi Gateway | Notes |
-| --- | --- | --- | --- |
-| Device identity | ADB serial via `devices.laixi_device_id` | Laixi device id/session | Mobile MCP maps serials into existing device rows. |
-| `launch_app` | Supported | Supported | Verified through Mobile MCP smoke paths. |
-| `input_text` | Supported | Backend-dependent | Mobile MCP has explicit support. |
-| `tap` | Supported | Supported | Same macro step type, different dispatch backend. |
-| `swipe` | Supported | Supported | Same macro step type, different dispatch backend. |
-| `screenshot` | Supported | Supported | Current artifacts are persisted as artifact rows with inline metadata/previews. |
-| `get_current_app` | Supported | Supported | Used by demo and smoke checks. |
-| `adb` | Supported with approval flow | Supported with approval flow | Keep approval gates before backend dispatch. |
-| `wait` | Worker-local | Worker-local | No device dispatch required. |
-| `run_autox` | Not supported in V1 | Backend-specific | Do not promise Mobile MCP execution for AutoX scripts. |
-| Approval resume | Supported in worker | Supported in worker | Backend dispatch occurs after approval. |
-| Multi-target run | Supported sequentially | Supported sequentially | One worker claim executes targets sequentially. |
-| Device health | ADB/bridge status and expected serial checks | Gateway heartbeat/session checks | Use backend-specific diagnostics. |
+| Capability | Mobile MCP (Android) | Mobile MCP (iOS) | Mobilerun (Android) | Mobilerun (iOS) | Laixi Gateway | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Device identity | ADB serial | Portal URL | ADB serial | Portal URL | Laixi device id/session | iOS Portal URL stored in `devices.laixi_device_id`. |
+| `launch_app` | Supported | Supported | Supported | Supported | Supported | iOS uses bundle ID. |
+| `input_text` | Supported | Supported | Supported | Supported | Backend-dependent | |
+| `tap` | Supported | Supported | Supported | Supported | Supported | Same macro step type, different dispatch backend. |
+| `swipe` | Supported | Supported | Supported | Supported | Supported | Same macro step type, different dispatch backend. |
+| `screenshot` | Supported | Supported | Supported | Supported | Supported | Current artifacts are persisted as artifact rows with inline metadata/previews. |
+| `get_current_app` | Supported | ❌ Not supported | Supported | ❌ Not supported | Supported | iOS lacks ADB dumpsys. |
+| `adb` | Supported | ❌ Not supported | Supported | ❌ Not supported | Supported with approval flow | iOS has no ADB. |
+| `press_button` | back/home/enter | home only | back/home/enter | home only | Backend-specific | Validated via `driver.supported_buttons`. |
+| `get_ui_tree` | Supported | Supported | Supported | Supported | Not supported | Accessibility tree via Portal. |
+| `ai_task` | N/A | N/A | Supported | Supported | N/A | LLM-driven goal via MobileAgent. |
+| `wait` | Worker-local | Worker-local | Worker-local | Worker-local | Worker-local | No device dispatch required. |
+| `run_autox` | Not supported | Not supported | Not supported | Not supported | Backend-specific | Do not promise execution for AutoX scripts. |
+| Approval resume | Supported | Supported | Supported | Supported | Supported | Backend dispatch occurs after approval. |
+| Multi-target run | Supported sequentially | Supported sequentially | Supported sequentially | Supported sequentially | Supported sequentially | One worker claim executes targets sequentially. |
+| Device health | ADB/bridge status + expected serials | Portal date probe | ADB/bridge status + expected serials | Portal date probe | Gateway heartbeat/session checks | Use backend-specific diagnostics. |
+| Device discovery | ADB device list | Portal port scan (6643-6653) | ADB device list | Portal port scan (6643-6653) | Gateway sessions endpoint | |
 
 ## Artifact Decision
 
@@ -69,6 +79,8 @@ Use these checks before claiming pilot readiness:
 - `npm.cmd run verify:mobile-mcp`
 - `npm.cmd run smoke:mobile-mcp:db-queue`
 - `npm.cmd run smoke:mobile-mcp:ui`
+
+For Mobilerun backend: set `DEVICE_BACKEND=mobilerun` and verify `/health` shows `deviceBackend: "mobilerun"`.
 
 For Laixi compatibility checks, use `npm.cmd run dev:gateway`, then verify `GET /health` and `GET /sessions`. Do not claim Laixi pilot readiness unless `/sessions` shows a live device and the worker health confirms `deviceBackend: "laixi"` before a completed backend run.
 

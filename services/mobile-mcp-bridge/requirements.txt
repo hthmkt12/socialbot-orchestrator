@@ -1,8 +1,5 @@
-mobile-mcp-ai==2.7.17
-uiautomator2>=2.16.0
-adbutils>=1.2.0
+mobilerun>=0.6.0
 Pillow>=10.0.0
-opencv-python>=4.0.0
 numpy>=1.0.0
 mcp>=1.1.0
 python-dotenv>=1.0.0

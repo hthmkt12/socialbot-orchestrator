@@ -1,7 +1,16 @@
 # Project Changelog
 
+## 2026-06-26
+
+- **Phase 1 (Mobilerun driver swap)**: Replaced `mobile-mcp-ai` Python package with Mobilerun `AndroidDriver` in `services/mobile-mcp-bridge/`. Updated imports for v0.6.8 API (`from mobilerun import AndroidDriver`, `from mobilerun_core_cli.portal import ensure_portal_ready`). Fixed `.ckignore` venv block with `!.venv` exception.
+- **Phase 2 (Mobilerun backend + ai_task)**: Added `DEVICE_BACKEND=mobilerun` to worker config. Created `services/execution-worker/src/mobilerun-step-backend.ts` extending `MobileMcpStepBackend` with `ai_task` step via MobileAgent. Added `'ai_task'` to `StepType` union in contracts. Registered `_handle_ai_task` in bridge dispatch table. Changed `baseUrl` from `private` to `protected` for subclass access.
+- **Phase 3 (iOS support)**: Refactored `android_session_manager.py` → platform-aware `DeviceSession` supporting both `AndroidDriver` (Android) and `IOSDriver` (iOS). Added iOS device discovery via `discover_ios_portal()` (port range 6643-6653). Platform-specific step guards: `get_current_app` and `adb` return errors on iOS; `press_button` validates against `driver.supported_buttons` (Android: back/home/enter, iOS: home only). Updated `bridge_server.py` to pass `platform` from device payload to session manager. Updated both TypeScript backends to extract `platform` from `device.metadata_json?.platform` (default `android`). Session keys changed to `(platform, identifier)` tuples. Backward-compat `AndroidSessionManager` alias preserved.
+
 ## 2026-05-06
 
+- Created `plans/260506-mobile-mcp-pilot-readiness-smoke/` for the Mobile MCP pilot readiness and artifact-bearing Run Detail smoke slice.
+- Rechecked current Mobile MCP readiness: `status:mobile-mcp` and `diagnose:mobile-mcp:devices` produced fresh reports, but the slice is blocked because Windows/ADB does not see expected serial `QC4DKJUO6PW4FMQW`.
+- Kept pilot architecture decisions unchanged while blocked: Mobile MCP remains pilot default, Laixi remains future-compatible, inline artifacts remain the pilot artifact path, and multi-target execution remains sequential.
 - Created Spec Kit feature `002-laixi-gateway-live-proof` and recorded current Laixi outcome: gateway health is OK locally, sessions are empty, and clean-path proof is blocked until Laixi VIP/API access and a live device session are available.
 - Updated backend/pilot docs to keep Mobile MCP as the pilot-default backend while Laixi remains future-compatible rather than pilot-blocking.
 - Created Spec Kit feature `003-artifact-storage-thresholds` and documented numeric thresholds for inline artifacts: 512,000-byte preview payloads, 10 artifacts per run, 5 screenshots per run, 30-day retention, and authenticated-app-only viewing.

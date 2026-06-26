@@ -12,7 +12,7 @@ export interface WorkerConfig {
   supabaseServiceRoleKey: string;
   gatewayBaseUrl: string;
   mobileMcpBridgeUrl: string;
-  deviceBackend: 'laixi' | 'mobile-mcp';
+  deviceBackend: 'laixi' | 'mobile-mcp' | 'mobilerun';
   commandTimeoutMs: number;
 }
 

@@ -4,11 +4,11 @@ import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlparse
 
-from android_session_manager import AndroidSessionManager
+from android_session_manager import DeviceSessionManager
 from json_response import make_response, to_json_bytes
 
 
-MANAGER = AndroidSessionManager()
+MANAGER = DeviceSessionManager()
 SERIAL_RE = re.compile(r"^/devices/([^/]+)/(health|execute-step|tools/call)$")
 
 
@@ -22,7 +22,6 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {
                 "service": "mobile-mcp-bridge",
                 "status": "ok",
-                "platform": "android",
                 "sessionCount": MANAGER.session_count(),
             })
             return
@@ -33,7 +32,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
         match = SERIAL_RE.match(path)
         if match and match.group(2) == "health":
             serial = unquote(match.group(1))
-            self._handle_result(lambda: make_response(True, MANAGER.with_session(serial, lambda s: s.health())))
+            # Detect platform from serial format: iOS Portal URLs start with http
+            platform = "ios" if serial.startswith("http://") or serial.startswith("https://") else "android"
+            self._handle_result(lambda: make_response(True, MANAGER.with_session(serial, lambda s: s.health(), platform=platform)))
             return
 
         self._send_json(404, {"success": False, "error": "Not found"})
@@ -95,6 +96,7 @@ def _execute_step(serial, payload):
     step_type = str(payload.get("stepType", ""))
     params = payload.get("params") if isinstance(payload.get("params"), dict) else {}
     device = payload.get("device") if isinstance(payload.get("device"), dict) else {}
+    platform = str(device.get("platform", "android"))
 
     def run(session):
         result = session.execute_step(step_type, params, device)
@@ -102,12 +104,13 @@ def _execute_step(serial, payload):
         success = bool(normalized.get("success", True))
         return make_response(success, normalized, None if success else normalized.get("message"), 200)
 
-    return MANAGER.with_session(serial, run)
+    return MANAGER.with_session(serial, run, platform=platform)
 
 
 def _call_tool(serial, payload):
     tool_name = str(payload.get("tool", ""))
     args = payload.get("args") if isinstance(payload.get("args"), dict) else {}
+    platform = str(payload.get("platform", "android"))
 
     def run(session):
         result = session.call_tool(tool_name, args)
@@ -115,7 +118,7 @@ def _call_tool(serial, payload):
         success = bool(normalized.get("success", True))
         return make_response(success, normalized, None if success else normalized.get("message"), 200)
 
-    return MANAGER.with_session(serial, run)
+    return MANAGER.with_session(serial, run, platform=platform)
 
 
 def main():

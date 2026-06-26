@@ -32,6 +32,14 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - `npm.cmd run typecheck`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
 - `npm.cmd run lint`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
 - `npm.cmd run build`: pass on 2026-05-06 after `001-normalize-pilot-artifact`.
+- `npm.cmd test`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- `npm.cmd run typecheck`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- `npm.cmd run lint`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- `npm.cmd run build`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- `npm.cmd run build:worker`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- `npm.cmd run build:gateway`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- `npm.cmd run smoke:backend`: pass on 2026-05-06 during Mobile MCP pilot-readiness review.
+- Evidence summary: `plans/260506-mobile-mcp-pilot-readiness-smoke/reports/verification-summary.md`.
 
 ## Current Product State
 - Backend-owned run execution exists.
@@ -43,6 +51,7 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Run evidence UI now uses normalized artifact fields for friendly evidence labels, linkage warnings, inline preview availability, and storage status.
 - Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
 - Spec Kit feature `003-artifact-storage-thresholds` is completed and merged; it documents numeric artifact thresholds without adding object storage.
+- Mobile MCP current local readiness is blocked on 2026-05-06 because ADB/Windows does not see expected serial `QC4DKJUO6PW4FMQW`; see `plans/reports/mobile-mcp-status-2026-05-06T10-58-12-223Z.json` and `plans/reports/mobile-mcp-wait-devices-2026-05-06T10-58-27-212Z.json`.
 
 ## Known Risks
 - Several UI files exceed 200 lines and should be modularized only after runtime proof is stable.
@@ -51,9 +60,11 @@ Laixi Orchestration Platform controls Android automation workflows through Supab
 - Multi-target execution is sequential inside one worker claim.
 - Inline artifact storage is acceptable for small pilot volume; object storage is deferred until higher screenshot volume, longer retention, or external sharing.
 - Artifact storage thresholds are explicit: inline is acceptable at or below 512,000-byte preview payloads, 10 artifacts/run, 5 screenshots/run, 30-day retention, and authenticated-app-only viewing.
-- Manual run-detail smoke for normalized artifact evidence remains deferred until a suitable authenticated artifact-bearing run is available.
+- Fresh Mobile MCP artifact-producing smoke is blocked until the expected Android device is visible to ADB and Mobile MCP runtime checks pass again.
+- Manual run-detail inspection for normalized artifact evidence remains deferred until an authenticated UI session can access a suitable artifact-bearing run; prior smoke run `f2bc8499-5475-4c86-ae82-55ac0c17c274` is a candidate if it still exists and is accessible.
 - Laixi clean-path proof cannot run without VIP/API access and a live Laixi-compatible device session.
 
 ## Unresolved Questions
 - Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
 - What is the next Spec Kit feature after artifact threshold policy?
+- Is `QC4DKJUO6PW4FMQW` still the active pilot Android device serial?

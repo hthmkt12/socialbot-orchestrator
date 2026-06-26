@@ -16,12 +16,17 @@ Date: 2026-05-06
 - First Spec Kit feature completed: `001-normalize-pilot-artifact` normalized pilot artifact labels, linkage warnings, preview availability copy, and storage-decision documentation without adding object storage.
 - Spec Kit feature `002-laixi-gateway-live-proof` created and current outcome recorded: gateway health OK, no Laixi sessions, clean-path proof blocked until Laixi VIP/API access is available.
 - Spec Kit feature `003-artifact-storage-thresholds` completed to define numeric inline artifact and object-storage trigger policy without implementing storage.
+- **Phase 1** — Swapped mobile-mcp-ai driver to Mobilerun AndroidDriver (ADB + Portal APK) in the bridge.
+- **Phase 2** — Added `DEVICE_BACKEND=mobilerun` with `ai_task` step type via MobileAgent (LLM-driven goals).
+- **Phase 3** — Added iOS support via Mobilerun IOSDriver with platform-aware session manager, device discovery (ADB + Portal probe), and step compatibility guards.
 
 ## Now
 - Keep Mobile MCP as pilot-default backend while Laixi remains future-compatible until VIP/API access and a live session are available.
 - Use `docs/backend-capability-matrix.md` as the pilot backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
 - Run manual run-detail smoke for `001-normalize-pilot-artifact` when an authenticated UI session and artifact-bearing completed run are available.
+- Restore current Mobile MCP local readiness by making expected Android serial `QC4DKJUO6PW4FMQW` visible to ADB/Windows, then rerun preflight/verify/fresh UI smoke.
+- If UI/auth/Supabase are available before the device returns, manually inspect prior artifact-bearing run `f2bc8499-5475-4c86-ae82-55ac0c17c274` to close the Run Detail evidence UI check.
 - Use the artifact storage thresholds before approving larger screenshot volume, longer retention, or external sharing.
 
 ## Next
@@ -39,3 +44,4 @@ Date: 2026-05-06
 - When will Laixi VIP/API access be available for clean-path proof?
 - What is the next real Spec Kit feature branch after artifact threshold policy?
 - What authenticated artifact-bearing run should be used for the deferred run-detail smoke?
+- Is `QC4DKJUO6PW4FMQW` still the pilot device, or should `MOBILE_MCP_EXPECTED_SERIALS` be updated?

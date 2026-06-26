@@ -21,7 +21,7 @@ const SUPPORTED_MOBILE_MCP_STEPS = new Set([
 
 export class MobileMcpStepBackend implements DeviceStepBackend {
   constructor(
-    private readonly baseUrl: string,
+    protected readonly baseUrl: string,
     private readonly commandTimeoutMs: number
   ) {}
 
@@ -49,7 +49,10 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
     }
 
     const serial = getDeviceSerial(args.device);
-    const bridge = await this.postExecuteStep(serial, args);
+    const platform = typeof args.device.metadata_json?.platform === 'string'
+      ? args.device.metadata_json.platform
+      : 'android';
+    const bridge = await this.postExecuteStep(serial, args, platform);
     const output = bridge.output ?? {};
     const artifacts = extractArtifacts(output.artifacts);
 
@@ -74,7 +77,7 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
     return { success: true, output: { waited: ms } };
   }
 
-  private async postExecuteStep(serial: string, args: DeviceStepExecutionArgs): Promise<MobileMcpBridgeResponse> {
+  private async postExecuteStep(serial: string, args: DeviceStepExecutionArgs, platform = 'android'): Promise<MobileMcpBridgeResponse> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.commandTimeoutMs);
     try {
@@ -90,6 +93,7 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
           device: {
             id: args.device.id,
             serial,
+            platform,
             screenWidth: args.device.screen_width,
             screenHeight: args.device.screen_height,
           },
