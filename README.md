@@ -6,7 +6,7 @@ A full-stack platform for orchestrating Android device automation workflows thro
 
 The platform enables teams to:
 
-- **Manage Android devices** connected through a Laixi WebSocket gateway (`ws://127.0.0.1:22221/`)
+- **Manage Android and iOS devices** connected through a Laixi WebSocket gateway or Mobilerun bridge
 - **Define reusable macros** as versioned JSON workflows with 14 step types (tap, swipe, launch app, screenshot, ADB, AutoX scripts, conditional logic, and more)
 - **Execute workflow runs** across single devices, device groups, or entire fleets
 - **Monitor runs in real time** with step-by-step progress, live status indicators, and artifact collection
@@ -29,7 +29,7 @@ Browser (Vite + React SPA)
     |
     |--- Device Backend
              |--- Laixi Gateway Service
-             |--- Mobile MCP Bridge (Android serial backend)
+             |--- Mobile MCP Bridge (Mobilerun: Android ADB + iOS Portal)
              |--- Android Device 1
              |--- Android Device 2
              |--- ...
@@ -46,7 +46,7 @@ Browser (Vite + React SPA)
 | Auth       | Supabase Auth (email/password)          |
 | Icons      | Lucide React                            |
 | Validation | Zod                                     |
-| Gateway    | Laixi WebSocket or Mobile MCP bridge    |
+| Gateway    | Laixi WebSocket or Mobilerun bridge (Android ADB / iOS Portal) |
 
 ### Key Directories
 
@@ -71,13 +71,13 @@ packages/
 services/
   execution-worker/  # Worker with queue-claim, lease loop, and single-device backend execution
   laixi-gateway/     # Gateway service for device sessions, heartbeats, and step dispatch
-  mobile-mcp-bridge/ # Android serial bridge backed by mobile-mcp-ai
+  mobile-mcp-bridge/ # Python bridge using Mobilerun drivers (Android ADB + iOS Portal)
 ```
 
 ## Prerequisites
 
 - Node.js 20+
-- Python 3.10+ for the optional Mobile MCP bridge
+- Python 3.10+ for the optional Mobile MCP bridge (Android ADB + iOS Portal)
 - A Supabase project (already provisioned -- connection details in `.env`)
 - (Optional) Laixi gateway running on `ws://127.0.0.1:22221/` for live device control
 - (Optional) Android SDK Platform Tools (`adb`) for `DEVICE_BACKEND=mobile-mcp`
