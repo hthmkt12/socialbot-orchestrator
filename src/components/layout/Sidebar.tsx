@@ -14,6 +14,7 @@ import {
   Bot,
   UserCircle,
   BarChart3,
+  HeartPulse,
 } from 'lucide-react';
 import { useLaixiStore } from '../../stores/laixi';
 import { useAuthStore } from '../../stores/auth';
@@ -26,6 +27,7 @@ const navItems = [
   { to: '/mobile-mcp-orchestrator', label: 'MCP Orchestrator', icon: Bot },
   { to: '/account-setup', label: 'Accounts', icon: UserCircle },
   { to: '/social-dashboard', label: 'Social Dashboard', icon: BarChart3 },
+  { to: '/fleet-health', label: 'Fleet Health', icon: HeartPulse },
   { to: '/macros', label: 'Macros', icon: FolderOpen },
   { to: '/runs', label: 'Runs', icon: Play },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },

@@ -22,6 +22,7 @@
 - **Account action history modal**: Click any account health card in the Social Dashboard to open an action history timeline showing recent actions (like/follow/comment/post/share) with timestamps, success/failure indicators, and error details. Wired via existing `useAccountHistory` hook.
 - **Multi-app macro step routing**: New `TargetApp` type and optional `targetApp` field on `MacroStep` for routing individual steps to Instagram/TikTok/Facebook. Target App selector added to each step card in the guided builder. Validation rejects invalid targetApp values.
 - **Daily action count reset**: `account-action-reset.ts` resets `current_action_count` to 0 when a new calendar day starts and adjusts `daily_action_limit` per warm-up stage. Batch `runDailyActionReset()` integrated into the scheduler pipeline.
+- **Fleet Health Dashboard**: Added `/fleet-health` route showing aggregate metrics (healthy, stale, busy, locked, error) and per-device health cards. Cards display status dots, lifecycle labels, heartbeat detail, model, last seen, lock state, and last error message. Sorted by severity (errors first). Sidebar navigation updated.
 
 ## 2026-06-26
 
