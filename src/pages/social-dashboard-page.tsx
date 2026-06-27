@@ -1,10 +1,12 @@
-import { BarChart3, Users, Activity, AlertTriangle, TrendingUp } from 'lucide-react';
+import { BarChart3, Users, Activity, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
 import { useAccounts, useUpdateAccount } from '../hooks/use-accounts';
 import { useUIStore } from '../stores/ui';
+import { useWarmUpAdvancementState, useAdvanceAccounts } from '../hooks/use-warmup-auto-advance';
 import Header from '../components/layout/Header';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import Badge from '../components/ui/Badge';
+import { WarmUpAdvancementPanel } from '../components/accounts/warmup-progression-panel';
 import {
   getStageInfo,
   computeRecommendedStage,
@@ -12,12 +14,8 @@ import {
   daysInWarmUp,
 } from '../lib/account-warmup-engine';
 import type { Account } from '../lib/database.types';
+import type { AdvancementResult } from '../lib/account-warmup-auto-advance';
 
-const platformColors: Record<string, 'red' | 'teal' | 'blue'> = {
-  instagram: 'red',
-  tiktok: 'teal',
-  facebook: 'blue',
-};
 
 function StatCard({ icon: Icon, label, value, color }: {
   icon: typeof BarChart3;
@@ -135,6 +133,10 @@ export default function SocialDashboardPage() {
   const updateAccount = useUpdateAccount();
   const addToast = useUIStore((s) => s.addToast);
 
+  const { readyAccounts, estimates, warmingUpCount, fullSpeedCount } =
+    useWarmUpAdvancementState(accounts ?? []);
+  const advanceAccounts = useAdvanceAccounts();
+
   const handleStartWarmUp = async (id: string) => {
     try {
       await updateAccount.mutateAsync({
@@ -148,10 +150,21 @@ export default function SocialDashboardPage() {
     }
   };
 
+  const handleAdvanceWarmUp = async (candidates: AdvancementResult[]) => {
+    try {
+      const results = await advanceAccounts.mutateAsync(candidates);
+      const succeeded = results.filter((r) => r.success).length;
+      const failed = results.filter((r) => !r.success).length;
+      if (succeeded > 0) addToast(`Advanced ${succeeded} account${succeeded !== 1 ? 's' : ''}`, 'success');
+      if (failed > 0) addToast(`Failed to advance ${failed} account${failed !== 1 ? 's' : ''}`, 'error');
+    } catch {
+      addToast('Failed to advance accounts', 'error');
+    }
+  };
+
   const activeAccounts = (accounts ?? []).filter((a) => !a.is_blocked);
   const blockedAccounts = (accounts ?? []).filter((a) => a.is_blocked);
   const totalActions = (accounts ?? []).reduce((sum, a) => sum + a.current_action_count, 0);
-  const fullSpeed = (accounts ?? []).filter((a) => a.warm_up_stage >= 5).length;
 
   return (
     <>
@@ -178,7 +191,7 @@ export default function SocialDashboardPage() {
               <StatCard icon={Users} label="Total Accounts" value={accounts.length} color="bg-sky-500" />
               <StatCard icon={Activity} label="Active Accounts" value={activeAccounts.length} color="bg-emerald-500" />
               <StatCard icon={BarChart3} label="Actions Today" value={totalActions} color="bg-indigo-500" />
-              <StatCard icon={TrendingUp} label="Full Speed" value={fullSpeed} color="bg-violet-500" />
+              <StatCard icon={TrendingUp} label="Full Speed" value={fullSpeedCount} color="bg-violet-500" />
             </div>
 
             {/* Blocked warning */}
@@ -186,6 +199,22 @@ export default function SocialDashboardPage() {
               <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm">
                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
                 <span className="text-red-700">{blockedAccounts.length} account{blockedAccounts.length !== 1 ? 's' : ''} blocked. Check Account Setup for details.</span>
+              </div>
+            )}
+
+            {/* Warm-up auto-advancement */}
+            {(readyAccounts.length > 0 || (warmingUpCount > 0 && estimates.length > 0)) && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <h2 className="text-sm font-semibold text-gray-900">Warm-Up Progression</h2>
+                </div>
+                <WarmUpAdvancementPanel
+                  readyAccounts={readyAccounts}
+                  estimates={estimates}
+                  onAdvance={handleAdvanceWarmUp}
+                  isAdvancing={advanceAccounts.isPending}
+                />
               </div>
             )}
 

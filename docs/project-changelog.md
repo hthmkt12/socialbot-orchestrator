@@ -13,6 +13,7 @@
 - **Account CSV import**: CSV parser with validation (platform check, column count, empty fields, daily_limit parsing). Import modal with file picker, preview table, error display, and sample template download. 9-unit-test coverage.
 - **Account-to-macro mapping in run wizard**: New "Select Account" step in the run wizard that appears when a social engagement macro (with antiDetection config) is selected. Users pick from active Instagram/TikTok/Facebook accounts. Account info (username, platform) is injected into run input variables for downstream action tracking.
 - **Social Dashboard page**: New `/social-dashboard` route with stat cards (total accounts, active, actions today, full speed), blocked-account alert, and per-account health cards showing warm-up stage, usage bar, action counts, and quick Start Warm-Up action.
+- **Warm-up auto-advancement system**: `account-warmup-auto-advance.ts` detects accounts eligible for stage advancement (day thresholds met, active in warm-up stages 2-4). React hook (`use-warmup-auto-advance.ts`) and panel component (`warmup-progression-panel.tsx`) with per-account Advance buttons and batch "Advance All" in the Social Dashboard. `account-warmup-scheduler.ts` provides daily-check foundation with localStorage cooldown tracking.
 
 ## 2026-06-26
 

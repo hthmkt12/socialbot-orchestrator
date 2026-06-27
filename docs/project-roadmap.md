@@ -50,6 +50,8 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Anti-detection engine: random delays, scroll variance, device fingerprinting
 - Account state tracking: warm-up stages, daily action limits, block detection
 - Account input UI: form + CSV import, Supabase RLS per team
+- Account health dashboard (engagement rate, risk score)
+- Warm-up auto-advancement engine + scheduler
 - Proof: 5 devices × 10 Instagram follow-actions without bot detection
 
 ### Phase 2: Social Macro Templates & Multi-App (Q4 2026)
@@ -59,8 +61,8 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 
 ### Phase 3: Safety Limits & Warm-Up Sequences (Q1 2027)
 - Enforce max posts/day, max likes/hour, cooldowns
-- Automated warm-up sequences (gradual action increase over 7-14 days)
-- Account health dashboard (engagement rate, risk score)
+- Automated warm-up sequences ✅ (gradual action increase over 7-21 days)
+- Account health dashboard ✅
 
 ### Phase 4: Failover & Device Rotation (Q2 2027)
 - Account block detection + auto-rotate to healthy device

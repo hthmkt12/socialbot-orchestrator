@@ -55,7 +55,7 @@ export async function submitRunWizard({
 
   try {
     // Resolve account info for social engagement runs
-    let resolvedInputs: Record<string, unknown> = { ...inputValues };
+    const resolvedInputs: Record<string, unknown> = { ...inputValues };
     if (selectedAccountId) {
       const account = await fetchAccount(selectedAccountId);
       if (account) {
