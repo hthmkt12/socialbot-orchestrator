@@ -63,6 +63,7 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Enforce max posts/day, max likes/hour, cooldowns
 - Automated warm-up sequences ✅ (gradual action increase over 7-21 days)
 - Account health dashboard ✅
+- Daily action count reset ✅ (per-calendar-day reset + limit adjustment)
 
 ### Phase 4: Failover & Device Rotation (Q2 2027)
 - Account block detection + auto-rotate to healthy device
