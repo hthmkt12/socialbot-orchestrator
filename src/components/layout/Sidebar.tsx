@@ -5,12 +5,12 @@ import { useAuthStore } from '../../stores/auth';
 import { canViewAuditLogs, getRoleLabel } from '../../lib/role-access';
 
 const navItems = [
-  { icon: Home, label: 'Social Dashboard', path: '/social', id: 'social-dashboard' },
+  { icon: Home, label: 'Social Dashboard', path: '/social-dashboard', id: 'social-dashboard' },
   { icon: PlaySquare, label: 'Macros', path: '/macros', id: 'macros' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics', id: 'analytics' },
-  { icon: Users, label: 'Account Setup', path: '/accounts', id: 'accounts' },
-  { icon: Activity, label: 'System Monitor', path: '/monitor', id: 'system-monitor' },
-  { icon: FileText, label: 'Audit Logs', path: '/audit', id: 'audit-logs', requiresAuditAccess: true },
+  { icon: Users, label: 'Account Setup', path: '/account-setup', id: 'accounts' },
+  { icon: Activity, label: 'System Monitor', path: '/system-monitor', id: 'system-monitor' },
+  { icon: FileText, label: 'Audit Logs', path: '/audit-logs', id: 'audit-logs', requiresAuditAccess: true },
   { icon: BookOpen, label: 'Documentation', path: '/docs', id: 'docs' },
 ];
 

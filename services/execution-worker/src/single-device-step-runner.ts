@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition, MacroStep } from '../../../src/contracts/macro';
 import type { Device } from '../../../src/lib/database.types';
 import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/engine/resolver';
+import { ExecutionContext } from './engine/execution-context';
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout';
 import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers';
 import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer';
@@ -50,10 +51,12 @@ function extractInlineLogText(output: Record<string, unknown>) {
 export class SingleDeviceStepRunner {
   private readonly stepOutputs = new Map<string, Record<string, unknown>>();
   private readonly persistedSteps = new Map<string, StoredRunStepRecord>();
+  private executionContext!: ExecutionContext;
 
   constructor(private readonly params: RunnerParams) {}
 
   async run() {
+    this.executionContext = new ExecutionContext(this.params.inputVariables);
     await this.hydratePersistedState();
     const completed = await this.runSteps(this.params.definition.steps, 0);
     return { totalSteps: this.countSteps(this.params.definition.steps), ...completed };
@@ -123,6 +126,8 @@ export class SingleDeviceStepRunner {
     if (step.type === 'conditional') return this.handleConditional(step, stepIndex);
     if (step.type === 'group' && step.steps) return this.handleGroup(step, stepIndex);
     if (step.type === 'loop' && step.steps) return this.handleLoop(step, stepIndex);
+    if (step.type === 'try_catch' && step.steps) return this.handleTryCatch(step, stepIndex);
+    if (step.type === 'while_loop' && step.steps) return this.handleWhileLoop(step, stepIndex);
     if (step.type === 'approval_checkpoint') return this.handleApprovalCheckpoint(step, stepIndex);
     if (step.policy?.requiresApproval) {
       const gate = await this.resolveApprovalGate(step, stepIndex, `Approval required for ${step.type}`);
@@ -132,7 +137,7 @@ export class SingleDeviceStepRunner {
   }
 
   private async handleLoop(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
-    const loopCount = Number(this.resolveTemplate(step.params?.count as string | undefined)) || 1;
+    const loopCount = Number(resolveTemplate(String(step.params?.count ?? '1'), this.params.inputVariables, this.stepOutputs)) || 1;
     
     await this.saveStep({
       runId: this.params.runId,
@@ -168,6 +173,123 @@ export class SingleDeviceStepRunner {
       stepIndex,
       status: 'SUCCESS',
       retryCount: 0,
+    });
+    return { status: 'SUCCESS' };
+  }
+
+  private async handleTryCatch(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'RUNNING',
+      retryCount: 0,
+    });
+
+    const tryRes = await this.runSteps(step.steps ?? [], stepIndex + 1);
+
+    if (tryRes.status === 'FAILED') {
+      // Caught the error, run the catch block
+      if (step.catch && step.catch.length > 0) {
+         const catchRes = await this.runSteps(step.catch, stepIndex + 1 + tryRes.completedSteps);
+         if (catchRes.status !== 'COMPLETED') {
+            await this.saveStep({
+              runId: this.params.runId,
+              step,
+              deviceId: this.params.device.id,
+              stepIndex,
+              status: catchRes.status === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : 'FAILED',
+              retryCount: 0,
+            });
+            return { status: catchRes.status === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : 'FAILED' };
+         }
+      }
+
+      // Override failure because we caught it
+      await this.saveStep({
+        runId: this.params.runId,
+        step,
+        deviceId: this.params.device.id,
+        stepIndex,
+        status: 'SUCCESS',
+        retryCount: 0,
+        output: { caughtError: true }
+      });
+      return { status: 'SUCCESS' };
+    }
+
+    if (tryRes.status !== 'COMPLETED') {
+      await this.saveStep({
+        runId: this.params.runId,
+        step,
+        deviceId: this.params.device.id,
+        stepIndex,
+        status: tryRes.status === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : 'CANCELLED',
+        retryCount: 0,
+      });
+      return { status: tryRes.status === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : 'CANCELLED' };
+    }
+
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'SUCCESS',
+      retryCount: 0,
+    });
+    return { status: 'SUCCESS' };
+  }
+
+  private async handleWhileLoop(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
+    const maxIter = Number(resolveTemplate(String(step.params.maxIterations ?? '100'), this.params.inputVariables, this.stepOutputs)) || 100;
+
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'RUNNING',
+      retryCount: 0,
+    });
+
+    let iter = 0;
+    let localCompleted = 0;
+
+    while (iter < maxIter) {
+      const left = resolveTemplate(String(step.params.left ?? ''), this.params.inputVariables, this.stepOutputs);
+      const right = resolveTemplate(String(step.params.right ?? ''), this.params.inputVariables, this.stepOutputs);
+      const operator = String(step.params.operator ?? 'equals');
+      const conditionMet = evaluateCondition(left, operator, right);
+
+      if (!conditionMet) break;
+
+      const res = await this.runSteps(step.steps ?? [], stepIndex + localCompleted + 1);
+      localCompleted += res.completedSteps;
+
+      if (res.status !== 'COMPLETED') {
+        await this.saveStep({
+          runId: this.params.runId,
+          step,
+          deviceId: this.params.device.id,
+          stepIndex,
+          status: res.status === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : (res.status === 'CANCELLED' ? 'CANCELLED' : 'FAILED'),
+          retryCount: 0,
+        });
+        return { status: res.status === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : (res.status === 'CANCELLED' ? 'CANCELLED' : 'FAILED') };
+      }
+      iter++;
+    }
+
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'SUCCESS',
+      retryCount: 0,
+      output: { iterations: iter }
     });
     return { status: 'SUCCESS' };
   }
@@ -540,6 +662,14 @@ export class SingleDeviceStepRunner {
 
     if (params.status === 'SUCCESS') {
       this.stepOutputs.set(params.step.id, output);
+      
+      if (params.step.type === 'extract_var' && params.step.params.variableName) {
+        const variableName = String(params.step.params.variableName);
+        this.executionContext.set(variableName, output.value);
+        
+        // Also mutate inputVariables so existing resolveTemplate logic sees it
+        this.params.inputVariables[variableName] = output.value;
+      }
     }
   }
 

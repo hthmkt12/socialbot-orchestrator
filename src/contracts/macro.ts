@@ -17,11 +17,14 @@ export type StepType =
   | 'group'
   | 'stop'
   | 'ai_task'
-  | 'loop';
+  | 'loop'
+  | 'while_loop'
+  | 'try_catch'
+  | 'extract_var';
 
 export type OnErrorPolicy = 'stop' | 'continue' | 'skip';
 export type TargetMode = 'single_device' | 'device_group' | 'multi_device' | 'all_devices';
-export type ConditionalOperator = 'equals' | 'not_equals' | 'contains' | 'starts_with' | 'ends_with' | 'gt' | 'lt';
+export type ConditionalOperator = 'equals' | 'not_equals' | 'contains' | 'starts_with' | 'ends_with' | 'gt' | 'lt' | 'exists';
 
 export interface StepPolicy {
   requiresApproval?: boolean;
@@ -40,6 +43,7 @@ export interface MacroStep {
   then?: MacroStep[];
   else?: MacroStep[];
   steps?: MacroStep[];
+  catch?: MacroStep[];
 }
 
 export interface MacroInputField {
@@ -127,7 +131,7 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
     'wait', 'launch_app', 'input_text', 'tap', 'swipe', 'screenshot',
     'get_current_app', 'adb', 'run_autox', 'approval_checkpoint',
     'conditional', 'foreach_device', 'group', 'stop', 'ai_task',
-    'loop'
+    'loop', 'while_loop', 'try_catch', 'extract_var'
   ];
 
   if (d.steps && Array.isArray(d.steps)) {
@@ -148,6 +152,7 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
         if (step.then && Array.isArray(step.then)) validateSteps(step.then, `${sp}.then`);
         if (step.else && Array.isArray(step.else)) validateSteps(step.else, `${sp}.else`);
         if (step.steps && Array.isArray(step.steps)) validateSteps(step.steps, `${sp}.steps`);
+        if (step.catch && Array.isArray(step.catch)) validateSteps(step.catch, `${sp}.catch`);
       }
     }
     validateSteps(d.steps as unknown[], 'steps');

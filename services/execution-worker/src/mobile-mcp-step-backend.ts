@@ -17,6 +17,7 @@ const SUPPORTED_MOBILE_MCP_STEPS = new Set([
   'screenshot',
   'get_current_app',
   'adb',
+  'extract_var',
 ]);
 
 export class MobileMcpStepBackend implements DeviceStepBackend {
@@ -120,6 +121,14 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
       return {
         appPackage: bridgeOutput.package ?? '',
         appActivity: bridgeOutput.activity ?? '',
+        backend: 'mobile-mcp',
+        serial,
+      };
+    }
+    if (stepType === 'extract_var') {
+      return {
+        value: bridgeOutput.value ?? '',
+        raw_output: bridgeOutput.raw_output ?? '',
         backend: 'mobile-mcp',
         serial,
       };

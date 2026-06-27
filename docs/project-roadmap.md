@@ -105,9 +105,16 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Integrate docs portal into the main navigation sidebar
 
 ### Phase 11: Playwright E2E Testing Suite (Q4 2028)
-- Install and configure `@playwright/test`
-- Write baseline navigation and UI structure tests
-- Add CI/CD test hooks to `package.json`
+- Install and configure `@playwright/test` ✅
+- Write baseline navigation and UI structure tests ✅
+- Add Supabase Auth mocking (network interception) ✅
+- Add CI/CD test hooks to `package.json` ✅
+
+### Phase 12: Advanced Macros (Q1 2029)
+- Conditionals (If/Else logic and evaluation) 🚧
+- While Loops (conditional repetition) 🚧
+- Variables (extraction and interpolation) 🚧
+- Error Boundaries (Try/Catch fallbacks) 🚧
 
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.

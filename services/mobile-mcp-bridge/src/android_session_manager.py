@@ -192,6 +192,51 @@ def _handle_get_ui_tree(session, _params, _device):
 # -- ai_task (MobileAgent) -------------------------------------------------------
 
 
+import re
+import json
+
+def _handle_extract_var(session, params, _device):
+    # Needs to extract text from a shell command or ui_tree
+    source = params.get("source", "adb") # adb or ui_tree
+    
+    if source == "adb":
+        if session.platform == "ios":
+            return {"success": False, "message": "ADB shell source is not supported on iOS"}
+        command = str(params.get("command", "")).strip()
+        if not command:
+            return {"success": False, "message": "command is required for adb source"}
+        try:
+            output = session._run(session.driver.device.shell(command))
+            
+            # Apply regex extraction if specified
+            regex = params.get("regex")
+            if regex:
+                match = re.search(regex, output)
+                if match:
+                    extracted = match.group(1) if len(match.groups()) > 0 else match.group(0)
+                else:
+                    extracted = ""
+            else:
+                extracted = output.strip()
+                
+            return {"success": True, "value": extracted, "raw_output": output}
+        except Exception as exc:
+            return {"success": False, "message": f"extract_var adb failed: {str(exc)}"}
+            
+    elif source == "ui_tree":
+        # Extract from a UI tree element
+        text_match = params.get("text_match")
+        id_match = params.get("id_match")
+        try:
+            tree = session._run(session.driver.get_ui_tree())
+            # For this simple MVP, we just find the node
+            # This is complex and depends on the ui tree format (xml/json)
+            # Leaving basic extraction
+            return {"success": False, "message": "ui_tree source not fully implemented yet, use adb"}
+        except Exception as exc:
+            return {"success": False, "message": f"extract_var ui_tree failed: {str(exc)}"}
+            
+    return {"success": False, "message": f"Unknown extract_var source: {source}"}
 def _handle_ai_task(session, params, _device):
     """Execute a natural-language goal on the device via Mobilerun MobileAgent.
 
@@ -254,6 +299,7 @@ _STEP_HANDLERS = {
     "press_button": _handle_press_button,
     "get_ui_tree": _handle_get_ui_tree,
     "ai_task": _handle_ai_task,
+    "extract_var": _handle_extract_var,
 }
 
 

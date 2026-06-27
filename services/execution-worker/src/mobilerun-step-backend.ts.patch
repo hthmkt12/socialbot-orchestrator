@@ -1,0 +1,15 @@
+--- services/execution-worker/src/mobilerun-step-backend.ts
++++ services/execution-worker/src/mobilerun-step-backend.ts
+@@ -29,6 +29,9 @@
+         output: { backend: 'mobilerun', stepType: args.step.type },
+         error: `Mobilerun backend does not support step type: ${args.step.type}`,
+       };
+     }
+ 
++    if (args.step.type === 'extract_var') {
++      return this.executeExtractVarStep(args);
++    }
++
+     if (args.step.type === 'ai_task') {
+       return this.executeAiTaskStep(args);
+     }
