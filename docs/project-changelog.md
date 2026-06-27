@@ -15,6 +15,7 @@
 - **Social Dashboard page**: New `/social-dashboard` route with stat cards (total accounts, active, actions today, full speed), blocked-account alert, and per-account health cards showing warm-up stage, usage bar, action counts, and quick Start Warm-Up action.
 - **Warm-up auto-advancement system**: `account-warmup-auto-advance.ts` detects accounts eligible for stage advancement (day thresholds met, active in warm-up stages 2-4). React hook (`use-warmup-auto-advance.ts`) and panel component (`warmup-progression-panel.tsx`) with per-account Advance buttons and batch "Advance All" in the Social Dashboard. `account-warmup-scheduler.ts` provides daily-check foundation with localStorage cooldown tracking.
 - **Account action history modal**: Click any account health card in the Social Dashboard to open an action history timeline showing recent actions (like/follow/comment/post/share) with timestamps, success/failure indicators, and error details. Wired via existing `useAccountHistory` hook.
+- **Multi-app macro step routing**: New `TargetApp` type and optional `targetApp` field on `MacroStep` for routing individual steps to Instagram/TikTok/Facebook. Target App selector added to each step card in the guided builder. Validation rejects invalid targetApp values.
 
 ## 2026-06-26
 

@@ -55,9 +55,9 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Proof: 5 devices × 10 Instagram follow-actions without bot detection
 
 ### Phase 2: Social Macro Templates & Multi-App (Q4 2026)
-- Pre-built Instagram (like/follow/comment on hashtag), TikTok, Facebook templates
-- Multi-app macro step routing (detect app in focus, adapt commands)
-- Account-to-macro mapping in run wizard
+- Pre-built Instagram (like/follow/comment on hashtag), TikTok, Facebook templates ✅
+- Multi-app macro step routing (detect app in focus, adapt commands) ✅
+- Account-to-macro mapping in run wizard ✅
 
 ### Phase 3: Safety Limits & Warm-Up Sequences (Q1 2027)
 - Enforce max posts/day, max likes/hour, cooldowns
