@@ -5,7 +5,7 @@
 - **Social pivot Phase 0 (Foundation) started**: Repositioned platform for social media automation (Instagram, TikTok, Facebook). Updated README, project-overview-pdr, roadmap, and codebase-summary with social-first positioning and 6-phase strategic roadmap.
 - **Account schema**: Created migration `20260627000001_account_tables.sql` with `accounts` table (platform, warm-up stages, action limits, block detection) and `account_action_history` table (per-action audit trail). RLS enforced, indexes added.
 - **Account types and hooks**: Added `Account`, `AccountActionHistory` types to `database.types.ts`. Created `account-service-helpers.ts` with full CRUD + action recording. Created `use-accounts.ts` React Query hooks (useAccounts, useAccount, useCreateAccount, useUpdateAccount, useDeleteAccount, useAccountHistory, useRecordAccountAction).
-- **Static checks**: All pass — 5 test files, 27 tests, typecheck clean, lint clean, build 6.94s (364 kB / 110 kB gzip).
+- **Account Setup UI**: New `/account-setup` page with accounts table (username, platform badge, warm-up stage, action counts, blocked status), create modal (username, password, platform, daily limit), and delete. Lazy-loaded at 7.5 kB. Added "Accounts" nav link in sidebar.
 
 ## 2026-06-26
 
