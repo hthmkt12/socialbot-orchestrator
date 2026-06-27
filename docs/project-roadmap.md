@@ -89,6 +89,11 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Execution engine looping / `foreach` steps
 - Anti-detection engine (random delays, variance) in worker
 
+### Phase 8: Parallel Execution (Fleet Speed) (Q1 2028)
+- Refactored orchestrateRun to utilize concurrent device tracks
+- Applied chunked Promise.all to prevent database/memory exhaustion
+- Worker now interleaves steps for multi-device targets
+
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
 - Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
