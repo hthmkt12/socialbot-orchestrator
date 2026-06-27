@@ -46,7 +46,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight">LAIXI PLATFORM</h1>
-            <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">Orchestration</p>
+            <p className="text-[10px] text-gray-400 font-medium tracking-wider uppercase">Social Automation</p>
           </div>
         </div>
       </div>
