@@ -15,6 +15,7 @@ import {
   UserCircle,
   BarChart3,
   HeartPulse,
+  ActivitySquare,
 } from 'lucide-react';
 import { useLaixiStore } from '../../stores/laixi';
 import { useAuthStore } from '../../stores/auth';
@@ -28,6 +29,7 @@ const navItems = [
   { to: '/account-setup', label: 'Accounts', icon: UserCircle },
   { to: '/social-dashboard', label: 'Social Dashboard', icon: BarChart3 },
   { to: '/fleet-health', label: 'Fleet Health', icon: HeartPulse },
+  { to: '/system-monitor', label: 'System Monitor', icon: ActivitySquare },
   { to: '/macros', label: 'Macros', icon: FolderOpen },
   { to: '/runs', label: 'Runs', icon: Play },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
