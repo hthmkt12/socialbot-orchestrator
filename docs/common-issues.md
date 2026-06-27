@@ -127,6 +127,43 @@ Verification:
 - Worker changes: run `npm.cmd run build:worker` and a relevant smoke command.
 - Gateway changes: run `npm.cmd run build:gateway`.
 
+## Mobile MCP Bridge Serial Field Mismatch
+
+Symptoms:
+- `wait-mobile-mcp-expected-devices.mjs` reports `bridge: none` even though the bridge `/devices` endpoint returns the device.
+- Preflight reports `bridge.devices` PASS but `bridge.expectedSerials` FAIL.
+- Status script warnings show "Expected serial X is not visible from bridge /devices" despite bridge being healthy.
+
+Root Cause:
+- The bridge `/devices` endpoint returns devices with a `serial` field (e.g., `{"serial":"97249fb5","state":"device"}`), but the scripts read `device.id` which is `undefined`. The `.filter(Boolean)` then removes the undefined entries, making the bridge appear empty.
+
+Common Triggers:
+- Running Mobile MCP scripts (preflight, wait-devices, status) against a Mobilerun-based bridge that returns `serial` instead of `id`.
+
+Solutions:
+- Replace `device.id` with `device.id ?? device.serial` in all three scripts: `preflight-mobile-mcp-local.mjs:113`, `status-mobile-mcp-local.mjs:120`, `wait-mobile-mcp-expected-devices.mjs:70`.
+
+Verification:
+- `node -e "process.env.MOBILE_MCP_EXPECTED_SERIALS='<serial>'; require('./scripts/wait-mobile-mcp-expected-devices.mjs')"` shows "missing: none".
+
+## Windows spawn EINVAL With npm.cmd
+
+Symptoms:
+- `start-mobile-mcp-local-runtime.mjs` fails with `runtime error: spawn EINVAL`.
+- The bridge/worker/UI services do not start, but the preflight venv checks pass.
+
+Root Cause:
+- `npm.cmd` on Windows is a batch file. Node.js `spawn()` cannot execute batch files directly without `shell: true`. The runtime script spawns services with `spawn(command, args, { ... })` without the `shell` option, causing `EINVAL`.
+
+Common Triggers:
+- Running `node scripts/start-mobile-mcp-local-runtime.mjs` on Windows without `shell: isWindows`.
+
+Solutions:
+- Add `shell: isWindows` to the `spawn()` call options in `start-mobile-mcp-local-runtime.mjs:155`.
+
+Verification:
+- `node scripts/start-mobile-mcp-local-runtime.mjs --check` reports all services healthy.
+
 ## CK Bootstrap
 
 - Use `ck.cmd update`.

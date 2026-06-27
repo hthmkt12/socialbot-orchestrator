@@ -1,5 +1,15 @@
 # Project Changelog
 
+## 2026-06-27
+
+- **iOS setup guide**: Created `docs/ios-setup-guide.md` covering architecture, prerequisites (libimobiledevice), Portal app install, iproxy forwarding, supported steps table, and troubleshooting.
+- **UI platform labels**: Added platform-aware labels throughout device UI components. `DeviceGrid.tsx` and `device-drawer-detail-sections.tsx` read `metadata_json?.platform` to show "iOS"/"Android" instead of hardcoded "Android". `mobile-mcp-device-card.tsx` shows platform from bridge response.
+- **Bug fixes**:
+  - Added `shell: isWindows` to `spawn()` in `start-mobile-mcp-local-runtime.mjs` — fixes `spawn EINVAL` when executing `npm.cmd` batch scripts on Windows.
+  - Fixed bridge serial field mismatch (`device.id` → `device.id ?? device.serial`) in `preflight`, `status`, and `wait-devices` scripts — the bridge `/devices` endpoint returns `serial`, not `id`.
+- **Mobile MCP local readiness**: Restored local stack (bridge, worker, Vite UI) with Redmi `97249fb5` connected via ADB. 12/12 preflight checks pass. Full verify blocked only on Supabase DNS (`ENOTFOUND`). Updated pilot readiness plan with current evidence.
+- `docs/common-issues.md`: Added entries for "Mobile MCP Bridge Serial Field Mismatch" and "Windows spawn EINVAL With npm.cmd".
+
 ## 2026-06-26
 
 - **Phase 1 (Mobilerun driver swap)**: Replaced `mobile-mcp-ai` Python package with Mobilerun `AndroidDriver` in `services/mobile-mcp-bridge/`. Updated imports for v0.6.8 API (`from mobilerun import AndroidDriver`, `from mobilerun_core_cli.portal import ensure_portal_ready`). Fixed `.ckignore` venv block with `!.venv` exception.
