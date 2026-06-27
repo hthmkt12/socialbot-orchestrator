@@ -3,6 +3,7 @@ import type { MacroDefinition, MacroStep } from '../../../src/contracts/macro';
 import type { Device } from '../../../src/lib/database.types';
 import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/engine/resolver';
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout';
+import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers';
 import type { DeviceStepBackend } from './device-step-backend';
 import {
   createLogArtifact,
@@ -94,6 +95,14 @@ export class SingleDeviceStepRunner {
       const result = await this.executeStep(step, baseIndex + i);
       if (result.status === 'SUCCESS' || result.status === 'SKIPPED') {
         completedSteps += 1;
+
+        /* Anti-detection cooldown: pause between steps to simulate human pacing.
+           Only applies when antiDetection config is set and step actually ran. */
+        if (result.status === 'SUCCESS' && this.params.definition.antiDetection && i < steps.length - 1) {
+          const [minCd, maxCd] = this.params.definition.antiDetection.cooldownBetweenActionsMs;
+          await new Promise((r) => setTimeout(r, randomDelayMs(minCd, maxCd)));
+        }
+
         continue;
       }
       return { completedSteps, status: result.status };
@@ -261,13 +270,19 @@ export class SingleDeviceStepRunner {
 
       const resolvedParams = resolveParams(step.params, this.params.inputVariables, this.stepOutputs);
 
+      /* Apply anti-detection transforms (coordinate jitter, delay randomization)
+         when the macro definition includes an antiDetection config. */
+      const finalParams = this.params.definition.antiDetection
+        ? applyAntiDetection(resolvedParams as { x?: number; y?: number; ms?: number }, this.params.definition.antiDetection)
+        : resolvedParams;
+
       try {
         const result = await withTimeout(
           this.params.backend.executeStep({
             step,
             runId: this.params.runId,
             device: this.params.device,
-            resolvedParams,
+            resolvedParams: finalParams,
             isCancelled: async () => isRunCancelled(this.params.supabase, this.params.runId, this.params.claimToken),
           }),
           step.id,

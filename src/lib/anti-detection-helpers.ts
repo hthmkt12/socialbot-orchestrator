@@ -56,13 +56,8 @@ export function jitterCoordinate(x: number, y: number, radiusPx = 5) {
   };
 }
 
-/** Default anti-detection config for social macro templates. */
-export interface AntiDetectionConfig {
-  randomDelayMs: [number, number];
-  scrollVariance: boolean;
-  tapJitterPx: number;
-  cooldownBetweenActionsMs: [number, number];
-}
+import type { AntiDetectionConfig } from '../contracts/macro';
+export type { AntiDetectionConfig };
 
 export const DEFAULT_ANTI_DETECTION: AntiDetectionConfig = {
   randomDelayMs: [3000, 8000],

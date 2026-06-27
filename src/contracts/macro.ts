@@ -59,6 +59,17 @@ export interface MacroTarget {
   mode: TargetMode;
 }
 
+export interface AntiDetectionConfig {
+  /** Random delay range [min, max] in ms applied between steps. */
+  randomDelayMs: [number, number];
+  /** Enable random scroll variance before tap/swipe actions. */
+  scrollVariance: boolean;
+  /** Pixel radius for tap coordinate jitter (simulates human imprecision). */
+  tapJitterPx: number;
+  /** Cooldown range [min, max] in ms between consecutive actions. */
+  cooldownBetweenActionsMs: [number, number];
+}
+
 export interface MacroDefinition {
   version: number;
   meta: MacroMeta;
@@ -66,6 +77,8 @@ export interface MacroDefinition {
   target: MacroTarget;
   execution: MacroExecution;
   steps: MacroStep[];
+  /** Optional anti-detection config for social engagement macros. */
+  antiDetection?: AntiDetectionConfig;
 }
 
 export function validateMacroDefinition(def: unknown): { valid: boolean; errors: string[] } {
