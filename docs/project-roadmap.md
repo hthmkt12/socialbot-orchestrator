@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Date: 2026-05-06
+Date: 2026-06-27
 
 ## Completed
 - Backend-owned run execution path.
@@ -36,6 +36,42 @@ Date: 2026-05-06
 - Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
 - Keep authenticated route lazy-loading in place; main Vite chunk is now below warning threshold.
 
+## Social Pivot (Strategic Direction)
+
+Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposition from generic device orchestration → **social media automation platform**.
+
+### Phase 0: Foundation (Jun-Jul 2026)
+- Update docs/messaging to reflect social positioning
+- Set up `accounts` + `account_action_history` schema
+- Verify Mobile MCP backend stable (12/12 preflight passes)
+- Proof: Mobile MCP runs stable for 5 consecutive devices on simple workflow
+
+### Phase 1: Anti-Detection & Account Lifecycle (Q3 2026) — MVP
+- Anti-detection engine: random delays, scroll variance, device fingerprinting
+- Account state tracking: warm-up stages, daily action limits, block detection
+- Account input UI: form + CSV import, Supabase RLS per team
+- Proof: 5 devices × 10 Instagram follow-actions without bot detection
+
+### Phase 2: Social Macro Templates & Multi-App (Q4 2026)
+- Pre-built Instagram (like/follow/comment on hashtag), TikTok, Facebook templates
+- Multi-app macro step routing (detect app in focus, adapt commands)
+- Account-to-macro mapping in run wizard
+
+### Phase 3: Safety Limits & Warm-Up Sequences (Q1 2027)
+- Enforce max posts/day, max likes/hour, cooldowns
+- Automated warm-up sequences (gradual action increase over 7-14 days)
+- Account health dashboard (engagement rate, risk score)
+
+### Phase 4: Failover & Device Rotation (Q2 2027)
+- Account block detection + auto-rotate to healthy device
+- Exponential backoff retry
+- Fleet health dashboard
+
+### Phase 5: Scheduling & Analytics (Q3 2027)
+- Cron-like scheduling (daily 9am, weekdays only, etc.)
+- Engagement analytics (followers gained, likes per post, 30-day trending)
+- Tiered pricing: Free/Pro/Enterprise
+
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
 - Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
@@ -45,3 +81,5 @@ Date: 2026-05-06
 - What is the next real Spec Kit feature branch after artifact threshold policy?
 - What authenticated artifact-bearing run should be used for the deferred run-detail smoke?
 - Is `QC4DKJUO6PW4FMQW` still the pilot device, or should `MOBILE_MCP_EXPECTED_SERIALS` be updated?
+- Instagram/TikTok API vs UI automation for initial accounts?
+- Encrypted password storage or OAuth tokens for social accounts?

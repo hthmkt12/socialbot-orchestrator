@@ -166,6 +166,36 @@ export interface ExecutionProfile {
   updated_at: string;
 }
 
+export type AccountPlatform = 'instagram' | 'tiktok' | 'facebook';
+export type AccountActionType = 'like' | 'follow' | 'comment' | 'post' | 'share';
+
+export interface Account {
+  id: string;
+  user_id: string;
+  username: string;
+  encrypted_password: string;
+  platform: AccountPlatform;
+  warm_up_started_at: string | null;
+  warm_up_stage: number;
+  daily_action_limit: number;
+  current_action_count: number;
+  last_action_reset_at: string | null;
+  is_blocked: boolean;
+  detected_block_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AccountActionHistory {
+  id: string;
+  account_id: string;
+  action_type: AccountActionType;
+  step_id: string | null;
+  success: boolean | null;
+  error_message: string | null;
+  created_at: string;
+}
+
 export interface DeviceLock {
   id: string;
   device_id: string;
@@ -190,6 +220,8 @@ export interface Database {
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog> & { action: string }; Update: Partial<AuditLog> };
       execution_profiles: { Row: ExecutionProfile; Insert: Partial<ExecutionProfile> & { name: string }; Update: Partial<ExecutionProfile> };
       device_locks: { Row: DeviceLock; Insert: Partial<DeviceLock> & { device_id: string; workflow_run_id: string }; Update: Partial<DeviceLock> };
+      accounts: { Row: Account; Insert: Partial<Account> & { user_id: string; username: string; encrypted_password: string; platform: AccountPlatform }; Update: Partial<Account> };
+      account_action_history: { Row: AccountActionHistory; Insert: Partial<AccountActionHistory> & { account_id: string; action_type: AccountActionType }; Update: Partial<AccountActionHistory> };
     };
   };
 }

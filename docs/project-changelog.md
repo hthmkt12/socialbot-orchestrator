@@ -2,13 +2,10 @@
 
 ## 2026-06-27
 
-- **iOS setup guide**: Created `docs/ios-setup-guide.md` covering architecture, prerequisites (libimobiledevice), Portal app install, iproxy forwarding, supported steps table, and troubleshooting.
-- **UI platform labels**: Added platform-aware labels throughout device UI components. `DeviceGrid.tsx` and `device-drawer-detail-sections.tsx` read `metadata_json?.platform` to show "iOS"/"Android" instead of hardcoded "Android". `mobile-mcp-device-card.tsx` shows platform from bridge response.
-- **Bug fixes**:
-  - Added `shell: isWindows` to `spawn()` in `start-mobile-mcp-local-runtime.mjs` — fixes `spawn EINVAL` when executing `npm.cmd` batch scripts on Windows.
-  - Fixed bridge serial field mismatch (`device.id` → `device.id ?? device.serial`) in `preflight`, `status`, and `wait-devices` scripts — the bridge `/devices` endpoint returns `serial`, not `id`.
-- **Mobile MCP local readiness**: Restored local stack (bridge, worker, Vite UI) with Redmi `97249fb5` connected via ADB. 12/12 preflight checks pass. Full verify blocked only on Supabase DNS (`ENOTFOUND`). Updated pilot readiness plan with current evidence.
-- `docs/common-issues.md`: Added entries for "Mobile MCP Bridge Serial Field Mismatch" and "Windows spawn EINVAL With npm.cmd".
+- **Social pivot Phase 0 (Foundation) started**: Repositioned platform for social media automation (Instagram, TikTok, Facebook). Updated README, project-overview-pdr, roadmap, and codebase-summary with social-first positioning and 6-phase strategic roadmap.
+- **Account schema**: Created migration `20260627000001_account_tables.sql` with `accounts` table (platform, warm-up stages, action limits, block detection) and `account_action_history` table (per-action audit trail). RLS enforced, indexes added.
+- **Account types and hooks**: Added `Account`, `AccountActionHistory` types to `database.types.ts`. Created `account-service-helpers.ts` with full CRUD + action recording. Created `use-accounts.ts` React Query hooks (useAccounts, useAccount, useCreateAccount, useUpdateAccount, useDeleteAccount, useAccountHistory, useRecordAccountAction).
+- **Static checks**: All pass — 5 test files, 27 tests, typecheck clean, lint clean, build 6.94s (364 kB / 110 kB gzip).
 
 ## 2026-06-26
 

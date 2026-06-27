@@ -1,17 +1,31 @@
-# Laixi Orchestration Platform
+# Laixi Automation Platform
 
-A full-stack platform for orchestrating Android device automation workflows through Laixi, a local WebSocket-based device gateway.
+A full-stack platform for orchestrating device automation workflows — purpose-built for **social media automation teams** that need reliable multi-device execution, anti-detection, and account lifecycle management.
 
 ## Overview
 
-The platform enables teams to:
+The platform lets teams run **Android and iOS device automation** at scale:
 
-- **Manage Android and iOS devices** connected through a Laixi WebSocket gateway or Mobilerun bridge
-- **Define reusable macros** as versioned JSON workflows with 14 step types (tap, swipe, launch app, screenshot, ADB, AutoX scripts, conditional logic, and more)
+- **Social media automation** — Run Instagram, TikTok, Facebook workflows across 5-50 devices with human-like behavior (random delays, scroll variance, device rotation)
+- **Account lifecycle tracking** — Warm-up sequences, daily action limits, block detection, and auto-failover
+- **Manage Android and iOS devices** connected through a Mobilerun bridge (Android ADB + iOS Portal)
+- **Define reusable macros** as versioned JSON workflows with 14 step types (tap, swipe, launch app, screenshot, ADB, conditional logic, and more)
 - **Execute workflow runs** across single devices, device groups, or entire fleets
 - **Monitor runs in real time** with step-by-step progress, live status indicators, and artifact collection
 - **Gate sensitive operations** with approval checkpoints for ADB and script commands
 - **Audit everything** with a full immutable audit trail
+
+## Social Media Automation
+
+The platform is designed for **social media automation teams** running 5-50 Android/iOS devices. Key differentiators:
+
+- **Anti-detection** — Random delays, scroll variance, and device fingerprinting to avoid bot detection on Instagram, TikTok, and Facebook
+- **Account lifecycle** — Track warm-up stages, daily action limits, cooldown enforcement, and block detection per account
+- **Macro templates** — Pre-built Instagram like/follow/comment, TikTok engagement, and Facebook page interaction workflows
+- **Device failover** — Auto-rotate accounts to healthy devices when a device or account gets blocked
+- **Fleet dashboard** — Account health per device, action counts, warm-up status, and recommended actions
+
+See `plans/brainstorm-report-social-first-roadmap.md` for the full strategic roadmap.
 
 ## Architecture
 

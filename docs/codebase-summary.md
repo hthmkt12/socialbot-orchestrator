@@ -3,7 +3,10 @@
 Date: 2026-06-27
 
 ## Product
-Laixi Orchestration Platform controls Android/iOS automation workflows through Supabase, a backend worker, and device bridges (Mobile MCP with Mobilerun AndroidDriver/IOSDriver, or Laixi gateway).
+Laixi Automation Platform orchestrates Android/iOS device automation workflows through Supabase, a backend worker, and device bridges (Mobile MCP with Mobilerun AndroidDriver/IOSDriver). Purpose-built for **social media automation teams** running 5-50 devices with anti-detection, account lifecycle tracking, and multi-app workflows (Instagram, TikTok, Facebook).
+
+### Strategic Direction
+Social media automation pivot — per `plans/brainstorm-report-social-first-roadmap.md`. Phase 0 (Foundation) in progress. See `docs/project-roadmap.md` → Social Pivot for full 6-phase plan.
 
 ## Main Areas
 - `src/`: React/Vite SPA.
@@ -62,3 +65,6 @@ Laixi Orchestration Platform controls Android/iOS automation workflows through S
 - Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
 - What is the next Spec Kit feature after artifact threshold policy?
 - Is `QC4DKJUO6PW4FMQW` still the active pilot Android device serial?
+- Social pivot Phase 0-5 needs user validation — is "SocialBot Orchestrator" the right product name?
+- Instagram/TikTok API vs pure UI automation for account actions?
+- Encrypted password storage or OAuth tokens for social account credentials?
