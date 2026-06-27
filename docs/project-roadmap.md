@@ -99,6 +99,11 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Build HTTP wrapper for Laixi Gateway API calls
 - Verify worker payload translation for `DEVICE_BACKEND=laixi`
 
+### Phase 10: User Documentation System (Q3 2028)
+- Add in-app markdown documentation viewer (`react-markdown`)
+- Author user guides for device connection, macros, and account setup
+- Integrate docs portal into the main navigation sidebar
+
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
 - Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
