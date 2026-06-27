@@ -5,6 +5,7 @@ import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout';
 import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers';
 import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer';
+import { detectAccountBlock, handlePotentialBlock } from '../../../src/lib/account-block-detector';
 import type { Account, AccountActionType, AccountActionHistory } from '../../../src/lib/database.types';
 import type { DeviceStepBackend } from './device-step-backend';
 import {
@@ -344,6 +345,12 @@ export class SingleDeviceStepRunner {
             stepType: step.type,
             source: 'step-error',
           });
+
+          // Block detection
+          const accountId = this.params.inputVariables?.accountId as string | undefined;
+          if (accountId && result.error) {
+            await handlePotentialBlock(this.params.supabase, accountId, result.error);
+          }
         }
         await this.saveStep({
           runId: this.params.runId,
@@ -372,6 +379,12 @@ export class SingleDeviceStepRunner {
           source: 'step-exception',
           code,
         });
+
+        // Block detection on exception message
+        const accountId = this.params.inputVariables?.accountId as string | undefined;
+        if (accountId && message) {
+          await handlePotentialBlock(this.params.supabase, accountId, message);
+        }
         await this.saveStep({
           runId: this.params.runId,
           step,

@@ -3,6 +3,7 @@ import { GATEWAY_PROTOCOL_VERSION } from '../../../packages/shared/src';
 import { MultiTargetRunExecutor } from './multi-target-run-executor';
 import { RunClaimCoordinator, type WorkerConfig } from './run-claim-coordinator';
 import { SingleDeviceRunExecutor } from './single-device-run-executor';
+import { WorkflowScheduleTrigger } from './workflow-schedule-trigger';
 
 function readRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -90,8 +91,12 @@ function main() {
       ? singleTargetExecutor.executeClaimedRun(runId, claimToken)
       : multiTargetExecutor.executeClaimedRun(runId, claimToken)
   );
+
+  const scheduleTrigger = new WorkflowScheduleTrigger(config);
+
   startHealthServer(config, coordinator);
   coordinator.start();
+  scheduleTrigger.start();
 }
 
 main();

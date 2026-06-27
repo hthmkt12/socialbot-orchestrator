@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logAudit } from './audit';
 import type { Account, AccountActionHistory, AccountPlatform, AccountActionType } from './database.types';
 
 export async function fetchAccounts() {
@@ -51,6 +52,8 @@ export async function createAccount(input: {
 
   if (error) throw new Error(`Failed to create account: ${error.message}`);
   if (!data) throw new Error('Account not created');
+
+  await logAudit('account.create', 'account', data.id, { username: input.username, platform: input.platform });
   return data as Account;
 }
 
@@ -66,16 +69,22 @@ export async function updateAccount(
     .maybeSingle();
 
   if (error) throw new Error(`Failed to update account: ${error.message}`);
+
+  await logAudit('account.update', 'account', id, updates);
   return data as Account;
 }
 
 export async function deleteAccount(id: string) {
+  const { data } = await supabase.from('accounts').select('username').eq('id', id).maybeSingle();
+
   const { error } = await supabase
     .from('accounts')
     .delete()
     .eq('id', id);
 
   if (error) throw new Error(`Failed to delete account: ${error.message}`);
+
+  await logAudit('account.delete', 'account', id, { username: data?.username });
 }
 
 export async function fetchAccountHistory(accountId: string, limit = 50) {

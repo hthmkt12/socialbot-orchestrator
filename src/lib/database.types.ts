@@ -186,6 +186,18 @@ export interface Account {
   updated_at: string;
 }
 
+
+export type AccountAnalytics = {
+  id: string;
+  account_id: string;
+  snapshot_date: string;
+  followers_count: number;
+  following_count: number;
+  posts_count: number;
+  engagement_rate: number | null;
+  created_at: string;
+};
+
 export interface AccountActionHistory {
   id: string;
   account_id: string;
@@ -202,6 +214,25 @@ export interface DeviceLock {
   workflow_run_id: string;
   acquired_at: string;
   expires_at: string;
+}
+
+export interface WorkflowSchedule {
+  id: string;
+  name: string;
+  macro_id: string;
+  macro_version_id: string;
+  target_type: TargetType;
+  target_device_id: string | null;
+  target_group_id: string | null;
+  input_variables: Record<string, unknown>;
+  cron_expression: string;
+  timezone: string;
+  is_active: boolean;
+  next_run_at: string | null;
+  last_run_at: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
 }
 
 export interface Database {
@@ -221,7 +252,9 @@ export interface Database {
       execution_profiles: { Row: ExecutionProfile; Insert: Partial<ExecutionProfile> & { name: string }; Update: Partial<ExecutionProfile> };
       device_locks: { Row: DeviceLock; Insert: Partial<DeviceLock> & { device_id: string; workflow_run_id: string }; Update: Partial<DeviceLock> };
       accounts: { Row: Account; Insert: Partial<Account> & { user_id: string; username: string; encrypted_password: string; platform: AccountPlatform }; Update: Partial<Account> };
+      account_analytics: { Row: AccountAnalytics; Insert: Partial<AccountAnalytics> & { account_id: string }; Update: Partial<AccountAnalytics> };
       account_action_history: { Row: AccountActionHistory; Insert: Partial<AccountActionHistory> & { account_id: string; action_type: AccountActionType }; Update: Partial<AccountActionHistory> };
+      workflow_schedules: { Row: WorkflowSchedule; Insert: Partial<WorkflowSchedule> & { name: string; macro_id: string; macro_version_id: string; target_type: TargetType; cron_expression: string }; Update: Partial<WorkflowSchedule> };
     };
   };
 }

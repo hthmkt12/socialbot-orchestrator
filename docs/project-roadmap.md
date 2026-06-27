@@ -68,9 +68,11 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Daily action count reset ✅ (per-calendar-day reset + limit adjustment)
 
 ### Phase 4: Failover & Device Rotation (Q2 2027)
-- Account block detection + auto-rotate to healthy device
-- Exponential backoff retry
+- Account block detection + auto-rotate to healthy device ✅
+- Exponential backoff retry ✅
 - Fleet health dashboard ✅
+- System Monitor ✅
+- Audit Logs UI ✅
 
 ### Phase 5: Scheduling & Analytics (Q3 2027)
 - Cron-like scheduling (daily 9am, weekdays only, etc.)

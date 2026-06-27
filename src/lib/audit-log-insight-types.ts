@@ -1,4 +1,4 @@
-export type AuditDomain = 'RUNS' | 'APPROVALS' | 'MACROS' | 'DEVICES' | 'DEVICE_GROUPS' | 'SYSTEM';
+export type AuditDomain = 'RUNS' | 'APPROVALS' | 'MACROS' | 'DEVICES' | 'DEVICE_GROUPS' | 'ACCOUNTS' | 'SYSTEM';
 export type AuditTone = 'green' | 'red' | 'yellow' | 'blue' | 'gray' | 'orange' | 'teal';
 
 export interface AuditLink {
@@ -32,5 +32,6 @@ export const AUDIT_DOMAIN_ORDER: AuditDomain[] = [
   'MACROS',
   'DEVICES',
   'DEVICE_GROUPS',
+  'ACCOUNTS',
   'SYSTEM',
 ];

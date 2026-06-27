@@ -40,6 +40,7 @@ export function getAuditDomain(action: string, resourceType: string): AuditDomai
   if (prefix === 'macro' || prefix === 'macro_version' || resourceType === 'macro' || resourceType === 'macro_version') return 'MACROS';
   if (prefix === 'devices' || resourceType === 'device') return 'DEVICES';
   if (prefix === 'device_group' || resourceType === 'device_group') return 'DEVICE_GROUPS';
+  if (prefix === 'account' || resourceType === 'account') return 'ACCOUNTS';
   return 'SYSTEM';
 }
 
@@ -55,6 +56,8 @@ export function getAuditDomainLabel(domain: AuditDomain) {
       return 'Devices';
     case 'DEVICE_GROUPS':
       return 'Device Groups';
+    case 'ACCOUNTS':
+      return 'Accounts';
     case 'SYSTEM':
     default:
       return 'System';
@@ -76,6 +79,9 @@ export function getAuditActionLabel(action: string) {
     'device_group.create': 'Device Group Created',
     'device_group.add_device': 'Device Added To Group',
     'device_group.remove_device': 'Device Removed From Group',
+    'account.create': 'Account Created',
+    'account.update': 'Account Updated',
+    'account.delete': 'Account Deleted',
   };
 
   return explicitLabels[action] ?? action.split('.').map(humanizeToken).join(' ');
@@ -91,6 +97,8 @@ export function getAuditResourceLabel(resourceType: string) {
       return 'Macro Version';
     case 'device_group':
       return 'Device Group';
+    case 'account':
+      return 'Account';
     default:
       return humanizeToken(resourceType);
   }

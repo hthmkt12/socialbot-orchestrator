@@ -17,6 +17,8 @@
     "../../src/engine/step-timeout.ts",
     "../../src/lib/database.types.ts",
     "../../src/lib/action-budget-types.ts",
-    "../../src/lib/action-budget-enforcer.ts"
+    "../../src/lib/action-budget-enforcer.ts",
+    "../../src/lib/account-block-detector.ts",
+    "../../src/lib/database.types.ts"
   ]
 }
