@@ -79,6 +79,16 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Engagement analytics (followers gained, likes per post, 30-day trending) ✅
 - Tiered pricing: Free/Pro/Enterprise ✅
 
+### Phase 6: Object Storage (Q3 2027)
+- Large payload extraction from DB ✅
+- Supabase Storage buckets & RLS ✅
+- Generate signed URLs in frontend ✅
+
+### Phase 7: Concrete Social Bots (Q4 2027)
+- Concrete Instagram/TikTok macro templates
+- Execution engine looping / `foreach` steps
+- Anti-detection engine (random delays, variance) in worker
+
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
 - Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
