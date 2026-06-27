@@ -124,7 +124,7 @@ export function buildRunArtifactStepKey(deviceId: string | null, stepId: string 
   return deviceId && stepId ? `${deviceId}::${stepId}` : null;
 }
 
-export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
+export function normalizeRunArtifact(artifact: Artifact & { storage_path?: string | null }): RunArtifactPreview {
   const metadata = isRecord(artifact.metadata_json) ? artifact.metadata_json : {};
   const stepId = asString(metadata.stepId);
   const base64 = asString(metadata.base64);
@@ -133,6 +133,7 @@ export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
   const source = asString(metadata.source);
   const jsonPayload = readJsonPayload(metadata);
   const isOversized = artifact.size > MAX_INLINE_PREVIEW_BYTES;
+  const isObjectStorage = Boolean(artifact.storage_path);
 
   const imageSrc = artifact.type === 'SCREENSHOT' && base64 && !isOversized
     ? `data:${artifact.content_type};base64,${base64}`
@@ -153,7 +154,7 @@ export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
         : 'binary';
   const evidenceDisplay = getEvidenceDisplay(artifact.type);
   const linkage = getLinkageStatus(artifact.device_id, stepId);
-  const previewAvailability = getPreviewAvailability(previewKind, Boolean(imageSrc || previewText), isOversized);
+  const previewAvailability = getPreviewAvailability(previewKind, Boolean(imageSrc || previewText || isObjectStorage), isOversized);
 
   return {
     artifact,
@@ -167,8 +168,8 @@ export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
     rawMetadataPreviewText: buildRawMetadataPreviewText(metadata, isOversized),
     ...evidenceDisplay,
     ...linkage,
-    storageModeLabel: 'Inline pilot evidence',
-    storageStatusLabel: 'Object storage deferred',
+    storageModeLabel: isObjectStorage ? 'Supabase Storage' : 'Inline pilot evidence',
+    storageStatusLabel: isObjectStorage ? 'Stored remotely' : 'Object storage deferred',
     ...previewAvailability,
   };
 }

@@ -32,7 +32,7 @@ Date: 2026-06-27
 ## Next
 - Normalize docs/spec workflow around `specs/` for new work. ✅
 - Modularize oversized UI files after runtime proof remains stable. ✅
-- Implement object storage only if artifact thresholds are exceeded or external sharing/audit packages become required.
+
 - Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
 - Keep authenticated route lazy-loading in place; main Vite chunk is now below warning threshold.
 

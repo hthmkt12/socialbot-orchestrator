@@ -1,4 +1,6 @@
 import Badge from '../ui/Badge';
+import { useArtifactUrl } from '../../hooks/use-artifact-url';
+import Spinner from '../ui/Spinner';
 import type { RunArtifactPreview } from '../../lib/run-artifacts';
 
 const evidenceVariant: Record<RunArtifactPreview['evidenceKind'], 'blue' | 'teal' | 'gray'> = {
@@ -10,6 +12,10 @@ const evidenceVariant: Record<RunArtifactPreview['evidenceKind'], 'blue' | 'teal
 
 export function RunArtifactPreviewCard({ artifact }: { artifact: RunArtifactPreview }) {
   const createdAt = artifact.timestamp ?? artifact.artifact.created_at;
+  const { url: storageUrl, isLoading: isUrlLoading, error: urlError } = useArtifactUrl(artifact.artifact as any); // eslint-disable-line @typescript-eslint/no-explicit-any
+  
+  const finalImageSrc = artifact.imageSrc || (artifact.previewKind === 'image' ? storageUrl : null);
+  const finalPreviewText = artifact.previewText || (artifact.previewKind === 'text' && storageUrl ? 'Text content available via storage URL (click to download)' : null);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
@@ -36,21 +42,24 @@ export function RunArtifactPreviewCard({ artifact }: { artifact: RunArtifactPrev
         {artifact.linkageStatus !== 'linked' && <p className="text-amber-700">{artifact.linkageMessage}</p>}
       </div>
 
-      {artifact.imageSrc && (
+      {isUrlLoading && <div className="p-4 flex justify-center"><Spinner size="sm" /></div>}
+      {urlError && <div className="p-4 text-red-500 text-xs">Failed to load image from storage</div>}
+      
+      {finalImageSrc && !isUrlLoading && (
         <img
-          src={artifact.imageSrc}
+          src={finalImageSrc}
           alt={`Artifact ${artifact.artifact.id}`}
           className="w-full rounded-lg border border-gray-200 bg-gray-50"
         />
       )}
 
-      {!artifact.imageSrc && artifact.previewText && (
+      {!finalImageSrc && finalPreviewText && (
         <pre className="max-h-44 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-[10px] text-gray-700 whitespace-pre-wrap">
-          {artifact.previewText}
+          {finalPreviewText}
         </pre>
       )}
 
-      {!artifact.imageSrc && !artifact.previewText && (
+      {!finalImageSrc && !finalPreviewText && !isUrlLoading && (
         <div className="space-y-2">
           <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
             {artifact.previewAvailabilityLabel}: {artifact.previewAvailabilityReason}

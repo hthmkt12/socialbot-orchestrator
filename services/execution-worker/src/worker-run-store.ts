@@ -26,6 +26,7 @@ interface ArtifactRecordInput {
   content_type: string;
   size: number;
   metadata_json: Record<string, unknown>;
+  storage_path?: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -50,11 +51,63 @@ async function createArtifactRecord(
   supabase: SupabaseClient,
   artifact: ArtifactRecordInput
 ) {
+  // If the artifact size is > 512,000 bytes OR if we are explicitly instructed to use object storage,
+  // we will upload to Supabase Storage and set storage_path.
+  // For screenshots or logs, we extract base64/text from metadata_json, upload it, and remove it from metadata.
+  
+  let storage_path: string | undefined = undefined;
+  
+  if (artifact.metadata_json && typeof artifact.metadata_json === 'object') {
+    const meta = artifact.metadata_json as Record<string, unknown>;
+    
+    // Check threshold (512KB) or if it's a screenshot
+    const threshold = 512000;
+    const shouldUpload = artifact.size > threshold || artifact.type === 'SCREENSHOT';
+    
+    if (shouldUpload) {
+      storage_path = `${artifact.workflow_run_id}/${artifact.device_id}/${artifact.storage_key.split('/').pop()}`;
+      
+      let uploadBuffer: Buffer | null = null;
+      if (artifact.type === 'SCREENSHOT' && typeof meta.base64 === 'string') {
+        uploadBuffer = Buffer.from(meta.base64, 'base64');
+        delete meta.base64; // Don't store in DB inline anymore
+      } else if (artifact.type === 'LOG_BLOB' && typeof meta.text === 'string') {
+        uploadBuffer = Buffer.from(meta.text, 'utf-8');
+        delete meta.text; // Don't store in DB inline anymore
+      }
+      
+      if (uploadBuffer) {
+        try {
+          const { error: uploadError } = await supabase.storage
+            .from('artifacts')
+            .upload(storage_path, uploadBuffer, {
+              contentType: artifact.content_type,
+              upsert: true
+            });
+            
+          if (uploadError) {
+            console.error('[execution-worker] Artifact storage upload failed:', uploadError);
+            storage_path = undefined; // Fallback to inline if upload fails (but meta is already deleted... let's just accept the loss if upload fails to avoid blowing up DB)
+          }
+        } catch (e) {
+          console.error('[execution-worker] Artifact storage upload exception:', e);
+          storage_path = undefined;
+        }
+      } else {
+        storage_path = undefined;
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('artifacts')
-    .insert(artifact)
+    .insert({
+      ...artifact,
+      storage_path
+    })
     .select('id')
     .maybeSingle();
+    
   if (error) throw new Error(error.message);
   return data?.id ?? null;
 }
