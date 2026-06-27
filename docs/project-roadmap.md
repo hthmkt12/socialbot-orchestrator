@@ -94,6 +94,11 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Applied chunked Promise.all to prevent database/memory exhaustion
 - Worker now interleaves steps for multi-device targets
 
+### Phase 9: Laixi Clean-path Proof (Q2 2028)
+- Implement `laixi-step-backend.ts` execution mappings
+- Build HTTP wrapper for Laixi Gateway API calls
+- Verify worker payload translation for `DEVICE_BACKEND=laixi`
+
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
 - Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
