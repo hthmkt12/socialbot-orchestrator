@@ -15,7 +15,9 @@ import {
   canPerformAction,
   daysInWarmUp,
 } from '../lib/account-warmup-engine';
-import type { Account } from '../lib/database.types';
+import { getAccountBudgets } from '../lib/action-budget-enforcer';
+import { ACTION_TYPE_LABELS } from '../lib/action-budget-types';
+import type { Account, AccountActionType } from '../lib/database.types';
 import type { AdvancementResult } from '../lib/account-warmup-auto-advance';
 
 
@@ -49,6 +51,7 @@ function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: {
   const days = daysInWarmUp(account.warm_up_started_at);
   const canAdvance = recommendedStage > account.warm_up_stage;
   const usagePct = Math.min(100, Math.round((account.current_action_count / account.daily_action_limit) * 100));
+  const budgets = getAccountBudgets(account);
 
   return (
     <div
@@ -115,6 +118,19 @@ function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: {
           <p className="text-lg font-bold text-gray-900">{usagePct}%</p>
           <p className="text-[10px] text-gray-500 font-medium">Usage</p>
         </div>
+      </div>
+
+      {/* Per-type budget breakdown */}
+      <div className="flex flex-wrap gap-1 mb-3">
+        {(Object.keys(budgets) as AccountActionType[]).map((type) => {
+          const bgt = budgets[type];
+          return (
+            <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">
+              <span className="font-semibold">{ACTION_TYPE_LABELS[type]}</span>
+              {bgt.daily}
+            </span>
+          );
+        })}
       </div>
 
       {/* Usage bar */}

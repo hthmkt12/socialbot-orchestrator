@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import Modal from '../ui/Modal';
+import { computeDefaultBudgets, ACTION_TYPE_LABELS } from '../../lib/action-budget-types';
 import type { AccountPlatform } from '../../lib/database.types';
 
 interface CreateAccountModalProps {
@@ -19,6 +20,7 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
   const [password, setPassword] = useState('');
   const [platform, setPlatform] = useState<AccountPlatform>('instagram');
   const [dailyLimit, setDailyLimit] = useState(100);
+  const budgetMap = useMemo(() => computeDefaultBudgets(dailyLimit), [dailyLimit]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -84,6 +86,19 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
             max={1000}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
           />
+        </div>
+
+        {/* Budget breakdown preview */}
+        <div>
+          <p className="block text-sm font-medium text-gray-700 mb-1.5">Action Budget Breakdown</p>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(budgetMap).map(([type, budget]) => (
+              <span key={type} className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-gray-100 text-gray-600">
+                <span className="font-semibold">{ACTION_TYPE_LABELS[type as keyof typeof ACTION_TYPE_LABELS]}</span>
+                {budget.daily}/d
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

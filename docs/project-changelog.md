@@ -2,6 +2,11 @@
 
 ## 2026-06-27
 
+- **Action budget management system**: Created `action-budget-types.ts` and `action-budget-enforcer.ts` defining per-action-type budgets (like/follow/comment/post/share) as configurable daily/hourly limits derived from `daily_action_limit`. Budget enforcement library provides `checkActionBudget()`, `getAccountBudgets()`, `getTodayActionCounts()`, and `getBudgetUsages()` for shared use between frontend and worker. Default budget split: 40% likes, 25% follows, 15% comments, 10% posts, 10% shares.
+- **Budget breakdown in health cards**: Social Dashboard account health cards now show per-type daily budget allocations as compact badges (e.g. "Likes 40", "Follows 25") below the action stats row.
+- **Budget preview in account form**: Create Account modal shows a live budget breakdown preview that updates as the daily limit value changes.
+- **Worker runtime budget enforcement**: Execution worker now checks per-type action budgets before executing budget-consuming steps (`params.actionBudgetType`). If daily budget exceeded or account blocked, step fails with `BUDGET_EXCEEDED` error. On successful execution, records action in `account_action_history` and increments `current_action_count`. Social templates annotated: Instagram like/follow, TikTok like.
+
 - **Social pivot Phase 0 (Foundation) started**: Repositioned platform for social media automation (Instagram, TikTok, Facebook). Updated README, project-overview-pdr, roadmap, and codebase-summary with social-first positioning and 6-phase strategic roadmap.
 - **Account schema**: Created migration `20260627000001_account_tables.sql` with `accounts` table (platform, warm-up stages, action limits, block detection) and `account_action_history` table (per-action audit trail). RLS enforced, indexes added.
 - **Account types and hooks**: Added `Account`, `AccountActionHistory` types to `database.types.ts`. Created `account-service-helpers.ts` with full CRUD + action recording. Created `use-accounts.ts` React Query hooks (useAccounts, useAccount, useCreateAccount, useUpdateAccount, useDeleteAccount, useAccountHistory, useRecordAccountAction).

@@ -4,6 +4,8 @@ import type { Device } from '../../../src/lib/database.types';
 import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/engine/resolver';
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout';
 import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers';
+import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer';
+import type { Account, AccountActionType, AccountActionHistory } from '../../../src/lib/database.types';
 import type { DeviceStepBackend } from './device-step-backend';
 import {
   createLogArtifact,
@@ -255,6 +257,22 @@ export class SingleDeviceStepRunner {
   }
 
   private async executeDeviceStepWithRetry(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
+    /* Action budget check: before executing a budget-consuming step, verify the
+       account has remaining capacity for this action type today. */
+    const budgetCheck = await this.budgetCheckForStep(step);
+    if (budgetCheck && !budgetCheck.allowed) {
+      await this.saveStep({
+        runId: this.params.runId,
+        step,
+        deviceId: this.params.device.id,
+        stepIndex,
+        status: 'FAILED',
+        retryCount: 0,
+        errorPayload: { code: 'BUDGET_EXCEEDED', message: budgetCheck.reason ?? 'Action budget exceeded', timestamp: new Date().toISOString() },
+      });
+      return { status: 'FAILED' as const };
+    }
+
     const timeoutMs = step.policy?.timeoutMs ?? this.params.definition.execution.defaultTimeoutMs;
     const maxRetries = Math.max(0, step.policy?.maxRetries ?? this.params.definition.execution.maxRetries);
 
@@ -311,6 +329,7 @@ export class SingleDeviceStepRunner {
             output: result.output,
             screenshotArtifactId,
           });
+          await this.recordStepAction(step, true);
           return { status: 'SUCCESS' as const };
         }
 
@@ -367,6 +386,88 @@ export class SingleDeviceStepRunner {
     }
 
     return { status: 'FAILED' as const };
+  }
+
+  /* ── Action budget helpers ── */
+
+  private static readonly VALID_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share']);
+
+  /** Check action budget for a step that declares `params.actionBudgetType`.
+   *  Returns null when the step is not budget-gated. */
+  private async budgetCheckForStep(step: MacroStep): Promise<BudgetCheckResult | null> {
+    const actionType = step.params?.actionBudgetType;
+    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.VALID_ACTION_TYPES.has(actionType)) return null;
+
+    const accountId = this.params.inputVariables?.accountId;
+    if (typeof accountId !== 'string') return null;
+
+    const { data: account } = await this.params.supabase
+      .from('accounts')
+      .select('*')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    if (!account) return null; // account missing → don't block execution
+
+    if ((account as Account).is_blocked) {
+      return {
+        allowed: false,
+        dailyRemaining: 0,
+        dailyBudget: 0,
+        hourlyRemaining: 0,
+        hourlyBudget: 0,
+        reason: `Account blocked: ${(account as Account).detected_block_reason ?? 'unknown'}`,
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { data: history } = await this.params.supabase
+      .from('account_action_history')
+      .select('*')
+      .eq('account_id', accountId)
+      .gte('created_at', today.toISOString());
+
+    const todayCounts = getTodayActionCounts((history ?? []) as AccountActionHistory[], accountId);
+    return checkActionBudget(account as Account, actionType as AccountActionType, todayCounts);
+  }
+
+  /** Record a completed action in account_action_history and increment current_action_count. */
+  private async recordStepAction(step: MacroStep, success: boolean): Promise<void> {
+    const actionType = step.params?.actionBudgetType;
+    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.VALID_ACTION_TYPES.has(actionType)) return;
+
+    const accountId = this.params.inputVariables?.accountId;
+    if (typeof accountId !== 'string') return;
+
+    try {
+      await this.params.supabase.from('account_action_history').insert({
+        account_id: accountId,
+        action_type: actionType,
+        step_id: step.id,
+        success,
+      });
+
+      if (success) {
+        const { data: account } = await this.params.supabase
+          .from('accounts')
+          .select('current_action_count')
+          .eq('id', accountId)
+          .maybeSingle();
+
+        if (account) {
+          await this.params.supabase
+            .from('accounts')
+            .update({
+              current_action_count: ((account as { current_action_count: number }).current_action_count ?? 0) + 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', accountId);
+        }
+      }
+    } catch {
+      /* Best-effort recording — don't fail the step if tracking fails. */
+    }
   }
 
   private async saveStep(

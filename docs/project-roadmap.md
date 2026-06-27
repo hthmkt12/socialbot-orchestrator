@@ -60,7 +60,9 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Account-to-macro mapping in run wizard ✅
 
 ### Phase 3: Safety Limits & Warm-Up Sequences (Q1 2027)
-- Enforce max posts/day, max likes/hour, cooldowns
+- Action budget types + enforcement library created ✅ (per-type budgets, checkActionBudget, getBudgetUsages)
+- Budget breakdown in health cards and account form ✅
+- Worker runtime enforcement (check budget before social step execution) ✅
 - Automated warm-up sequences ✅ (gradual action increase over 7-21 days)
 - Account health dashboard ✅
 - Daily action count reset ✅ (per-calendar-day reset + limit adjustment)
