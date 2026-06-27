@@ -56,6 +56,30 @@ export const GUIDED_BUILDER_STEPS: GuidedBuilderStepDefinition[] = [
     description: 'Stop the run with a human-readable reason.',
     defaultParams: { reason: 'Stopped by workflow rule' },
   },
+  {
+    type: 'extract_var',
+    label: 'Extract Variable',
+    description: 'Extract text from device (ADB/UI Tree) into a variable.',
+    defaultParams: { source: 'adb', command: '', regex: '', variableName: 'myVar' },
+  },
+  {
+    type: 'conditional',
+    label: 'If / Else',
+    description: 'Branch execution based on a condition.',
+    defaultParams: { left: '{{myVar}}', operator: 'equals', right: 'value' },
+  },
+  {
+    type: 'while_loop',
+    label: 'While Loop',
+    description: 'Repeat steps while condition is true.',
+    defaultParams: { left: '{{myVar}}', operator: 'not_equals', right: 'done', maxIterations: 10 },
+  },
+  {
+    type: 'try_catch',
+    label: 'Try / Catch',
+    description: 'Run steps, catch failures, and recover.',
+    defaultParams: {},
+  },
 ];
 
 export const GUIDED_STEP_TYPES = new Set<StepType>(GUIDED_BUILDER_STEPS.map((step) => step.type));
@@ -70,4 +94,8 @@ export const STEP_ID_PREFIX: Record<GuidedBuilderStepType, string> = {
   get_current_app: 'current',
   approval_checkpoint: 'approval',
   stop: 'stop',
+  extract_var: 'extract',
+  conditional: 'if',
+  while_loop: 'while',
+  try_catch: 'try',
 };

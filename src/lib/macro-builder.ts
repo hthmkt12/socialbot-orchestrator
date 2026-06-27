@@ -16,7 +16,11 @@ export type GuidedBuilderStepType =
   | 'screenshot'
   | 'get_current_app'
   | 'approval_checkpoint'
-  | 'stop';
+  | 'stop'
+  | 'extract_var'
+  | 'conditional'
+  | 'while_loop'
+  | 'try_catch';
 
 export interface GuidedBuilderCompatibility {
   supported: boolean;

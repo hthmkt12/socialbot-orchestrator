@@ -53,9 +53,83 @@ export function GuidedStepParamsEditor({ step, onChange }: GuidedStepParamsEdito
     case 'approval_checkpoint':
     case 'stop':
       return <Field label="Reason"><input value={String(step.params.reason ?? '')} onChange={(e) => updateParam('reason', e.target.value)} className={textClassName} /></Field>;
+    case 'extract_var':
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Field label="Source">
+            <select value={String(step.params.source ?? 'adb')} onChange={(e) => updateParam('source', e.target.value)} className={textClassName}>
+              <option value="adb">ADB Shell</option>
+              <option value="ui_tree">UI Tree</option>
+            </select>
+          </Field>
+          <Field label="Variable Name">
+            <input value={String(step.params.variableName ?? '')} onChange={(e) => updateParam('variableName', e.target.value)} className={textClassName} placeholder="myVar" />
+          </Field>
+          {step.params.source === 'adb' && (
+            <>
+              <Field label="Command">
+                <input value={String(step.params.command ?? '')} onChange={(e) => updateParam('command', e.target.value)} className={textClassName} placeholder="dumpsys battery" />
+              </Field>
+              <Field label="Regex Pattern (Optional)">
+                <input value={String(step.params.regex ?? '')} onChange={(e) => updateParam('regex', e.target.value)} className={textClassName} placeholder="level: (\d+)" />
+              </Field>
+            </>
+          )}
+        </div>
+      );
+    case 'conditional':
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Field label="Left">
+            <input value={String(step.params.left ?? '')} onChange={(e) => updateParam('left', e.target.value)} className={textClassName} placeholder="{{myVar}}" />
+          </Field>
+          <Field label="Operator">
+            <select value={String(step.params.operator ?? 'equals')} onChange={(e) => updateParam('operator', e.target.value)} className={textClassName}>
+              <option value="equals">Equals (==)</option>
+              <option value="not_equals">Not Equals (!=)</option>
+              <option value="contains">Contains</option>
+              <option value="starts_with">Starts With</option>
+              <option value="ends_with">Ends With</option>
+              <option value="gt">Greater Than (&gt;)</option>
+              <option value="lt">Less Than (&lt;)</option>
+              <option value="exists">Exists</option>
+            </select>
+          </Field>
+          <Field label="Right">
+            <input value={String(step.params.right ?? '')} onChange={(e) => updateParam('right', e.target.value)} className={textClassName} placeholder="expected value" />
+          </Field>
+        </div>
+      );
+    case 'while_loop':
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Field label="Left">
+            <input value={String(step.params.left ?? '')} onChange={(e) => updateParam('left', e.target.value)} className={textClassName} placeholder="{{myVar}}" />
+          </Field>
+          <Field label="Operator">
+            <select value={String(step.params.operator ?? 'not_equals')} onChange={(e) => updateParam('operator', e.target.value)} className={textClassName}>
+              <option value="equals">Equals (==)</option>
+              <option value="not_equals">Not Equals (!=)</option>
+              <option value="contains">Contains</option>
+              <option value="starts_with">Starts With</option>
+              <option value="ends_with">Ends With</option>
+              <option value="gt">Greater Than (&gt;)</option>
+              <option value="lt">Less Than (&lt;)</option>
+              <option value="exists">Exists</option>
+            </select>
+          </Field>
+          <Field label="Right">
+            <input value={String(step.params.right ?? '')} onChange={(e) => updateParam('right', e.target.value)} className={textClassName} placeholder="done" />
+          </Field>
+          <Field label="Max Iterations">
+            <input type="number" min={1} value={Number(step.params.maxIterations ?? 10)} onChange={(e) => updateParam('maxIterations', parseBuilderNumber(e.target.value))} className={textClassName} />
+          </Field>
+        </div>
+      );
     case 'get_current_app':
+    case 'try_catch':
     default:
-      return <p className="text-xs text-gray-500">This step has no required parameters in guided mode.</p>;
+      return <p className="text-xs text-gray-500">This step has no required parameters in guided mode. Advanced structure (steps, then, else, catch) requires the JSON editor.</p>;
   }
 }
 
