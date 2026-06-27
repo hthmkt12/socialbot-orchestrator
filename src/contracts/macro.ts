@@ -1,3 +1,6 @@
+/** Target social app for multi-app macro step routing. */
+export type TargetApp = 'instagram' | 'tiktok' | 'facebook' | null;
+
 export type StepType =
   | 'wait'
   | 'launch_app'
@@ -30,6 +33,9 @@ export interface MacroStep {
   type: StepType;
   params: Record<string, unknown>;
   policy?: StepPolicy;
+  /** Target social app for this step. When set, the execution worker ensures
+   *  the target app is in the foreground before executing. */
+  targetApp?: Extract<TargetApp, string>;
   then?: MacroStep[];
   else?: MacroStep[];
   steps?: MacroStep[];
@@ -131,6 +137,9 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
         if (step.id) ids.add(step.id as string);
         if (!step.type || !validStepTypes.includes(step.type as StepType)) {
           errors.push(`${sp}.type "${step.type}" is not valid`);
+        }
+        if (step.targetApp !== undefined && !['instagram', 'tiktok', 'facebook'].includes(step.targetApp as string)) {
+          errors.push(`${sp}.targetApp "${step.targetApp}" is not valid`);
         }
         if (step.then && Array.isArray(step.then)) validateSteps(step.then, `${sp}.then`);
         if (step.else && Array.isArray(step.else)) validateSteps(step.else, `${sp}.else`);
