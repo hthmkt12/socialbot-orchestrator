@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BarChart3, Users, Activity, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
 import { useAccounts, useUpdateAccount } from '../hooks/use-accounts';
 import { useUIStore } from '../stores/ui';
@@ -7,6 +8,7 @@ import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import Badge from '../components/ui/Badge';
 import { WarmUpAdvancementPanel } from '../components/accounts/warmup-progression-panel';
+import AccountActionHistoryPanel from '../components/accounts/account-action-history-panel';
 import {
   getStageInfo,
   computeRecommendedStage,
@@ -36,7 +38,11 @@ function StatCard({ icon: Icon, label, value, color }: {
   );
 }
 
-function AccountHealthCard({ account, onStartWarmUp }: { account: Account; onStartWarmUp: (id: string) => void }) {
+function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: {
+  account: Account;
+  onStartWarmUp: (id: string) => void;
+  onShowHistory: (id: string) => void;
+}) {
   const stageInfo = getStageInfo(account.platform, account.warm_up_stage);
   const recommendedStage = computeRecommendedStage(account);
   const actionCheck = canPerformAction(account);
@@ -45,9 +51,15 @@ function AccountHealthCard({ account, onStartWarmUp }: { account: Account; onSta
   const usagePct = Math.min(100, Math.round((account.current_action_count / account.daily_action_limit) * 100));
 
   return (
-    <div className={`rounded-xl border p-5 bg-white transition-all hover:shadow-sm ${
-      account.is_blocked ? 'border-red-200' : usagePct >= 80 ? 'border-amber-200' : 'border-gray-200'
-    }`}>
+    <div
+      className={`rounded-xl border p-5 bg-white transition-all hover:shadow-sm cursor-pointer ${
+        account.is_blocked ? 'border-red-200' : usagePct >= 80 ? 'border-amber-200' : 'border-gray-200'
+      }`}
+      onClick={() => onShowHistory(account.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onShowHistory(account.id); }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -118,7 +130,7 @@ function AccountHealthCard({ account, onStartWarmUp }: { account: Account; onSta
       {/* Actions */}
       {account.warm_up_stage === 1 && !account.is_blocked && (
         <button
-          onClick={() => onStartWarmUp(account.id)}
+          onClick={(e) => { e.stopPropagation(); onStartWarmUp(account.id); }}
           className="w-full text-center py-2 text-xs font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors"
         >
           Start Warm-Up
@@ -136,6 +148,9 @@ export default function SocialDashboardPage() {
   const { readyAccounts, estimates, warmingUpCount, fullSpeedCount } =
     useWarmUpAdvancementState(accounts ?? []);
   const advanceAccounts = useAdvanceAccounts();
+
+  const [historyAccountId, setHistoryAccountId] = useState<string | null>(null);
+  const historyAccount = accounts?.find((a) => a.id === historyAccountId);
 
   const handleStartWarmUp = async (id: string) => {
     try {
@@ -227,10 +242,19 @@ export default function SocialDashboardPage() {
                     key={account.id}
                     account={account}
                     onStartWarmUp={handleStartWarmUp}
+                    onShowHistory={setHistoryAccountId}
                   />
                 ))}
               </div>
             </div>
+
+            {/* Action history modal */}
+            <AccountActionHistoryPanel
+              accountId={historyAccountId ?? ''}
+              accountLabel={historyAccount ? `${historyAccount.username} (${historyAccount.platform})` : ''}
+              open={!!historyAccountId}
+              onClose={() => setHistoryAccountId(null)}
+            />
           </>
         )}
       </div>
