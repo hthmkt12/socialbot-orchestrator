@@ -30,6 +30,7 @@ const FleetHealthPage = lazy(() => import('./pages/fleet-health-page'));
 const SystemMonitorPage = lazy(() => import('./pages/system-monitor-page'));
 const SchedulesPage = lazy(() => import('./pages/SchedulesPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,6 +80,7 @@ function AuthGate() {
         <Route path="/system-monitor" element={withPageFallback(<SystemMonitorPage />)} />
         <Route path="/schedules" element={withPageFallback(<SchedulesPage />)} />
         <Route path="/analytics" element={withPageFallback(<AnalyticsPage />)} />
+        <Route path="/pricing" element={withPageFallback(<PricingPage />)} />
         <Route path="*" element={<Navigate to="/devices" replace />} />
       </Route>
       </Routes>

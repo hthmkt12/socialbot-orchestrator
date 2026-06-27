@@ -18,6 +18,7 @@ import {
   PieChart,
   Wifi,
   WifiOff,
+  CreditCard,
 } from 'lucide-react';
 import { useLaixiStore } from '../../stores/laixi';
 import { useAuthStore } from '../../stores/auth';
@@ -34,6 +35,7 @@ const navItems = [
   { to: '/system-monitor', label: 'System Monitor', icon: ActivitySquare },
   { to: '/schedules', label: 'Schedules', icon: CalendarClock },
   { to: '/analytics', label: 'Analytics', icon: PieChart },
+  { to: '/pricing', label: 'Pricing & Plans', icon: CreditCard },
   { to: '/macros', label: 'Macros', icon: FolderOpen },
   { to: '/runs', label: 'Runs', icon: Play },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
