@@ -122,12 +122,54 @@ export class SingleDeviceStepRunner {
   private async executeStep(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
     if (step.type === 'conditional') return this.handleConditional(step, stepIndex);
     if (step.type === 'group' && step.steps) return this.handleGroup(step, stepIndex);
+    if (step.type === 'loop' && step.steps) return this.handleLoop(step, stepIndex);
     if (step.type === 'approval_checkpoint') return this.handleApprovalCheckpoint(step, stepIndex);
     if (step.policy?.requiresApproval) {
       const gate = await this.resolveApprovalGate(step, stepIndex, `Approval required for ${step.type}`);
       if (gate !== 'APPROVED') return { status: gate === 'WAITING_APPROVAL' ? 'WAITING_APPROVAL' : 'CANCELLED' };
     }
     return this.executeDeviceStepWithRetry(step, stepIndex);
+  }
+
+  private async handleLoop(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
+    const loopCount = Number(this.resolveTemplate(step.params?.count as string | undefined)) || 1;
+    
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'RUNNING',
+      retryCount: 0,
+    });
+
+    let localCompleted = 0;
+    
+    for (let i = 0; i < loopCount; i++) {
+      const res = await this.executeSubSequence(step.steps || [], stepIndex + localCompleted + 1);
+      localCompleted += res.completedSteps;
+      if (res.status !== 'COMPLETED') {
+        await this.saveStep({
+          runId: this.params.runId,
+          step,
+          deviceId: this.params.device.id,
+          stepIndex,
+          status: res.status,
+          retryCount: 0,
+        });
+        return { status: res.status };
+      }
+    }
+
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'SUCCESS',
+      retryCount: 0,
+    });
+    return { status: 'SUCCESS' };
   }
 
   private async handleGroup(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {

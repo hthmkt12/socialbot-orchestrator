@@ -16,6 +16,19 @@ export function MacroDetailConfigPanel({ definition }: MacroDetailConfigPanelPro
         <ConfigMetric label="Max Retries" value={String(definition.execution.maxRetries)} />
         <ConfigMetric label="On Error" value={definition.execution.onError} />
       </div>
+      {definition.antiDetection && (
+        <>
+          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Anti-Detection Settings</h4>
+          </div>
+          <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <ConfigMetric label="Random Delay" value={definition.antiDetection.randomDelayMs ? `${definition.antiDetection.randomDelayMs[0]}-${definition.antiDetection.randomDelayMs[1]}ms` : 'Disabled'} />
+            <ConfigMetric label="Scroll Variance" value={definition.antiDetection.scrollVariance ? 'Enabled' : 'Disabled'} />
+            <ConfigMetric label="Tap Jitter" value={definition.antiDetection.tapJitterPx ? `${definition.antiDetection.tapJitterPx}px radius` : 'Disabled'} />
+            <ConfigMetric label="Fingerprint" value={definition.antiDetection.deviceFingerprint ? 'Enabled' : 'Disabled'} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

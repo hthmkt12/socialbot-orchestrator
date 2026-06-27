@@ -35,5 +35,7 @@ export const macroDetailStepTypeConfig: Record<string, { icon: typeof Timer; lab
   conditional: { icon: GitBranch, label: 'Conditional', color: 'text-sky-600 bg-sky-50' },
   foreach_device: { icon: Repeat, label: 'For Each Device', color: 'text-sky-600 bg-sky-50' },
   group: { icon: Hand, label: 'Group', color: 'text-gray-600 bg-gray-50' },
+  loop: { icon: Repeat, label: 'Loop', color: 'text-violet-600 bg-violet-50' },
+  ai_task: { icon: Terminal, label: 'AI Task', color: 'text-emerald-600 bg-emerald-50' },
   stop: { icon: Octagon, label: 'Stop', color: 'text-red-600 bg-red-50' },
 };

@@ -16,7 +16,8 @@ export type StepType =
   | 'foreach_device'
   | 'group'
   | 'stop'
-  | 'ai_task';
+  | 'ai_task'
+  | 'loop';
 
 export type OnErrorPolicy = 'stop' | 'continue' | 'skip';
 export type TargetMode = 'single_device' | 'device_group' | 'multi_device' | 'all_devices';
@@ -67,13 +68,15 @@ export interface MacroTarget {
 
 export interface AntiDetectionConfig {
   /** Random delay range [min, max] in ms applied between steps. */
-  randomDelayMs: [number, number];
+  randomDelayMs?: [number, number];
   /** Enable random scroll variance before tap/swipe actions. */
-  scrollVariance: boolean;
+  scrollVariance?: boolean;
   /** Pixel radius for tap coordinate jitter (simulates human imprecision). */
-  tapJitterPx: number;
+  tapJitterPx?: number;
   /** Cooldown range [min, max] in ms between consecutive actions. */
-  cooldownBetweenActionsMs: [number, number];
+  cooldownBetweenActionsMs?: [number, number];
+  /** Use browser/device fingerprinting logic if available. */
+  deviceFingerprint?: boolean;
 }
 
 export interface MacroDefinition {
@@ -124,6 +127,7 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
     'wait', 'launch_app', 'input_text', 'tap', 'swipe', 'screenshot',
     'get_current_app', 'adb', 'run_autox', 'approval_checkpoint',
     'conditional', 'foreach_device', 'group', 'stop', 'ai_task',
+    'loop'
   ];
 
   if (d.steps && Array.isArray(d.steps)) {

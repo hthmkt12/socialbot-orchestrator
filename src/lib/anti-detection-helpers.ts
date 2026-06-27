@@ -83,7 +83,8 @@ export function applyAntiDetection(
   }
 
   if (result.ms !== undefined) {
-    const [min, max] = config.randomDelayMs;
+    const delayConf = config.randomDelayMs || [3000, 8000];
+    const [min, max] = delayConf;
     result.ms = randomDelayMs(min, max);
   }
 
