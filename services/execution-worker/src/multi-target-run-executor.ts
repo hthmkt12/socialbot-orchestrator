@@ -65,40 +65,66 @@ export class MultiTargetRunExecutor {
       let waitingApproval = false;
       let lastError: { code: string; message: string } | undefined;
 
-      for (const device of context.devices) {
+      // Ensure thread-safe updates to local counters
+      const incrementSuccess = () => succeeded++;
+      const incrementFailed = (err?: { code: string; message: string }) => {
+        failed++;
+        if (err) lastError = err;
+      };
+      const incrementCancelled = () => cancelled++;
+      const markWaitingApproval = () => { waitingApproval = true; };
+
+      const MAX_CONCURRENT_DEVICES = 5;
+
+      const chunkArray = <T>(array: T[], size: number): T[][] => {
+        const result = [];
+        for (let i = 0; i < array.length; i += size) {
+          result.push(array.slice(i, i + size));
+        }
+        return result;
+      };
+
+      const chunks = chunkArray(context.devices, MAX_CONCURRENT_DEVICES);
+
+      for (const chunk of chunks) {
         if (await isRunCancelled(this.supabase, context.runId, claimToken)) {
-          cancelled = context.devices.length - succeeded - failed;
+          cancelled += context.devices.length - succeeded - failed - cancelled;
           break;
         }
 
-        const result = await executeOwnedDeviceRun({
-          supabase: this.supabase,
-          backend,
-          runId: context.runId,
-          claimToken,
-          device,
-          definition: context.definition,
-          triggeredByUserId: context.triggeredByUserId,
-          inputVariables: context.inputVariables,
-        });
+        await Promise.allSettled(chunk.map(async (device) => {
+          if (await isRunCancelled(this.supabase, context.runId, claimToken)) {
+            incrementCancelled();
+            return;
+          }
 
-        if (result.status === 'COMPLETED') {
-          succeeded += 1;
-          continue;
-        }
+          const result = await executeOwnedDeviceRun({
+            supabase: this.supabase,
+            backend,
+            runId: context.runId,
+            claimToken,
+            device,
+            definition: context.macroDefinition,
+          });
 
-        if (result.status === 'WAITING_APPROVAL') {
-          waitingApproval = true;
-          break;
-        }
+          if (result.status === 'SUCCESS' || result.status === 'COMPLETED') {
+            incrementSuccess();
+            return;
+          }
 
-        if (result.status === 'CANCELLED') {
-          cancelled = context.devices.length - succeeded - failed;
-          break;
-        }
+          if (result.status === 'CANCELLED') {
+            incrementCancelled();
+            return;
+          }
 
-        failed += 1;
-        lastError = result.error;
+          if (result.status === 'WAITING_APPROVAL') {
+            markWaitingApproval();
+            incrementFailed(result.error);
+            return;
+          }
+
+          incrementFailed(result.error);
+        }));
       }
 
       const aggregate = await aggregateRunResults(this.supabase, context.runId);
