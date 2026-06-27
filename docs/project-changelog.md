@@ -9,6 +9,8 @@
 - **Anti-detection engine**: Created `anti-detection-helpers.ts` with randomized delays, scroll variance, tap coordinate jitter, and cooldown utilities. Defined `AntiDetectionConfig` interface in `contracts/macro.ts` as canonical source. Sidebar branding updated to "Social Automation".
 - **Social engagement templates**: Pre-built `MacroDefinition` workflows for Instagram (like hashtag, follow accounts) and TikTok (like trending) in `social-engagement-templates.ts`. Registered in macro starter template picker alongside generic templates.
 - **Anti-detection execution integration**: `SingleDeviceStepRunner` now applies coordinate jitter and delay randomization to resolved step params when `antiDetection` config present in `MacroDefinition`. Adds random cooldown between successful steps for human-like pacing.
+- **Account warm-up progression engine**: Per-platform stage progression (Instagram/TikTok/Facebook) with day-based thresholds and recommended daily action limits. Account table shows computed stage info, Start Warm-Up button, advancement hints, and action limit status.
+- **Account CSV import**: CSV parser with validation (platform check, column count, empty fields, daily_limit parsing). Import modal with file picker, preview table, error display, and sample template download. 9-unit-test coverage.
 
 ## 2026-06-26
 

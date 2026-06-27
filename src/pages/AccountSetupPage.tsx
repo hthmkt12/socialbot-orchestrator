@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Upload, Users } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { AccountTable } from '../components/accounts/account-table';
 import { CreateAccountModal } from '../components/accounts/create-account-modal';
+import { CsvImportModal } from '../components/accounts/csv-import-modal';
 import EmptyState from '../components/ui/EmptyState';
 import Spinner from '../components/ui/Spinner';
 import { useAccounts, useCreateAccount, useDeleteAccount, useUpdateAccount } from '../hooks/use-accounts';
 import { useUIStore } from '../stores/ui';
 import type { AccountPlatform } from '../lib/database.types';
+import type { CsvAccountRow } from '../lib/account-csv-import-parser';
 
 export default function AccountSetupPage() {
   const { data: accounts, isLoading } = useAccounts();
   const [showCreate, setShowCreate] = useState(false);
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const createAccount = useCreateAccount();
   const deleteAccount = useDeleteAccount();
   const updateAccount = useUpdateAccount();
@@ -54,19 +57,48 @@ export default function AccountSetupPage() {
     }
   };
 
+  const handleCsvImport = async (rows: CsvAccountRow[]) => {
+    let success = 0;
+    let failed = 0;
+    for (const row of rows) {
+      try {
+        await createAccount.mutateAsync({
+          username: row.username,
+          encrypted_password: row.password,
+          platform: row.platform,
+          daily_action_limit: row.daily_limit,
+        });
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+    addToast(`Imported ${success} account${success !== 1 ? 's' : ''}${failed ? `, ${failed} failed` : ''}`, failed ? 'info' : 'success');
+    setShowCsvImport(false);
+  };
+
   return (
     <>
       <Header
         title="Account Setup"
         subtitle={`${accounts?.length ?? 0} accounts`}
         actions={
-          <button
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Account
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCsvImport(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Import CSV
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Account
+            </button>
+          </div>
         }
       />
 
@@ -105,6 +137,13 @@ export default function AccountSetupPage() {
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
         isSubmitting={createAccount.isPending}
+      />
+
+      <CsvImportModal
+        open={showCsvImport}
+        onClose={() => setShowCsvImport(false)}
+        onImport={handleCsvImport}
+        isImporting={createAccount.isPending}
       />
     </>
   );
