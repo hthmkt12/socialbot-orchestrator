@@ -13,6 +13,7 @@ import {
   Cable,
   Bot,
   UserCircle,
+  BarChart3,
 } from 'lucide-react';
 import { useLaixiStore } from '../../stores/laixi';
 import { useAuthStore } from '../../stores/auth';
@@ -24,6 +25,7 @@ const navItems = [
   { to: '/device-setup', label: 'Device Setup', icon: Cable },
   { to: '/mobile-mcp-orchestrator', label: 'MCP Orchestrator', icon: Bot },
   { to: '/account-setup', label: 'Accounts', icon: UserCircle },
+  { to: '/social-dashboard', label: 'Social Dashboard', icon: BarChart3 },
   { to: '/macros', label: 'Macros', icon: FolderOpen },
   { to: '/runs', label: 'Runs', icon: Play },
   { to: '/approvals', label: 'Approvals', icon: ShieldCheck },

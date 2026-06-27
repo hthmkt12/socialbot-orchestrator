@@ -25,6 +25,7 @@ const DemoPage = lazy(() => import('./pages/DemoPage'));
 const DeviceSetupPage = lazy(() => import('./pages/DeviceSetupPage'));
 const MobileMcpOrchestratorPage = lazy(() => import('./pages/mobile-mcp-orchestrator-page'));
 const AccountSetupPage = lazy(() => import('./pages/AccountSetupPage'));
+const SocialDashboardPage = lazy(() => import('./pages/social-dashboard-page'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +70,7 @@ function AuthGate() {
           element={withPageFallback(<MobileMcpOrchestratorPage />)}
         />
         <Route path="/account-setup" element={withPageFallback(<AccountSetupPage />)} />
+        <Route path="/social-dashboard" element={withPageFallback(<SocialDashboardPage />)} />
         <Route path="*" element={<Navigate to="/devices" replace />} />
       </Route>
       </Routes>
