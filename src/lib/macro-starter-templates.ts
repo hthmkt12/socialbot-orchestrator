@@ -1,4 +1,5 @@
 import { SAMPLE_MACROS, type MacroDefinition } from '../contracts/macro';
+import { SOCIAL_TEMPLATES } from '../contracts/social-engagement-templates';
 import {
   analyzeMacroDefinitionForGuidedBuilder,
   cloneMacroDefinition,
@@ -57,7 +58,7 @@ function summarizeTemplateFallback(reasons: string[]): string {
 }
 
 export function getStarterMacroTemplates(): MacroStarterTemplate[] {
-  return STARTER_TEMPLATE_CONFIG.flatMap((templateConfig) => {
+  const generic = STARTER_TEMPLATE_CONFIG.flatMap((templateConfig) => {
     const definition = SAMPLE_MACROS.find((macro) => macro.meta.key === templateConfig.key);
     if (!definition) return [];
 
@@ -79,4 +80,22 @@ export function getStarterMacroTemplates(): MacroStarterTemplate[] {
       definition: clonedDefinition,
     }];
   });
+
+  const social = Object.values(SOCIAL_TEMPLATES).map((template) => {
+    const def: MacroDefinition = { ...template.definition, antiDetection: template.antiDetection };
+    return {
+      key: def.meta.key,
+      name: def.meta.name,
+      description: def.meta.description ?? '',
+      tags: [...(def.meta.tags ?? []), template.platform],
+      targetMode: def.target.mode,
+      stepCount: def.steps.length,
+      opensIn: 'json' as const,
+      opensInLabel: 'Raw JSON',
+      opensInReason: 'Social engagement template with anti-detection config.',
+      definition: def,
+    };
+  });
+
+  return [...generic, ...social];
 }
