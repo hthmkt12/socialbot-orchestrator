@@ -33,7 +33,8 @@ export function sanitizeLlmMacroOutput(
 
   if (raw.steps && Array.isArray(raw.steps)) {
     const idCounter = { value: 0 };
-    result.steps = sanitizeSteps(raw.steps, idCounter);
+    const seenIds = new Set<string>();
+    result.steps = sanitizeSteps(raw.steps, idCounter, seenIds);
   }
 
   return result;
@@ -71,6 +72,7 @@ function sanitizeExecution(exec: unknown): Record<string, unknown> {
 function sanitizeSteps(
   steps: unknown[],
   idCounter: { value: number },
+  seenIds: Set<string>,
 ): Record<string, unknown>[] {
   const result: Record<string, unknown>[] = [];
 
@@ -82,9 +84,16 @@ function sanitizeSteps(
     if (!VALID_STEP_TYPES.has(type)) continue; // drop invalid step types
 
     idCounter.value++;
-    const id = typeof step.id === "string" && step.id
+    let id = typeof step.id === "string" && step.id
       ? step.id
       : `${type}_${idCounter.value}`;
+
+    // Dedup: if ID already seen, generate a unique one
+    while (seenIds.has(id)) {
+      idCounter.value++;
+      id = `${type}_${idCounter.value}`;
+    }
+    seenIds.add(id);
 
     const sanitized: Record<string, unknown> = {
       id,
@@ -94,16 +103,16 @@ function sanitizeSteps(
 
     // Nested step arrays
     if (step.then && Array.isArray(step.then)) {
-      sanitized.then = sanitizeSteps(step.then, idCounter);
+      sanitized.then = sanitizeSteps(step.then, idCounter, seenIds);
     }
     if (step.else && Array.isArray(step.else)) {
-      sanitized.else = sanitizeSteps(step.else, idCounter);
+      sanitized.else = sanitizeSteps(step.else, idCounter, seenIds);
     }
     if (step.steps && Array.isArray(step.steps)) {
-      sanitized.steps = sanitizeSteps(step.steps, idCounter);
+      sanitized.steps = sanitizeSteps(step.steps, idCounter, seenIds);
     }
     if (step.catch && Array.isArray(step.catch)) {
-      sanitized.catch = sanitizeSteps(step.catch, idCounter);
+      sanitized.catch = sanitizeSteps(step.catch, idCounter, seenIds);
     }
 
     result.push(sanitized);

@@ -43,9 +43,6 @@ Deno.serve(async (req: Request) => {
     if (!authHeader) return json({ error: "Missing auth" }, 401);
 
     const supabaseUrl = readRequiredEnv("SUPABASE_URL");
-    const supabaseServiceKey = readRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     const anonKey = readRequiredEnv("SUPABASE_ANON_KEY");
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
