@@ -110,7 +110,7 @@ async function main() {
     const bridgeHealth = await fetchJson(`${bridgeUrl}/health`);
     addCheck('bridge.health', bridgeHealth.ok, `${bridgeUrl}/health -> ${bridgeHealth.status}`);
     const bridgeDevices = await fetchJson(`${bridgeUrl}/devices`);
-    const ids = bridgeDevices.body?.output?.devices?.map((device) => device.id) ?? [];
+    const ids = bridgeDevices.body?.output?.devices?.map((device) => device.id ?? device.serial) ?? [];
     addCheck('bridge.devices', ids.length >= deviceMatches.length, ids.join(', ') || 'none');
     if (expectedSerials.length) {
       const missing = expectedSerials.filter((serial) => !ids.includes(serial));

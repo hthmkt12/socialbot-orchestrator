@@ -67,7 +67,7 @@ async function readBridgeOnline() {
   try {
     const response = await fetch(`${bridgeUrl}/devices`, { signal: AbortSignal.timeout(3000) });
     const body = await response.json();
-    const online = body?.output?.devices?.map((device) => device.id).filter(Boolean) ?? [];
+    const online = body?.output?.devices?.map((device) => device.id ?? device.serial).filter(Boolean) ?? [];
     return { ok: response.ok, online, status: response.status };
   } catch (error) {
     return { ok: false, online: [], error: error instanceof Error ? error.message : String(error) };

@@ -117,7 +117,7 @@ function summarizeReport(report) {
 
 function bridgeSerials(report) {
   const bridgeDevices = report.services.find((service) => service.name === 'bridge.devices');
-  return bridgeDevices?.body?.output?.devices?.map((device) => device.id).filter(Boolean) ?? [];
+  return bridgeDevices?.body?.output?.devices?.map((device) => device.id ?? device.serial).filter(Boolean) ?? [];
 }
 
 function latestAdbSyncSerials(report) {

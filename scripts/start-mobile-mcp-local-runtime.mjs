@@ -152,6 +152,7 @@ function startService(service) {
     env: { ...process.env, ...envFile, ...service.env },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
+    shell: isWindows,
   });
   child.stdout.pipe(stdout);
   child.stderr.pipe(stderr);
