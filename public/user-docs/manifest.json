@@ -1,0 +1,25 @@
+[
+  {
+    "id": "getting-started",
+    "title": "Getting Started",
+    "sections": [
+      { "id": "introduction", "title": "Introduction", "file": "/user-docs/introduction.md" },
+      { "id": "connecting-devices", "title": "Connecting Devices", "file": "/user-docs/connecting-devices.md" }
+    ]
+  },
+  {
+    "id": "automation",
+    "title": "Automation & Macros",
+    "sections": [
+      { "id": "macro-builder", "title": "Macro Builder", "file": "/user-docs/macro-builder.md" },
+      { "id": "anti-detection", "title": "Anti-Detection Engine", "file": "/user-docs/anti-detection.md" }
+    ]
+  },
+  {
+    "id": "accounts",
+    "title": "Account Management",
+    "sections": [
+      { "id": "warmup-schedules", "title": "Warm-up Schedules", "file": "/user-docs/warmup-schedules.md" }
+    ]
+  }
+]

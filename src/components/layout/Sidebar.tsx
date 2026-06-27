@@ -1,46 +1,17 @@
 import { NavLink } from 'react-router-dom';
-import {
-  Smartphone,
-  FolderOpen,
-  Workflow,
-  Play,
-  Layers,
-  ShieldCheck,
-  ScrollText,
-  Zap,
-  Bot,
-  Cable,
-  UserCircle,
-  BarChart3,
-  HeartPulse,
-  ActivitySquare,
-  CalendarClock,
-  PieChart,
-  Wifi,
-  WifiOff,
-  CreditCard,
-} from 'lucide-react';
+import { Activity, BarChart3, Home, PlaySquare, Users, FileText, BookOpen, Workflow, Wifi, WifiOff } from 'lucide-react';
 import { useLaixiStore } from '../../stores/laixi';
 import { useAuthStore } from '../../stores/auth';
 import { canViewAuditLogs, getRoleLabel } from '../../lib/role-access';
 
 const navItems = [
-  { to: '/devices', label: 'Devices', icon: Smartphone },
-  { to: '/device-groups', label: 'Device Groups', icon: Layers },
-  { to: '/device-setup', label: 'Device Setup', icon: Cable },
-  { to: '/mobile-mcp-orchestrator', label: 'MCP Orchestrator', icon: Bot },
-  { to: '/account-setup', label: 'Accounts', icon: UserCircle },
-  { to: '/social-dashboard', label: 'Social Dashboard', icon: BarChart3 },
-  { to: '/fleet-health', label: 'Fleet Health', icon: HeartPulse },
-  { to: '/system-monitor', label: 'System Monitor', icon: ActivitySquare },
-  { to: '/schedules', label: 'Schedules', icon: CalendarClock },
-  { to: '/analytics', label: 'Analytics', icon: PieChart },
-  { to: '/pricing', label: 'Pricing & Plans', icon: CreditCard },
-  { to: '/macros', label: 'Macros', icon: FolderOpen },
-  { to: '/runs', label: 'Runs', icon: Play },
-  { to: '/approvals', label: 'Approvals', icon: ShieldCheck },
-  { to: '/audit-logs', label: 'Audit Logs', icon: ScrollText, requiresAuditAccess: true },
-  { to: '/demo', label: 'E2E Demo', icon: Zap },
+  { icon: Home, label: 'Social Dashboard', path: '/social', id: 'social-dashboard' },
+  { icon: PlaySquare, label: 'Macros', path: '/macros', id: 'macros' },
+  { icon: BarChart3, label: 'Analytics', path: '/analytics', id: 'analytics' },
+  { icon: Users, label: 'Account Setup', path: '/accounts', id: 'accounts' },
+  { icon: Activity, label: 'System Monitor', path: '/monitor', id: 'system-monitor' },
+  { icon: FileText, label: 'Audit Logs', path: '/audit', id: 'audit-logs', requiresAuditAccess: true },
+  { icon: BookOpen, label: 'Documentation', path: '/docs', id: 'docs' },
 ];
 
 export default function Sidebar() {
@@ -66,8 +37,8 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1">
         {visibleNavItems.map((item) => (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={item.path}
+            to={item.path}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 isActive
