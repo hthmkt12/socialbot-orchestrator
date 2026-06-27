@@ -31,6 +31,16 @@
 
 - **Phase 12 (Advanced Macros) started**: Added conditional branching, while loops, variables extraction/interpolation, and error boundaries to the development roadmap. Phase 12 plan drafted in `plans/20260627-1200-advanced-macros/phase-12-advanced-macros.md`.
 
+- **Phase 13 (AI Workflow Builder) implemented**:
+  - Created `supabase/functions/ai-macro-generator/` Supabase Edge Function with OpenAI and Anthropic provider support, JWT auth, and JSON output mode.
+  - Built `system-prompt.ts` with full MacroStep schema, ConditionalOperator enum, 10 rules, and 3 few-shot examples (battery check + conditional, Instagram like loop, simple screenshot).
+  - Built `output-sanitizer.ts` to normalize LLM output: validates step types, clamps coordinates to 0-1, ensures unique IDs, sanitizes conditional operators, caps maxIterations.
+  - Created `src/lib/ai-macro-generator-client.ts` frontend API client using `supabase.functions.invoke()`.
+  - Created `src/components/macros/ai-macro-prompt-box.tsx` with expandable prompt panel, Ctrl+Enter shortcut, loading spinner, error display.
+  - Wired `AiMacroPromptBox` into `MacroDefinitionAuthoringModal` between template picker and mode toggle.
+  - Added `handleAiGenerated` to `useMacroDefinitionAuthoringState` hook for validation + hydration into builder state.
+  - Env vars: `AI_MACRO_LLM_PROVIDER` (openai/anthropic), `AI_MACRO_LLM_MODEL`, `AI_MACRO_LLM_API_KEY`.
+
 ## 2026-06-26
 
 - **Phase 1 (Mobilerun driver swap)**: Replaced `mobile-mcp-ai` Python package with Mobilerun `AndroidDriver` in `services/mobile-mcp-bridge/`. Updated imports for v0.6.8 API (`from mobilerun import AndroidDriver`, `from mobilerun_core_cli.portal import ensure_portal_ready`). Fixed `.ckignore` venv block with `!.venv` exception.

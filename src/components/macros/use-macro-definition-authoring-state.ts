@@ -117,10 +117,20 @@ export function useMacroDefinitionAuthoringState({
     }
   };
 
+  const handleAiGenerated = (macro: MacroDefinition) => {
+    const validation = validateMacroDefinition(macro);
+    if (!validation.valid) {
+      setErrors(validation.errors);
+      return;
+    }
+    loadDefinition(macro);
+  };
+
   return {
     builderDefinition,
     currentCompatibility: analyzeMacroDefinitionForGuidedBuilder(builderDefinition),
     errors,
+    handleAiGenerated,
     handleJsonChange,
     handleModeChange,
     handleSubmit,

@@ -1,0 +1,15 @@
+{"ts":"2026-06-27T08:45:03.650Z","hook":"descriptive-name","event":"PreToolUse","tool":"Write","target":"","note":"","dur":6,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:45:03.892Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'N', \"NOT_VALID_JSON{{{\" is not valid JSON"}
+{"ts":"2026-06-27T08:45:04.953Z","hook":"descriptive-name","event":"PreToolUse","tool":"Write","target":"","note":"","dur":6,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:45:05.077Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected end of JSON input"}
+{"ts":"2026-06-27T08:45:07.866Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"empty-input","dur":0,"status":"skip","exit":0,"error":""}
+{"ts":"2026-06-27T08:45:08.779Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'o', \"not valid json{{{\" is not valid JSON"}
+{"ts":"2026-06-27T08:45:09.745Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"missing-team-name","dur":1,"status":"skip","exit":0,"error":""}
+{"ts":"2026-06-27T08:45:10.612Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"1","note":"completion-logged","dur":2,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:45:11.612Z","hook":"subagent-init","event":"SubagentStart","tool":"","target":"test-agent","note":"context-injected","dur":3704,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:45:12.641Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"2","note":"completion-logged","dur":3,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:54:01.589Z","hook":"descriptive-name","event":"PreToolUse","tool":"Write","target":"","note":"","dur":3,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:54:02.950Z","hook":"descriptive-name","event":"PreToolUse","tool":"Write","target":"","note":"","dur":8,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-27T08:54:04.486Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'N', \"NOT_VALID_JSON{{{\" is not valid JSON"}
+{"ts":"2026-06-27T08:54:18.834Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"empty-input","dur":0,"status":"skip","exit":0,"error":""}
+{"ts":"2026-06-27T08:54:21.140Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'o', \"not valid json{{{\" is not valid JSON"}

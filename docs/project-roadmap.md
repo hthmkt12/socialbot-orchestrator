@@ -111,10 +111,15 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Add CI/CD test hooks to `package.json` ✅
 
 ### Phase 12: Advanced Macros (Q1 2029)
-- Conditionals (If/Else logic and evaluation) 🚧
-- While Loops (conditional repetition) 🚧
-- Variables (extraction and interpolation) 🚧
-- Error Boundaries (Try/Catch fallbacks) 🚧
+- Conditionals (If/Else logic and evaluation) ✅
+- While Loops (conditional repetition) ✅
+- Variables (extraction and interpolation) ✅
+- Error Boundaries (Try/Catch fallbacks) ✅
+
+### Phase 13: AI Workflow Builder (Q2 2029)
+- Natural Language to Macro generation ✅
+- LLM prompt translation layer ✅
+- Conversational macro editing interface ✅
 
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
