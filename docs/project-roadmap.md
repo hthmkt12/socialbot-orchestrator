@@ -104,6 +104,11 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Author user guides for device connection, macros, and account setup
 - Integrate docs portal into the main navigation sidebar
 
+### Phase 11: Playwright E2E Testing Suite (Q4 2028)
+- Install and configure `@playwright/test`
+- Write baseline navigation and UI structure tests
+- Add CI/CD test hooks to `package.json`
+
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
 - Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
