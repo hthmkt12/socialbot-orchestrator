@@ -10,15 +10,19 @@ import type { WizardStep } from './run-wizard-types';
 import type { TargetType } from '../../lib/database.types';
 
 export function useRunWizardNavigationState({
+  hasAccountStep,
   inputFields,
   inputValues,
+  selectedAccountId,
   selectedDeviceIds,
   selectedGroupId,
   selectedVersionId,
   targetType,
 }: {
+  hasAccountStep: boolean;
   inputFields: RunWizardInputField[];
   inputValues: Record<string, string>;
+  selectedAccountId: string;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   selectedVersionId: string;
@@ -26,11 +30,15 @@ export function useRunWizardNavigationState({
 }) {
   const [step, setStep] = useState<WizardStep>('macro');
 
-  const steps = useMemo(() => getRunWizardSteps(inputFields.length), [inputFields.length]);
+  const steps = useMemo(
+    () => getRunWizardSteps(inputFields.length, hasAccountStep),
+    [inputFields.length, hasAccountStep],
+  );
   const currentIdx = steps.indexOf(step);
   const canNext = canAdvanceRunWizard({
     inputFields,
     inputValues,
+    selectedAccountId,
     selectedDeviceIds,
     selectedGroupId,
     selectedVersionId,
@@ -41,8 +49,8 @@ export function useRunWizardNavigationState({
   return {
     canNext,
     currentIdx,
-    nextStep: () => setStep(getNextRunWizardStep(step, inputFields.length)),
-    prevStep: () => setStep(getPreviousRunWizardStep(step, inputFields.length)),
+    nextStep: () => setStep(getNextRunWizardStep(step, inputFields.length, hasAccountStep)),
+    prevStep: () => setStep(getPreviousRunWizardStep(step, inputFields.length, hasAccountStep)),
     step,
     steps,
   };

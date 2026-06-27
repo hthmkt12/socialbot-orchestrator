@@ -4,6 +4,7 @@ import type { TargetType } from '../../lib/database.types';
 export function useRunWizardFormState() {
   const [selectedMacroId, setSelectedMacroId] = useState('');
   const [selectedVersionId, setSelectedVersionId] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState('');
   const [targetType, setTargetType] = useState<TargetType>('SINGLE_DEVICE');
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -24,6 +25,10 @@ export function useRunWizardFormState() {
     setTargetType(nextTargetType);
     resetTargetSelection();
   }, [resetTargetSelection]);
+
+  const selectAccount = useCallback((accountId: string) => {
+    setSelectedAccountId(accountId);
+  }, []);
 
   const applyDeclaredTargetType = useCallback((declaredTargetType: TargetType | null) => {
     if (!declaredTargetType || targetType === declaredTargetType) return;
@@ -46,10 +51,12 @@ export function useRunWizardFormState() {
     applyDeclaredTargetType,
     inputValues,
     macroSearch,
+    selectedAccountId,
     selectedDeviceIds,
     selectedGroupId,
     selectedMacroId,
     selectedVersionId,
+    selectAccount,
     selectMacro,
     selectTargetType,
     setInputValues,

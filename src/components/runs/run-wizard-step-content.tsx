@@ -7,6 +7,7 @@ import {
   RunWizardInputsStep,
   type RunWizardInputField,
 } from './RunWizardInputsStep';
+import { RunWizardAccountStep } from './RunWizardAccountStep';
 import { RunWizardMacroStep } from './RunWizardMacroStep';
 import { RunWizardReviewStep } from './RunWizardReviewStep';
 import { RunWizardTargetStep } from './RunWizardTargetStep';
@@ -33,7 +34,9 @@ export function RunWizardStepContent({
   onSelectedVersionChange,
   onTargetTypeChange,
   onToggleDevice,
+  onSelectAccount,
   preflightSummary,
+  selectedAccountId,
   selectedDeviceIds,
   selectedGroupId,
   selectedMacro,
@@ -62,11 +65,13 @@ export function RunWizardStepContent({
   onGroupChange: (groupId: string) => void;
   onInputValuesChange: (values: Record<string, string>) => void;
   onMacroSearchChange: (value: string) => void;
+  onSelectAccount: (accountId: string) => void;
   onSelectedMacroChange: (macroId: string, latestVersionId: string) => void;
   onSelectedVersionChange: (versionId: string) => void;
   onTargetTypeChange: (targetType: TargetType) => void;
   onToggleDevice: (deviceId: string) => void;
   preflightSummary: RunPreflightSummary;
+  selectedAccountId: string;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   selectedMacro: Macro | undefined;
@@ -118,6 +123,15 @@ export function RunWizardStepContent({
         inputFields={inputFields}
         inputValues={inputValues}
         onInputValuesChange={onInputValuesChange}
+      />
+    );
+  }
+
+  if (step === 'account') {
+    return (
+      <RunWizardAccountStep
+        selectedAccountId={selectedAccountId}
+        onSelectAccount={onSelectAccount}
       />
     );
   }

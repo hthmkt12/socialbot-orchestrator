@@ -17,10 +17,12 @@ export default function RunWizard({ onClose }: Props) {
     applyDeclaredTargetType,
     inputValues,
     macroSearch,
+    selectedAccountId,
     selectedDeviceIds,
     selectedGroupId,
     selectedMacroId,
     selectedVersionId,
+    selectAccount,
     selectMacro,
     selectTargetType,
     setInputValues,
@@ -60,6 +62,9 @@ export default function RunWizard({ onClose }: Props) {
     selectedVersionId,
     targetType,
   });
+
+  const hasAccountStep = !!definition?.antiDetection;
+
   const {
     handleSubmit,
     isSubmitting,
@@ -70,6 +75,7 @@ export default function RunWizard({ onClose }: Props) {
     inputValues,
     onClose,
     preflightSummary,
+    selectedAccountId,
     selectedGroupId,
     selectedVersionId,
     targetType,
@@ -88,8 +94,10 @@ export default function RunWizard({ onClose }: Props) {
     step,
     steps,
   } = useRunWizardNavigationState({
+    hasAccountStep,
     inputFields,
     inputValues,
+    selectedAccountId,
     selectedDeviceIds,
     selectedGroupId,
     selectedVersionId,
@@ -117,11 +125,13 @@ export default function RunWizard({ onClose }: Props) {
           onGroupChange={setSelectedGroupId}
           onInputValuesChange={setInputValues}
           onMacroSearchChange={setMacroSearch}
+          onSelectAccount={selectAccount}
           onSelectedMacroChange={selectMacro}
           onSelectedVersionChange={setSelectedVersionId}
           onTargetTypeChange={selectTargetType}
           onToggleDevice={toggleDevice}
           preflightSummary={preflightSummary}
+          selectedAccountId={selectedAccountId}
           selectedDeviceIds={selectedDeviceIds}
           selectedGroupId={selectedGroupId}
           selectedMacro={selectedMacro}

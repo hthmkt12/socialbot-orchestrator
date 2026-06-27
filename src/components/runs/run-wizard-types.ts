@@ -1,11 +1,12 @@
 import { Globe, Smartphone, Users } from 'lucide-react';
 import type { TargetType } from '../../lib/database.types';
 
-export type WizardStep = 'macro' | 'target' | 'inputs' | 'review';
+export type WizardStep = 'macro' | 'target' | 'account' | 'inputs' | 'review';
 
 export const stepLabels: Record<WizardStep, string> = {
   macro: 'Select Macro',
   target: 'Choose Targets',
+  account: 'Select Account',
   inputs: 'Configure Inputs',
   review: 'Review & Execute',
 };

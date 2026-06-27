@@ -11,6 +11,7 @@
 - **Anti-detection execution integration**: `SingleDeviceStepRunner` now applies coordinate jitter and delay randomization to resolved step params when `antiDetection` config present in `MacroDefinition`. Adds random cooldown between successful steps for human-like pacing.
 - **Account warm-up progression engine**: Per-platform stage progression (Instagram/TikTok/Facebook) with day-based thresholds and recommended daily action limits. Account table shows computed stage info, Start Warm-Up button, advancement hints, and action limit status.
 - **Account CSV import**: CSV parser with validation (platform check, column count, empty fields, daily_limit parsing). Import modal with file picker, preview table, error display, and sample template download. 9-unit-test coverage.
+- **Account-to-macro mapping in run wizard**: New "Select Account" step in the run wizard that appears when a social engagement macro (with antiDetection config) is selected. Users pick from active Instagram/TikTok/Facebook accounts. Account info (username, platform) is injected into run input variables for downstream action tracking.
 
 ## 2026-06-26
 

@@ -14,6 +14,7 @@ interface UseRunWizardSubmitActionArgs {
   inputValues: Record<string, string>;
   onClose: () => void;
   preflightSummary: RunPreflightSummary;
+  selectedAccountId: string;
   selectedGroupId: string;
   selectedVersionId: string;
   targetType: TargetType;
@@ -26,6 +27,7 @@ export function useRunWizardSubmitAction({
   inputValues,
   onClose,
   preflightSummary,
+  selectedAccountId,
   selectedGroupId,
   selectedVersionId,
   targetType,
@@ -47,6 +49,7 @@ export function useRunWizardSubmitAction({
       onClose,
       preflightSummary,
       profile,
+      selectedAccountId,
       selectedGroupId,
       selectedVersionId,
       targetType,

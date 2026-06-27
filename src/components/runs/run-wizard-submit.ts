@@ -1,6 +1,7 @@
 import type { MacroDefinition } from '../../contracts/macro';
 import type { Device, Profile, TargetType } from '../../lib/database.types';
 import type { RunPreflightSummary } from '../../lib/run-preflight';
+import { fetchAccount } from '../../lib/account-service-helpers';
 
 export async function submitRunWizard({
   addToast,
@@ -13,6 +14,7 @@ export async function submitRunWizard({
   onClose,
   preflightSummary,
   profile,
+  selectedAccountId,
   selectedGroupId,
   selectedVersionId,
   targetType,
@@ -33,6 +35,7 @@ export async function submitRunWizard({
   onClose: () => void;
   preflightSummary: RunPreflightSummary;
   profile: Profile | null;
+  selectedAccountId: string;
   selectedGroupId: string;
   selectedVersionId: string;
   targetType: TargetType;
@@ -51,6 +54,17 @@ export async function submitRunWizard({
   }
 
   try {
+    // Resolve account info for social engagement runs
+    let resolvedInputs: Record<string, unknown> = { ...inputValues };
+    if (selectedAccountId) {
+      const account = await fetchAccount(selectedAccountId);
+      if (account) {
+        resolvedInputs.accountId = account.id;
+        resolvedInputs.accountUsername = account.username;
+        resolvedInputs.accountPlatform = account.platform;
+      }
+    }
+
     const result = await createRun({
       macroVersionId: selectedVersionId,
       profileId: profile.id,
@@ -58,7 +72,7 @@ export async function submitRunWizard({
       targetSelector: targetType === 'DEVICE_GROUP'
         ? { groupId: selectedGroupId }
         : { deviceIds: dispatchableDevices.map((device) => device.id) },
-      inputVariables: inputValues,
+      inputVariables: resolvedInputs,
     });
     const status = String(result.status);
     const isTerminal = ['COMPLETED', 'FAILED', 'CANCELLED', 'PARTIAL_SUCCESS'].includes(status);

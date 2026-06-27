@@ -6,13 +6,18 @@ interface InputFieldForNavigation {
   required?: boolean;
 }
 
-export function getRunWizardSteps(inputFieldCount: number): WizardStep[] {
-  return ['macro', 'target', ...(inputFieldCount > 0 ? ['inputs' as WizardStep] : []), 'review'];
+export function getRunWizardSteps(inputFieldCount: number, hasAccountStep = false): WizardStep[] {
+  const core: WizardStep[] = ['macro', 'target'];
+  if (hasAccountStep) core.push('account');
+  if (inputFieldCount > 0) core.push('inputs');
+  core.push('review');
+  return core;
 }
 
 export function canAdvanceRunWizard({
   inputFields,
   inputValues,
+  selectedAccountId,
   selectedDeviceIds,
   selectedGroupId,
   selectedVersionId,
@@ -21,6 +26,7 @@ export function canAdvanceRunWizard({
 }: {
   inputFields: InputFieldForNavigation[];
   inputValues: Record<string, string>;
+  selectedAccountId: string;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   selectedVersionId: string;
@@ -33,22 +39,48 @@ export function canAdvanceRunWizard({
     if (targetType === 'DEVICE_GROUP') return !!selectedGroupId;
     return true;
   }
+  if (step === 'account') return !!selectedAccountId;
   if (step === 'inputs') {
     return inputFields.filter((field) => field.required).every((field) => inputValues[field.key]);
   }
   return true;
 }
 
-export function getNextRunWizardStep(step: WizardStep, inputFieldCount: number): WizardStep {
-  if (step === 'macro') return 'target';
-  if (step === 'target') return inputFieldCount > 0 ? 'inputs' : 'review';
-  if (step === 'inputs') return 'review';
-  return step;
+function stepsBetween(step: WizardStep, to: WizardStep): WizardStep[] | null {
+  const all: WizardStep[] = ['macro', 'target', 'account', 'inputs', 'review'];
+  const fromIdx = all.indexOf(step);
+  const toIdx = all.indexOf(to);
+  if (fromIdx === -1 || toIdx === -1) return null;
+  return all.slice(fromIdx, toIdx + 1);
 }
 
-export function getPreviousRunWizardStep(step: WizardStep, inputFieldCount: number): WizardStep {
+export function getNextRunWizardStep(step: WizardStep, inputFieldCount: number, hasAccountStep = false): WizardStep {
+  const between = stepsBetween(step, 'review');
+  if (!between) return step;
+  const idx = between.indexOf(step);
+  if (idx === -1 || idx >= between.length - 1) return step;
+
+  // Skip steps not in the current flow
+  for (let i = idx + 1; i < between.length; i++) {
+    const next = between[i];
+    if (next === 'account' && !hasAccountStep) continue;
+    if (next === 'inputs' && inputFieldCount === 0) continue;
+    return next;
+  }
+  return 'review';
+}
+
+export function getPreviousRunWizardStep(step: WizardStep, inputFieldCount: number, hasAccountStep = false): WizardStep {
   if (step === 'target') return 'macro';
-  if (step === 'inputs') return 'target';
-  if (step === 'review') return inputFieldCount > 0 ? 'inputs' : 'target';
+  if (step === 'account') return 'target';
+  if (step === 'inputs') {
+    if (hasAccountStep) return 'account';
+    return 'target';
+  }
+  if (step === 'review') {
+    if (inputFieldCount > 0) return 'inputs';
+    if (hasAccountStep) return 'account';
+    return 'target';
+  }
   return step;
 }
