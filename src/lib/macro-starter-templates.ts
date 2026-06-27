@@ -58,7 +58,7 @@ function summarizeTemplateFallback(reasons: string[]): string {
 }
 
 export function getStarterMacroTemplates(): MacroStarterTemplate[] {
-  const generic = STARTER_TEMPLATE_CONFIG.flatMap((templateConfig) => {
+  const generic: MacroStarterTemplate[] = STARTER_TEMPLATE_CONFIG.flatMap((templateConfig) => {
     const definition = SAMPLE_MACROS.find((macro) => macro.meta.key === templateConfig.key);
     if (!definition) return [];
 
@@ -81,7 +81,7 @@ export function getStarterMacroTemplates(): MacroStarterTemplate[] {
     }];
   });
 
-  const social = Object.values(SOCIAL_TEMPLATES).map((template) => {
+  const social: MacroStarterTemplate[] = Object.values(SOCIAL_TEMPLATES).map((template) => {
     const def: MacroDefinition = { ...template.definition, antiDetection: template.antiDetection };
     return {
       key: def.meta.key,

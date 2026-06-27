@@ -56,7 +56,7 @@ export async function createAccount(input: {
 
 export async function updateAccount(
   id: string,
-  updates: Partial<Pick<Account, 'daily_action_limit' | 'warm_up_stage' | 'is_blocked' | 'detected_block_reason' | 'current_action_count'>>,
+  updates: Partial<Pick<Account, 'daily_action_limit' | 'warm_up_stage' | 'warm_up_started_at' | 'is_blocked' | 'detected_block_reason' | 'current_action_count' | 'last_action_reset_at'>>,
 ) {
   const { data, error } = await supabase
     .from('accounts')

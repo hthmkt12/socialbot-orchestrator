@@ -71,6 +71,7 @@ export interface DailyCheckResult {
  */
 export async function runDailyAdvancementCheck(
   accounts: Pick<Account, 'id' | 'username' | 'platform' | 'warm_up_stage' | 'warm_up_started_at' | 'daily_action_limit' | 'current_action_count' | 'is_blocked'>[],
+  now = new Date(),
 ): Promise<DailyCheckResult> {
   const ready = getAccountsReadyForAdvancement(accounts);
   if (ready.length === 0) {

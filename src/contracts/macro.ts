@@ -1,5 +1,5 @@
 /** Target social app for multi-app macro step routing. */
-export type TargetApp = 'instagram' | 'tiktok' | 'facebook' | null;
+export type TargetApp = 'instagram' | 'tiktok' | 'facebook';
 
 export type StepType =
   | 'wait'

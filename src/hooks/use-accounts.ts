@@ -56,6 +56,7 @@ export function useUpdateAccount() {
       is_blocked?: boolean;
       detected_block_reason?: string;
       current_action_count?: number;
+      last_action_reset_at?: string;
     }) => updateAccount(id, updates),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });

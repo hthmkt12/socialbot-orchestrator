@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react';
-import type { MacroStep } from '../../contracts/macro';
+import type { MacroStep, TargetApp } from '../../contracts/macro';
 import {
   GUIDED_BUILDER_STEPS,
   createGuidedBuilderStep,
@@ -55,7 +55,7 @@ export function MacroBuilderStepCardHeader({
             value={step.targetApp ?? ''}
             onChange={(event) => onUpdate(index, (current) => ({
               ...current,
-              targetApp: event.target.value || undefined,
+              targetApp: (event.target.value || undefined) as TargetApp | undefined,
             }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none bg-white"
           >
