@@ -75,9 +75,9 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Audit Logs UI ✅
 
 ### Phase 5: Scheduling & Analytics (Q3 2027)
-- Cron-like scheduling (daily 9am, weekdays only, etc.)
-- Engagement analytics (followers gained, likes per post, 30-day trending)
-- Tiered pricing: Free/Pro/Enterprise
+- Cron-like scheduling (daily 9am, weekdays only, etc.) ✅
+- Engagement analytics (followers gained, likes per post, 30-day trending) ✅
+- Tiered pricing: Free/Pro/Enterprise ✅
 
 ## Later
 - Parallelize multi-target execution if pilot requires fleet speed.
