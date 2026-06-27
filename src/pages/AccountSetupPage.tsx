@@ -5,7 +5,7 @@ import { AccountTable } from '../components/accounts/account-table';
 import { CreateAccountModal } from '../components/accounts/create-account-modal';
 import EmptyState from '../components/ui/EmptyState';
 import Spinner from '../components/ui/Spinner';
-import { useAccounts, useCreateAccount, useDeleteAccount } from '../hooks/use-accounts';
+import { useAccounts, useCreateAccount, useDeleteAccount, useUpdateAccount } from '../hooks/use-accounts';
 import { useUIStore } from '../stores/ui';
 import type { AccountPlatform } from '../lib/database.types';
 
@@ -14,6 +14,7 @@ export default function AccountSetupPage() {
   const [showCreate, setShowCreate] = useState(false);
   const createAccount = useCreateAccount();
   const deleteAccount = useDeleteAccount();
+  const updateAccount = useUpdateAccount();
   const addToast = useUIStore((s) => s.addToast);
 
   const handleCreate = async (data: {
@@ -37,6 +38,19 @@ export default function AccountSetupPage() {
       addToast('Account deleted', 'success');
     } catch {
       addToast('Failed to delete account', 'error');
+    }
+  };
+
+  const handleStartWarmUp = async (id: string) => {
+    try {
+      await updateAccount.mutateAsync({
+        id,
+        warm_up_stage: 2,
+        warm_up_started_at: new Date().toISOString(),
+      });
+      addToast('Warm-up started', 'success');
+    } catch {
+      addToast('Failed to start warm-up', 'error');
     }
   };
 
@@ -77,7 +91,12 @@ export default function AccountSetupPage() {
             }
           />
         ) : (
-          <AccountTable accounts={accounts} onDelete={handleDelete} isDeleting={deleteAccount.isPending} />
+          <AccountTable
+            accounts={accounts}
+            onDelete={handleDelete}
+            onStartWarmUp={handleStartWarmUp}
+            isDeleting={deleteAccount.isPending}
+          />
         )}
       </div>
 

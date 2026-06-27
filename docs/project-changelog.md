@@ -6,6 +6,9 @@
 - **Account schema**: Created migration `20260627000001_account_tables.sql` with `accounts` table (platform, warm-up stages, action limits, block detection) and `account_action_history` table (per-action audit trail). RLS enforced, indexes added.
 - **Account types and hooks**: Added `Account`, `AccountActionHistory` types to `database.types.ts`. Created `account-service-helpers.ts` with full CRUD + action recording. Created `use-accounts.ts` React Query hooks (useAccounts, useAccount, useCreateAccount, useUpdateAccount, useDeleteAccount, useAccountHistory, useRecordAccountAction).
 - **Account Setup UI**: New `/account-setup` page with accounts table (username, platform badge, warm-up stage, action counts, blocked status), create modal (username, password, platform, daily limit), and delete. Lazy-loaded at 7.5 kB. Added "Accounts" nav link in sidebar.
+- **Anti-detection engine**: Created `anti-detection-helpers.ts` with randomized delays, scroll variance, tap coordinate jitter, and cooldown utilities. Defined `AntiDetectionConfig` interface in `contracts/macro.ts` as canonical source. Sidebar branding updated to "Social Automation".
+- **Social engagement templates**: Pre-built `MacroDefinition` workflows for Instagram (like hashtag, follow accounts) and TikTok (like trending) in `social-engagement-templates.ts`. Registered in macro starter template picker alongside generic templates.
+- **Anti-detection execution integration**: `SingleDeviceStepRunner` now applies coordinate jitter and delay randomization to resolved step params when `antiDetection` config present in `MacroDefinition`. Adds random cooldown between successful steps for human-like pacing.
 
 ## 2026-06-26
 
