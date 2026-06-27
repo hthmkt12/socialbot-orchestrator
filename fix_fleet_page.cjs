@@ -1,10 +1,21 @@
-import { useMemo } from 'react';
+const fs = require('fs');
+let content = fs.readFileSync('src/pages/fleet-health-page.tsx', 'utf8');
+
+content = content.replace(
+  "import { useDevices } from '../hooks/useDevices';",
+  "import { useDevices } from '../hooks/useDevices';\nimport { DeviceMetricCard } from '../components/fleet-health/DeviceMetricCard';\nimport { DeviceGridCard } from '../components/fleet-health/DeviceGridCard';"
+);
+
+// We need to replace the entire rendering of cards with the new components
+// Instead of complex regex, let's just rewrite the file content
+
+const newContent = `import { useMemo } from 'react';
 import Header from '../components/layout/Header';
 import { useDevices } from '../hooks/useDevices';
 import { useRuns } from '../hooks/useRuns';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
-import { Smartphone, ShieldCheck } from 'lucide-react';
+import { Smartphone, Activity, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { DeviceMetricCard } from '../components/fleet-health/DeviceMetricCard';
 import { DeviceGridCard } from '../components/fleet-health/DeviceGridCard';
 
@@ -27,7 +38,7 @@ export default function FleetHealthPage() {
     let stalled = 0;
 
     const deviceStats = devices.map(device => {
-      const lastPing = new Date(device.updated_at).getTime();
+      const lastPing = new Date(device.last_ping_at || device.updated_at).getTime();
       const minutesSincePing = (now - lastPing) / (1000 * 60);
       
       let healthStatus: 'healthy' | 'warning' | 'offline' = 'offline';
@@ -108,14 +119,14 @@ export default function FleetHealthPage() {
                 value={fleetStats.total} 
                 icon="Smartphone" 
                 color="blue" 
-                subtitle={`${fleetStats.online} online`}
+                subtitle={\`\${fleetStats.online} online\`}
               />
               <DeviceMetricCard 
                 title="Active Execution" 
                 value={fleetStats.executing} 
                 icon="PlayCircle" 
                 color="emerald" 
-                subtitle={`${Math.round((fleetStats.executing / fleetStats.total) * 100)}% utilization`}
+                subtitle={\`\${Math.round((fleetStats.executing / fleetStats.total) * 100)}% utilization\`}
               />
               <DeviceMetricCard 
                 title="Warning State" 
@@ -157,3 +168,6 @@ export default function FleetHealthPage() {
     </>
   );
 }
+`;
+
+fs.writeFileSync('src/pages/fleet-health-page.tsx', newContent);

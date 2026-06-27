@@ -1,12 +1,18 @@
-# Docs Normalization Plan
+# Docs & Refactoring Plan
 
 ## Context
-The roadmap lists "Normalize docs/spec workflow around specs/ for new work." Currently, we have some older spec files or we are creating specs directly in docs/. We need to ensure new features go to `specs/` or standardize the approach.
-
-Wait, actually the "Next" section lists:
-1. Normalize docs/spec workflow around specs/ for new work.
+The "Next" section of the roadmap calls for two items we can address now:
+1. Normalize docs/spec workflow around `specs/` for new work.
 2. Modularize oversized UI files after runtime proof remains stable.
-3. Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
-4. Keep authenticated route lazy-loading in place; main Vite chunk is now below warning threshold.
 
-Let's look at oversized UI files: `social-dashboard-page.tsx` is 279 lines (11.6KB). We should modularize it according to the "Next" action items.
+We just modularized `social-dashboard-page.tsx`. Now let's tackle `fleet-health-page.tsx` which is 229 lines, and check for any remaining spec cleanup.
+
+## Scope
+1. **Modularize `fleet-health-page.tsx`**
+   - Extract `DeviceMetricCard.tsx`
+   - Extract `DeviceGridCard.tsx`
+2. **Modularize `DevicesPage.tsx`**
+   - It's 155 lines, can extract `DeviceCard.tsx` or similar if applicable.
+3. **Docs Normalization**
+   - Ensure the `/docs` directory is for reference, architecture, and project rules.
+   - Ensure the `/specs` directory is the standard location for new feature requirements.
