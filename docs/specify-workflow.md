@@ -61,4 +61,4 @@ Verification:
 - `003-artifact-storage-thresholds`
 
 ## Unresolved Questions
-- Should future hard plans live under `specs/` instead of `plans/`?
+**Decision:** Future *feature specifications* should live under `specs/`, but day-to-day implementation plans and brainstorms should stay in `plans/`.
