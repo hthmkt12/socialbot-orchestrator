@@ -1,6 +1,6 @@
 # Project Overview PDR
 
-Date: 2026-06-27
+Date: 2026-06-29
 
 ## Problem
 Operators need a durable way to define, run, monitor, and audit device automation workflows — specifically for **social media automation** teams managing 5-50 Android/iOS devices running Instagram, TikTok, and Facebook accounts.

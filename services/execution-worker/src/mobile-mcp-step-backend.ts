@@ -2,6 +2,7 @@ import type { Device } from '../../../src/lib/database.types';
 import type { StepArtifactRef } from '../../../packages/shared/src';
 import type { StepExecutionResult } from './execute-device-step';
 import type { DeviceStepBackend, DeviceStepExecutionArgs } from './device-step-backend';
+import { applyCoordinateVariance, getRandomDelay, sleep } from './lib/anti-detection';
 
 interface MobileMcpBridgeResponse {
   success: boolean;
@@ -47,6 +48,24 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
         output: { backend: 'mobile-mcp', stepType: args.step.type },
         error: `Mobile MCP backend does not support step type: ${args.step.type}`,
       };
+    }
+
+    // Anti-detection: Apply random delay before interactive steps
+    if (['tap', 'swipe', 'input_text'].includes(args.step.type)) {
+      await sleep(getRandomDelay());
+    }
+
+    // Anti-detection: Apply variance to coordinates
+    if (args.step.type === 'tap' && typeof args.resolvedParams.x === 'number' && typeof args.resolvedParams.y === 'number') {
+      args.resolvedParams.x = applyCoordinateVariance(args.resolvedParams.x);
+      args.resolvedParams.y = applyCoordinateVariance(args.resolvedParams.y);
+    }
+
+    if (args.step.type === 'swipe' && typeof args.resolvedParams.x1 === 'number' && typeof args.resolvedParams.y1 === 'number' && typeof args.resolvedParams.x2 === 'number' && typeof args.resolvedParams.y2 === 'number') {
+      args.resolvedParams.x1 = applyCoordinateVariance(args.resolvedParams.x1);
+      args.resolvedParams.y1 = applyCoordinateVariance(args.resolvedParams.y1);
+      args.resolvedParams.x2 = applyCoordinateVariance(args.resolvedParams.x2);
+      args.resolvedParams.y2 = applyCoordinateVariance(args.resolvedParams.y2);
     }
 
     const serial = getDeviceSerial(args.device);

@@ -44,8 +44,8 @@ export default function LoginPage() {
           <div className="w-14 h-14 bg-sky-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-sky-500/25">
             <Workflow className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Laixi Platform</h1>
-          <p className="text-sm text-gray-400">Device Orchestration System</p>
+          <h1 className="text-2xl font-bold text-white mb-1">SocialBot Orchestrator</h1>
+          <p className="text-sm text-gray-400">Social Media Automation Platform</p>
         </div>
 
         <form

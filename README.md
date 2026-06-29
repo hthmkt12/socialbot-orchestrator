@@ -1,6 +1,6 @@
-# Laixi Automation Platform
+# SocialBot Orchestrator
 
-A full-stack platform for orchestrating device automation workflows — purpose-built for **social media automation teams** that need reliable multi-device execution, anti-detection, and account lifecycle management.
+A full-stack platform for orchestrating social media automation workflows — purpose-built for **social media automation teams** that need reliable multi-device execution, anti-detection, and account lifecycle management.
 
 ## Overview
 
