@@ -108,9 +108,100 @@ export const TIKTOK_LIKE_TRENDING: SocialTemplate = {
   },
 };
 
+
+export const INSTAGRAM_MASS_LIKE_HASHTAGS: SocialTemplate = {
+  platform: 'instagram',
+  antiDetection: DEFAULT_ANTI_DETECTION,
+  definition: {
+    version: 1,
+    meta: {
+      key: 'instagram_mass_like_hashtags',
+      name: 'Instagram Mass Like Hashtags (Foreach)',
+      description: 'Search an array of hashtags and like top posts for each using foreach loop.',
+      tags: ['instagram', 'engagement', 'like', 'hashtag', 'mass'],
+    },
+    inputs: {
+      hashtags: { type: 'string', required: true, description: 'Comma-separated hashtags (e.g. fashion,style)' },
+      likesPerHashtag: { type: 'number', required: true, default: 3, description: 'Posts to like per hashtag' },
+    },
+    target: { mode: 'single_device' },
+    execution: { defaultTimeoutMs: 180_000, maxRetries: 1, onError: 'stop' },
+    steps: [
+      { id: 'launch', type: 'launch_app', params: { appName: 'com.instagram.android' } },
+      { id: 'wait_load', type: 'wait', params: { ms: 4000 } },
+      {
+        id: 'foreach_hashtag',
+        type: 'foreach',
+        params: { arraySourceVar: 'hashtags', itemName: 'currentHashtag' },
+        steps: [
+          { id: 'tap_search_tab', type: 'tap', params: { x: 0.5, y: 0.95 } },
+          { id: 'wait_search_tab', type: 'wait', params: { ms: 2000 } },
+          { id: 'type_hashtag', type: 'input_text', params: { text: '#{{currentHashtag}}' } },
+          { id: 'wait_results', type: 'wait', params: { ms: 3000 } },
+          { id: 'tap_first_result', type: 'tap', params: { x: 0.5, y: 0.35 } },
+          { id: 'wait_posts', type: 'wait', params: { ms: 2500 } },
+          { id: 'tap_first_post', type: 'tap', params: { x: 0.33, y: 0.45 } },
+          { id: 'wait_post_load', type: 'wait', params: { ms: 2000 } },
+          {
+            id: 'like_loop',
+            type: 'loop',
+            params: { count: '{{likesPerHashtag}}' },
+            steps: [
+              { id: 'double_tap_like', type: 'tap', params: { x: 0.5, y: 0.4, actionBudgetType: 'like' } },
+              { id: 'wait_after_like', type: 'wait', params: { ms: 2000 } },
+              { id: 'scroll_next_post', type: 'swipe', params: { fromX: 0.5, fromY: 0.7, toX: 0.5, toY: 0.2 } },
+              { id: 'wait_next_load', type: 'wait', params: { ms: 2500 } }
+            ]
+          }
+        ]
+      }
+    ],
+  },
+};
+
+export const INSTAGRAM_MASS_FOLLOW: SocialTemplate = {
+  platform: 'instagram',
+  antiDetection: { ...DEFAULT_ANTI_DETECTION, randomDelayMs: [5000, 12000] },
+  definition: {
+    version: 1,
+    meta: {
+      key: 'instagram_mass_follow',
+      name: 'Instagram Mass Follow Accounts (Foreach)',
+      description: 'Iterate over an array of usernames and follow each one.',
+      tags: ['instagram', 'engagement', 'follow', 'mass'],
+    },
+    inputs: {
+      usernames: { type: 'string', required: true, description: 'Comma-separated usernames' },
+    },
+    target: { mode: 'single_device' },
+    execution: { defaultTimeoutMs: 180_000, maxRetries: 1, onError: 'stop' },
+    steps: [
+      { id: 'launch', type: 'launch_app', params: { appName: 'com.instagram.android' } },
+      { id: 'wait_load', type: 'wait', params: { ms: 4000 } },
+      {
+        id: 'foreach_user',
+        type: 'foreach',
+        params: { arraySourceVar: 'usernames', itemName: 'currentUser' },
+        steps: [
+          { id: 'tap_search', type: 'tap', params: { x: 0.5, y: 0.95 } },
+          { id: 'wait_search', type: 'wait', params: { ms: 2000 } },
+          { id: 'type_username', type: 'input_text', params: { text: '{{currentUser}}' } },
+          { id: 'wait_results', type: 'wait', params: { ms: 3000 } },
+          { id: 'tap_profile', type: 'tap', params: { x: 0.5, y: 0.25 } },
+          { id: 'wait_profile', type: 'wait', params: { ms: 3000 } },
+          { id: 'tap_follow', type: 'tap', params: { x: 0.5, y: 0.45, actionBudgetType: 'follow' } },
+          { id: 'wait_after_follow', type: 'wait', params: { ms: 5000 } }
+        ]
+      }
+    ],
+  },
+};
+
 /** All available social templates, indexed by key. */
 export const SOCIAL_TEMPLATES: Record<string, SocialTemplate> = {
   instagram_like_hashtag: INSTAGRAM_LIKE_HASHTAG,
   instagram_follow_accounts: INSTAGRAM_FOLLOW_ACCOUNTS,
+  instagram_mass_like_hashtags: INSTAGRAM_MASS_LIKE_HASHTAGS,
+  instagram_mass_follow: INSTAGRAM_MASS_FOLLOW,
   tiktok_like_trending: TIKTOK_LIKE_TRENDING,
 };

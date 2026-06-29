@@ -1,6 +1,28 @@
 import type { MacroDefinition } from './macro';
 
 export const SAMPLE_MACROS: MacroDefinition[] = [
+
+  {
+    version: 1,
+    meta: { key: 'foreach_hashtag_demo', name: 'Foreach Hashtag Demo', description: 'Iterate over a list of hashtags and perform an action for each.', tags: ['foreach', 'loop', 'demo'] },
+    inputs: { hashtags: { type: 'string', required: true, description: 'Comma separated list of hashtags' }, appName: { type: 'string', required: true } },
+    target: { mode: 'single_device' },
+    execution: { defaultTimeoutMs: 20000, maxRetries: 1, onError: 'continue' },
+    steps: [
+      { id: 'launch', type: 'launch_app', params: { appName: '{{appName}}' } },
+      { id: 'wait_load', type: 'wait', params: { ms: 2500 } },
+      {
+        id: 'foreach_hashtag',
+        type: 'foreach',
+        params: { arraySourceVar: 'hashtags', itemName: 'hashtag' },
+        steps: [
+          { id: 'log_hashtag', type: 'adb', params: { command: 'shell echo "Processing hashtag: {{hashtag}}"' } },
+          { id: 'wait_process', type: 'wait', params: { ms: 1000 } }
+        ]
+      }
+    ]
+  },
+
   {
     version: 1,
     meta: { key: 'launch_app_and_capture', name: 'Launch App And Capture', description: 'Má»Ÿ app, chá» vÃ i giÃ¢y, chá»¥p mÃ n hÃ¬nh, láº¥y app hiá»‡n táº¡i', tags: ['basic', 'screenshot', 'demo'] },

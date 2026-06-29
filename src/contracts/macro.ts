@@ -13,6 +13,7 @@ export type StepType =
   | 'run_autox'
   | 'approval_checkpoint'
   | 'conditional'
+  | 'foreach'
   | 'foreach_device'
   | 'group'
   | 'stop'
@@ -130,7 +131,7 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
   const validStepTypes: StepType[] = [
     'wait', 'launch_app', 'input_text', 'tap', 'swipe', 'screenshot',
     'get_current_app', 'adb', 'run_autox', 'approval_checkpoint',
-    'conditional', 'foreach_device', 'group', 'stop', 'ai_task',
+    'conditional', 'foreach', 'foreach_device', 'group', 'stop', 'ai_task',
     'loop', 'while_loop', 'try_catch', 'extract_var'
   ];
 

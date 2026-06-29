@@ -128,6 +128,7 @@ export class SingleDeviceStepRunner {
     if (step.type === 'loop' && step.steps) return this.handleLoop(step, stepIndex);
     if (step.type === 'try_catch' && step.steps) return this.handleTryCatch(step, stepIndex);
     if (step.type === 'while_loop' && step.steps) return this.handleWhileLoop(step, stepIndex);
+    if (step.type === 'foreach' && step.steps) return this.handleForeachLoop(step, stepIndex);
     if (step.type === 'approval_checkpoint') return this.handleApprovalCheckpoint(step, stepIndex);
     if (step.policy?.requiresApproval) {
       const gate = await this.resolveApprovalGate(step, stepIndex, `Approval required for ${step.type}`);
@@ -240,6 +241,99 @@ export class SingleDeviceStepRunner {
       retryCount: 0,
     });
     return { status: 'SUCCESS' };
+  }
+
+
+  private async handleForeachLoop(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
+    const arraySourceVar = String(step.params?.arraySourceVar ?? '');
+    const itemName = String(step.params?.itemName ?? 'item');
+    
+    // Resolve the array source variable, which could be from inputs or step outputs
+    // We treat arraySourceVar as a template string, e.g. "{{hashtags}}"
+    let rawArrayValue: unknown;
+    if (arraySourceVar.includes('{{') && arraySourceVar.includes('}}')) {
+       // if it's templated, we can try to resolve it directly from the context, 
+       // but typically it might just be the variable name like "hashtags"
+       // Let's check executionContext first
+       const cleanVar = arraySourceVar.replace(/[{}]/g, '');
+       rawArrayValue = this.executionContext.get(cleanVar);
+       if (!rawArrayValue) {
+           rawArrayValue = this.params.inputVariables[cleanVar];
+       }
+    } else {
+       rawArrayValue = this.executionContext.get(arraySourceVar) ?? this.params.inputVariables[arraySourceVar];
+    }
+    
+    // Parse it if it's a JSON string, or use directly if it's an array
+    let items: unknown[] = [];
+    if (Array.isArray(rawArrayValue)) {
+      items = rawArrayValue;
+    } else if (typeof rawArrayValue === 'string') {
+      try {
+        const parsed = JSON.parse(rawArrayValue);
+        if (Array.isArray(parsed)) items = parsed;
+        else items = rawArrayValue.split(',').map(s => s.trim());
+      } catch {
+        items = rawArrayValue.split(',').map(s => s.trim());
+      }
+    }
+
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'RUNNING',
+      retryCount: 0,
+    });
+
+    let localCompleted = 0;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      // Inject the current item into the context and inputVariables so it's available for this iteration
+      this.executionContext.set(itemName, item);
+      const originalInput = this.params.inputVariables[itemName];
+      this.params.inputVariables[itemName] = item;
+      
+      const res = await this.executeSubSequence(step.steps || [], stepIndex + localCompleted + 1);
+      localCompleted += res.completedSteps;
+      
+      // Restore previous state if needed, though for a loop we just overwrite
+      if (originalInput !== undefined) {
+         this.params.inputVariables[itemName] = originalInput;
+      } else {
+         delete this.params.inputVariables[itemName];
+      }
+
+      if (res.status !== 'COMPLETED') {
+        await this.saveStep({
+          runId: this.params.runId,
+          step,
+          deviceId: this.params.device.id,
+          stepIndex,
+          status: res.status,
+          retryCount: 0,
+        });
+        return { status: res.status };
+      }
+    }
+
+    await this.saveStep({
+      runId: this.params.runId,
+      step,
+      deviceId: this.params.device.id,
+      stepIndex,
+      status: 'SUCCESS',
+      retryCount: 0,
+      output: { iterationsCompleted: items.length }
+    });
+    return { status: 'SUCCESS' };
+  }
+
+  // Helper method extracted from handleLoop and used in foreach
+  private async executeSubSequence(steps: MacroStep[], startIndex: number): Promise<{ completedSteps: number; status: TraversalStatus }> {
+     return this.runSteps(steps, startIndex);
   }
 
   private async handleWhileLoop(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {

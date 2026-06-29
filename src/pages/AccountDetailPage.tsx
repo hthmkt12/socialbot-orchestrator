@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, AlertCircle, RefreshCw, BarChart2 } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { useAccount, useAccountHistory } from '../hooks/use-accounts';
+import { useAccount } from '../hooks/use-accounts';
 import AccountActionHistoryPanel from '../components/accounts/account-action-history-panel';
 import { WarmUpAdvancementPanel } from '../components/accounts/warmup-progression-panel';
 import Spinner from '../components/ui/Spinner';
@@ -50,8 +50,15 @@ export default function AccountDetailPage() {
       <Header
         title={account.username}
         subtitle={account.platform}
-        backAction={() => navigate('/accounts')}
         actions={
+          <>
+            <button
+              onClick={() => navigate('/accounts')}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
           <div className="flex items-center gap-2">
             <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
               account.is_blocked 
@@ -63,6 +70,7 @@ export default function AccountDetailPage() {
               {account.is_blocked ? 'Blocked' : account.warm_up_stage < 5 ? 'Warming Up' : 'Active'}
             </span>
           </div>
+          </>
         }
       />
 
