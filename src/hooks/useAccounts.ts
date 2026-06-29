@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import type { Account, AccountActionHistory } from '../lib/database.types';
+import type { Account, AccountActionHistory, AccountPlatform } from '../lib/database.types';
 
 // Accounts Hooks
 export function useAccounts() {
@@ -39,7 +39,7 @@ export function useCreateAccount() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newAccount: Partial<Account> & { username: string; encrypted_password: string; platform: any }) => {
+    mutationFn: async (newAccount: Partial<Account> & { username: string; encrypted_password: string; platform: AccountPlatform }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 

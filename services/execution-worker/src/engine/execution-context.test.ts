@@ -21,7 +21,7 @@ describe('ExecutionContext', () => {
   it('should interpolate objects recursively', () => {
     const ctx = new ExecutionContext({ count: 5 });
     const obj = { text: 'items: {{count}}', nested: { val: '{{count}}' } };
-    const interpolated: any = ctx.interpolate(obj);
+    const interpolated = ctx.interpolate(obj) as Record<string, unknown>;
     expect(interpolated.text).toBe('items: 5');
     expect(interpolated.nested.val).toBe('5');
   });

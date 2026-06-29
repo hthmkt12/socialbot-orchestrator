@@ -6,11 +6,8 @@ import type { WorkerConfig } from './run-claim-coordinator';
 import { aggregateRunResults } from './worker-step-store';
 import { finalizeOwnedRun, isRunCancelled, markOwnedRunStatus } from './worker-run-store';
 import type { OwnedDeviceRunResult } from './execute-owned-device-run';
+import type { Device, MacroDefinition } from '../../../packages/shared/src';
 import { fileURLToPath } from 'node:url';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function mergeResolvedTargetSummary(
   summaryJson: Record<string, unknown> | null,
@@ -32,7 +29,15 @@ function chunkArray<T>(array: T[], size: number): T[][] {
   return result;
 }
 
-function runDeviceWorker(workerFile: string, workerData: any): Promise<OwnedDeviceRunResult> {
+interface DeviceWorkerData {
+  config: WorkerConfig;
+  runId: string;
+  claimToken: string;
+  device: Device;
+  definition: MacroDefinition;
+}
+
+function runDeviceWorker(workerFile: string, workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
   return new Promise((resolvePromise, rejectPromise) => {
     const worker = new Worker(workerFile, { workerData });
     worker.on('message', (message) => {
@@ -123,7 +128,7 @@ export class MultiTargetRunExecutor {
               definition: context.macroDefinition
             });
 
-            if ((result as any).status === 'SUCCESS' || result.status === 'COMPLETED') {
+            if (result.status === 'COMPLETED') {
               incrementSuccess();
             } else if (result.status === 'WAITING_APPROVAL') {
               waitingApproval = true;

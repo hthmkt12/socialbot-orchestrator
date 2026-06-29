@@ -6,7 +6,7 @@ import { ExecutionContext } from './engine/execution-context';
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout';
 import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers';
 import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer';
-import { detectAccountBlock, handlePotentialBlock } from '../../../src/lib/account-block-detector';
+import { handlePotentialBlock } from '../../../src/lib/account-block-detector';
 import type { Account, AccountActionType, AccountActionHistory } from '../../../src/lib/database.types';
 import type { DeviceStepBackend } from './device-step-backend';
 import {

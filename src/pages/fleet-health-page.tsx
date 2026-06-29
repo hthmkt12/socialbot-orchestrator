@@ -45,7 +45,7 @@ export default function FleetHealthPage() {
       // Check if device is currently assigned to an active run
       const activeRun = activeRuns.find(r => 
         r.target_type === 'SINGLE_DEVICE' && 
-        (r.target_selector_json as any)?.deviceIds?.includes(device.id)
+        (r.target_selector_json as { deviceIds?: string[] })?.deviceIds?.includes(device.id)
       );
 
       let isStalled = false;

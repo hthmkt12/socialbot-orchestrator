@@ -85,7 +85,7 @@ export async function loginAsTestUser(page: Page) {
     // If we're already on the dashboard, we don't need to log in
     await page.waitForURL(/.*\/social-dashboard/, { timeout: 2000 });
     return;
-  } catch (e) {
+  } catch {
     // Not on dashboard, proceed to login
   }
 

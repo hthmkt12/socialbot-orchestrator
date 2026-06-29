@@ -3,8 +3,15 @@ import Badge from '../ui/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import type { Device } from '../../lib/database.types';
 
+interface ActiveRunInfo {
+  id: string;
+  status: string;
+  target_type: string;
+  execution_lease_expires_at?: string | null;
+}
+
 interface DeviceGridCardProps {
-  device: Device & { active_run?: any };
+  device: Device & { active_run?: ActiveRunInfo | null; device_id_override?: string };
   healthStatus: 'healthy' | 'warning' | 'offline';
   isStalled: boolean;
 }
@@ -31,7 +38,7 @@ export function DeviceGridCard({ device, healthStatus, isStalled }: DeviceGridCa
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900">{device.name}</h3>
-            <p className="text-xs text-gray-500 font-mono">{(device as any).device_id_override || device.id.slice(0,8)}</p>
+            <p className="text-xs text-gray-500 font-mono">{device.device_id_override || device.id.slice(0,8)}</p>
           </div>
         </div>
         {getHealthBadge()}

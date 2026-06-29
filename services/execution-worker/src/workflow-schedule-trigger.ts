@@ -2,6 +2,22 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import cronParser from 'cron-parser';
 import type { WorkerConfig } from './run-claim-coordinator';
 
+interface DueSchedule {
+  id: string;
+  cron_expression: string;
+  timezone?: string;
+  target_type: string;
+  target_device_id?: string;
+  target_group_id?: string;
+  macro_version_id: string;
+  input_variables?: Record<string, unknown>;
+  created_by: string;
+  name: string;
+  last_run_at?: string | null;
+  is_active: boolean;
+  next_run_at?: string | null;
+}
+
 export class WorkflowScheduleTrigger {
   private readonly supabase: SupabaseClient;
   private pollInFlight = false;
@@ -65,7 +81,7 @@ export class WorkflowScheduleTrigger {
     }
   }
 
-  private async triggerSchedule(schedule: any, nowIso: string, skipRunCreation = false) {
+  private async triggerSchedule(schedule: DueSchedule, nowIso: string, skipRunCreation = false) {
     try {
       let nextRunIso: string | null = null;
       try {

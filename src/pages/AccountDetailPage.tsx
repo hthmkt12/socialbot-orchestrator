@@ -134,7 +134,7 @@ export default function AccountDetailPage() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Warm-up Status</h2>
                 <WarmUpAdvancementPanel 
                     readyAccounts={[]} 
-                    estimates={estimates as any} 
+                    estimates={estimates}
                     onAdvance={() => {}} 
                     isAdvancing={false} 
                 />

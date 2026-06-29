@@ -7,8 +7,17 @@ import type { WorkerConfig } from './run-claim-coordinator';
 import { aggregateRunResults } from './worker-step-store';
 import { finalizeOwnedRun, isRunCancelled, markOwnedRunStatus } from './worker-run-store';
 import type { OwnedDeviceRunResult } from './execute-owned-device-run';
+import type { Device, MacroDefinition } from '../../../packages/shared/src';
 
-function runDeviceWorker(workerFile: string, workerData: any): Promise<OwnedDeviceRunResult> {
+interface DeviceWorkerData {
+  config: WorkerConfig;
+  runId: string;
+  claimToken: string;
+  device: Device;
+  definition: MacroDefinition;
+}
+
+function runDeviceWorker(workerFile: string, workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
   return new Promise((resolvePromise, rejectPromise) => {
     const worker = new Worker(workerFile, { workerData });
     worker.on('message', (message) => {
