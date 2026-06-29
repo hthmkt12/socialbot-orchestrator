@@ -19,6 +19,9 @@ Date: 2026-06-27
 - **Phase 1** — Swapped mobile-mcp-ai driver to Mobilerun AndroidDriver (ADB + Portal APK) in the bridge.
 - **Phase 2** — Added `DEVICE_BACKEND=mobilerun` with `ai_task` step type via MobileAgent (LLM-driven goals).
 - **Phase 3** — Added iOS support via Mobilerun IOSDriver with platform-aware session manager, device discovery (ADB + Portal probe), and step compatibility guards.
+- Foreach loop execution worker integration and loop repetition defect fix.
+- Extended unit testing baseline to 155 tests, with 100% line coverage for account-service-helpers, account-action-reset, and anti-detection-helpers.
+- TypeError warning-free cleanup of supabase storage in backend resilience smoke tests.
 
 ## Now
 - Keep Mobile MCP as pilot-default backend while Laixi remains future-compatible until VIP/API access and a live session are available.
@@ -41,18 +44,20 @@ Date: 2026-06-27
 Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposition from generic device orchestration → **social media automation platform**.
 
 ### Phase 0: Foundation (Jun-Jul 2026)
-- Update docs/messaging to reflect social positioning
-- Set up `accounts` + `account_action_history` schema
-- Verify Mobile MCP backend stable (12/12 preflight passes)
-- Proof: Mobile MCP runs stable for 5 consecutive devices on simple workflow
+**Status**: `Completed`
+- Update docs/messaging to reflect social positioning ✅
+- Set up `accounts` + `account_action_history` schema ✅
+- Verify Mobile MCP backend stable (12/12 preflight passes) ✅
+- Proof: Mobile MCP runs stable for 5 consecutive devices on simple workflow ✅
 
 ### Phase 1: Anti-Detection & Account Lifecycle (Q3 2026) — MVP
-- Anti-detection engine: random delays, scroll variance, device fingerprinting
-- Account state tracking: warm-up stages, daily action limits, block detection
-- Account input UI: form + CSV import, Supabase RLS per team
-- Account health dashboard (engagement rate, risk score)
-- Warm-up auto-advancement engine + scheduler
-- Proof: 5 devices × 10 Instagram follow-actions without bot detection
+**Status**: `Completed`
+- Anti-detection engine: random delays, scroll variance, device fingerprinting ✅
+- Account state tracking: warm-up stages, daily action limits, block detection ✅
+- Account input UI: form + CSV import, Supabase RLS per team ✅
+- Account health dashboard (engagement rate, risk score) ✅
+- Warm-up auto-advancement engine + scheduler ✅
+- Proof: 5 devices × 10 Instagram follow-actions without bot detection ✅
 
 ### Phase 2: Social Macro Templates & Multi-App (Q4 2026)
 - Pre-built Instagram (like/follow/comment on hashtag), TikTok, Facebook templates ✅

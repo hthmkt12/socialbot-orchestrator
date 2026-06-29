@@ -102,7 +102,16 @@ export class InMemoryBackendDb implements WorkflowRunControlStore {
   private counter = 0;
 
   from(table: TableName) { return new InMemoryQuery(this, table); }
-  asSupabase() { return { from: (table: TableName) => this.from(table) } as never; }
+  asSupabase() {
+    return {
+      from: (table: TableName) => this.from(table),
+      storage: {
+        from: () => ({
+          upload: async () => ({ error: null })
+        })
+      }
+    } as never;
+  }
   rows(table: TableName) { return this.tables[table]; }
   seed(table: TableName, row: Row) { this.tables[table].push(this.normalizeRow(table, row)); }
   getWorkflowRun(runId: string) { return this.tables.workflow_runs.find((row) => row.id === runId) as WorkflowRun | undefined; }

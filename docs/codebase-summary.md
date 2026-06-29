@@ -6,7 +6,7 @@ Date: 2026-06-29 (updated)
 SocialBot Orchestrator orchestrates Android/iOS device automation workflows through Supabase, a backend worker, and device bridges (Mobile MCP with Mobilerun AndroidDriver/IOSDriver). Purpose-built for **social media automation teams** running 5-50 devices with anti-detection, account lifecycle tracking, and multi-app workflows (Instagram, TikTok, Facebook).
 
 ### Strategic Direction
-Social media automation pivot — per `plans/brainstorm-report-social-first-roadmap.md`. Phase 0 (Foundation) in progress. See `docs/project-roadmap.md` → Social Pivot for full 6-phase plan.
+Social media automation pivot — per `plans/brainstorm-report-social-first-roadmap.md`. Phase 0 (Foundation) and Phase 1 MVP are completed. See `docs/project-roadmap.md` → Social Pivot for full 6-phase plan.
 
 ## Main Areas
 - `src/`: React/Vite SPA.
@@ -24,13 +24,13 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - `docs/`: project summary, roadmap, changelog, standards, and operational notes.
 
 ## Current Verification Baseline
-- `npm.cmd test`: 7 files, **42 tests pass** on 2026-06-29.
+- `npm.cmd test`: 13 files, 155 tests pass on 2026-06-29.
 - `npm.cmd run typecheck`: pass on 2026-06-29.
 - `npm.cmd run lint`: 0 errors (1 warning — vendored file) on 2026-06-29.
 - `npm.cmd run build`: 6.85s, pass on 2026-06-29; main chunk 366 kB gzip 111 kB.
 - `npm.cmd run build:worker`: pass on 2026-06-29.
 - `npm.cmd run build:gateway`: pass on 2026-06-29.
-- `npm.cmd run smoke:backend`: pass on 2026-06-27.
+- `npm.cmd run smoke:backend`: pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.
 - Docker: full-stack compose (frontend + worker + gateway) with Dockerfiles.
 
@@ -51,6 +51,8 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
 - Spec Kit feature `003-artifact-storage-thresholds` is completed and merged.
 - **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). 12/12 preflight checks pass. Full verify blocked on Supabase DNS.
+- Foreach loop execution integration in backend worker (`handleForeachLoop` in `single-device-step-runner.ts`) along with a critical bug fix resolving loop step repetition/skipping defects across all loop types.
+- Extended unit testing suite with 100% line coverage for `anti-detection-helpers.ts` and `account-service-helpers.ts`.
 
 ## Known Risks
 - All source files are below 200 lines after the complete file-size refactor.

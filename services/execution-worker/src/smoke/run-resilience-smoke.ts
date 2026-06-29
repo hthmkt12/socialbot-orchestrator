@@ -13,6 +13,8 @@ import { LaixiStepBackend } from '../laixi-step-backend';
 import { aggregateRunResults, loadPersistedRunSteps } from '../worker-step-store';
 import { finalizeOwnedRun, markOwnedRunStatus } from '../worker-run-store';
 import { InMemoryBackendDb } from './in-memory-backend-db';
+import { foreachScenarios } from './foreach-loop-smoke';
+
 
 class FakeDeviceClient implements DeviceCommandClient {
   async connect() { return; }
@@ -186,6 +188,7 @@ async function main() {
     ['start queues a pending run', scenarioStartQueuesRun],
     ['cancel cleans active steps, approvals, and locks', scenarioCancelCleansLiveState],
     ['approval resume completes after refresh/tab-close style reconnect', scenarioApprovalResumeAfterUiDisconnect],
+    ...foreachScenarios,
   ];
 
   let failures = 0;

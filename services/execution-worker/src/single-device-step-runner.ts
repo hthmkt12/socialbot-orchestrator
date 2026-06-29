@@ -137,6 +137,24 @@ export class SingleDeviceStepRunner {
     return this.executeDeviceStepWithRetry(step, stepIndex);
   }
 
+  private clearPersistedSteps(steps: MacroStep[]) {
+    for (const step of steps) {
+      this.persistedSteps.delete(step.id);
+      if (step.steps) {
+        this.clearPersistedSteps(step.steps);
+      }
+      if (step.then) {
+        this.clearPersistedSteps(step.then);
+      }
+      if (step.else) {
+        this.clearPersistedSteps(step.else);
+      }
+      if (step.catch) {
+        this.clearPersistedSteps(step.catch);
+      }
+    }
+  }
+
   private async handleLoop(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
     const loopCount = Number(resolveTemplate(String(step.params?.count ?? '1'), this.params.inputVariables, this.stepOutputs)) || 1;
     
@@ -152,6 +170,9 @@ export class SingleDeviceStepRunner {
     let localCompleted = 0;
     
     for (let i = 0; i < loopCount; i++) {
+      if (step.steps) {
+        this.clearPersistedSteps(step.steps);
+      }
       const res = await this.executeSubSequence(step.steps || [], stepIndex + localCompleted + 1);
       localCompleted += res.completedSteps;
       if (res.status !== 'COMPLETED') {
@@ -296,6 +317,9 @@ export class SingleDeviceStepRunner {
       const originalInput = this.params.inputVariables[itemName];
       this.params.inputVariables[itemName] = item;
       
+      if (step.steps) {
+        this.clearPersistedSteps(step.steps);
+      }
       const res = await this.executeSubSequence(step.steps || [], stepIndex + localCompleted + 1);
       localCompleted += res.completedSteps;
       
@@ -359,6 +383,9 @@ export class SingleDeviceStepRunner {
 
       if (!conditionMet) break;
 
+      if (step.steps) {
+        this.clearPersistedSteps(step.steps);
+      }
       const res = await this.runSteps(step.steps ?? [], stepIndex + localCompleted + 1);
       localCompleted += res.completedSteps;
 
