@@ -15,8 +15,8 @@ vi.mock('./supabase', () => ({
 }));
 
 import { supabase } from './supabase';
-const mockFrom = vi.mocked(supabase.from);
-const mockGetSession = vi.mocked(supabase.auth.getSession);
+const mockFrom = vi.mocked(supabase.from) as any;
+const mockGetSession = vi.mocked(supabase.auth.getSession) as any;
 
 vi.mock('./audit', () => ({
   logAudit: vi.fn(),

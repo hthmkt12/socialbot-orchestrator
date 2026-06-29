@@ -71,7 +71,7 @@ export const DEFAULT_ANTI_DETECTION: AntiDetectionConfig = {
  * Returns modified params with randomized delay and jittered coordinates.
  */
 export function applyAntiDetection(
-  params: { x?: number; y?: number; ms?: number },
+  params: { x?: number; y?: number; ms?: number; [key: string]: any },
   config: AntiDetectionConfig = DEFAULT_ANTI_DETECTION,
 ) {
   const result = { ...params };

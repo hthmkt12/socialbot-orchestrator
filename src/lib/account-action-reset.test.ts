@@ -78,17 +78,17 @@ describe('resetAccountActionCount', () => {
     current_action_count: 45,
     daily_action_limit: 100,
     last_action_reset_at: '2026-06-28T12:00:00Z',
-  };
+  } as any;
 
   beforeEach(() => {
     mockUpdateAccount.mockReset();
-    mockUpdateAccount.mockResolvedValue({ id: 'acc-1' });
+    mockUpdateAccount.mockResolvedValue({ id: 'acc-1' } as any);
   });
 
   it('skips reset when already reset today', async () => {
     const now = new Date('2026-06-28T14:00:00Z');
     const result = await resetAccountActionCount(
-      { ...baseAccount, last_action_reset_at: '2026-06-28T12:00:00Z' },
+      { ...baseAccount, last_action_reset_at: '2026-06-28T12:00:00Z' } as any,
       now,
     );
     expect(result.wasReset).toBe(false);
@@ -109,7 +109,7 @@ describe('resetAccountActionCount', () => {
 
   it('updates daily_limit when recommended is higher', async () => {
     const now = new Date('2026-06-29T14:00:00Z');
-    const account = { ...baseAccount, daily_action_limit: 5 };
+    const account = { ...baseAccount, daily_action_limit: 5 } as any;
     const result = await resetAccountActionCount(account, now);
     expect(result.wasReset).toBe(true);
     expect(mockUpdateAccount).toHaveBeenCalledWith('acc-1', expect.objectContaining({
@@ -119,7 +119,7 @@ describe('resetAccountActionCount', () => {
 
   it('does not reduce daily_limit when current is higher than recommended', async () => {
     const now = new Date('2026-06-29T14:00:00Z');
-    const account = { ...baseAccount, daily_action_limit: 200 };
+    const account = { ...baseAccount, daily_action_limit: 200 } as any;
     const result = await resetAccountActionCount(account, now);
     expect(result.wasReset).toBe(true);
     expect(mockUpdateAccount).toHaveBeenCalledWith('acc-1', expect.not.objectContaining({
@@ -129,7 +129,7 @@ describe('resetAccountActionCount', () => {
 });
 
 describe('runDailyActionReset', () => {
-  const makeAccount = (id: string, overrides = {}) => ({
+  const makeAccount = (id: string, overrides = {}): any => ({
     id,
     platform: 'instagram' as const,
     warm_up_stage: 3,
@@ -141,7 +141,7 @@ describe('runDailyActionReset', () => {
 
   beforeEach(() => {
     mockUpdateAccount.mockReset();
-    mockUpdateAccount.mockResolvedValue({ id: 'mock' });
+    mockUpdateAccount.mockResolvedValue({ id: 'mock' } as any);
   });
 
   it('resets all accounts on a new day', async () => {
@@ -174,9 +174,9 @@ describe('runDailyActionReset', () => {
   it('handles mixed results', async () => {
     const now = new Date('2026-06-29T12:00:00Z');
     mockUpdateAccount
-      .mockResolvedValueOnce({ id: 'a1' })
+      .mockResolvedValueOnce({ id: 'a1' } as any)
       .mockRejectedValueOnce(new Error('DB error'))
-      .mockResolvedValueOnce({ id: 'a3' });
+      .mockResolvedValueOnce({ id: 'a3' } as any);
     const accounts = [makeAccount('a1'), makeAccount('a2'), makeAccount('a3')];
     const result = await runDailyActionReset(accounts, now);
     expect(result.reset).toBe(2);

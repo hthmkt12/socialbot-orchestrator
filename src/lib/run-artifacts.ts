@@ -124,7 +124,7 @@ export function buildRunArtifactStepKey(deviceId: string | null, stepId: string 
   return deviceId && stepId ? `${deviceId}::${stepId}` : null;
 }
 
-export function normalizeRunArtifact(artifact: Artifact & { storage_path?: string | null }): RunArtifactPreview {
+export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
   const metadata = isRecord(artifact.metadata_json) ? artifact.metadata_json : {};
   const stepId = asString(metadata.stepId);
   const base64 = asString(metadata.base64);
@@ -133,7 +133,7 @@ export function normalizeRunArtifact(artifact: Artifact & { storage_path?: strin
   const source = asString(metadata.source);
   const jsonPayload = readJsonPayload(metadata);
   const isOversized = artifact.size > MAX_INLINE_PREVIEW_BYTES;
-  const isObjectStorage = Boolean(artifact.storage_path);
+  const isObjectStorage = metadata.storage_mode === 'object';
 
   const imageSrc = artifact.type === 'SCREENSHOT' && base64 && !isOversized
     ? `data:${artifact.content_type};base64,${base64}`

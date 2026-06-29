@@ -120,4 +120,14 @@ describe('normalizeRunArtifact', () => {
 
     expect(preview.timestamp).toBe('2026-05-06T12:00:00.000Z');
   });
+
+  it('reports object storage mode and status when storage_mode is object', () => {
+    const preview = normalizeRunArtifact(buildArtifact({
+      metadata_json: { stepId: 'step-1', storage_mode: 'object' },
+    }));
+
+    expect(preview.storageModeLabel).toBe('Supabase Storage');
+    expect(preview.storageStatusLabel).toBe('Stored remotely');
+    expect(preview.previewAvailable).toBe(true);
+  });
 });

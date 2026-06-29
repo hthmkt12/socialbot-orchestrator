@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Artifact } from '../lib/database.types';
 
-export function useArtifactUrl(artifact: Artifact & { storage_path?: string | null }) {
+export function useArtifactUrl(artifact: Artifact) {
   const [url, setUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -11,7 +11,7 @@ export function useArtifactUrl(artifact: Artifact & { storage_path?: string | nu
     let isMounted = true;
 
     async function loadUrl() {
-      if (!artifact.storage_path) {
+      if (artifact.metadata_json?.storage_mode !== 'object') {
         setUrl(null);
         return;
       }
@@ -22,7 +22,7 @@ export function useArtifactUrl(artifact: Artifact & { storage_path?: string | nu
         // 60 seconds is enough for the preview card rendering.
         const { data, error } = await supabase.storage
           .from('artifacts')
-          .createSignedUrl(artifact.storage_path, 60);
+          .createSignedUrl(artifact.storage_key, 60);
 
         if (error) {
           throw error;
@@ -44,7 +44,7 @@ export function useArtifactUrl(artifact: Artifact & { storage_path?: string | nu
     return () => {
       isMounted = false;
     };
-  }, [artifact.storage_path]);
+  }, [artifact.storage_key, artifact.metadata_json?.storage_mode]);
 
   return { url, isLoading, error };
 }

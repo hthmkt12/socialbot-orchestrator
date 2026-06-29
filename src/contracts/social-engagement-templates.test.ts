@@ -124,7 +124,7 @@ describe('TIKTOK_LIKE_TRENDING', () => {
   it('includes a swipe scroll step', () => {
     const scrollStep = TIKTOK_LIKE_TRENDING.definition.steps.find((s) => s.type === 'swipe');
     expect(scrollStep).toBeDefined();
-    expect(scrollStep!.params.fromY).toBeGreaterThan(scrollStep!.params.toY);
+    expect(Number(scrollStep!.params.fromY)).toBeGreaterThan(Number(scrollStep!.params.toY));
   });
 
   it('has action budget type on like step', () => {
