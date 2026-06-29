@@ -19,6 +19,7 @@
     "id": "accounts",
     "title": "Account Management",
     "sections": [
+      { "id": "account-setup", "title": "Account Setup", "file": "/user-docs/account-setup.md" },
       { "id": "warmup-schedules", "title": "Warm-up Schedules", "file": "/user-docs/warmup-schedules.md" }
     ]
   }

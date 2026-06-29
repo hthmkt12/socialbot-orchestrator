@@ -720,20 +720,15 @@ export class SingleDeviceStepRunner {
       });
 
       if (success) {
-        const { data: account } = await this.params.supabase
-          .from('accounts')
-          .select('current_action_count')
-          .eq('id', accountId)
-          .maybeSingle();
+        const { error: rpcError } = await this.params.supabase.rpc('increment_account_action_count', {
+          p_account_id: accountId,
+        });
 
-        if (account) {
-          await this.params.supabase
-            .from('accounts')
-            .update({
-              current_action_count: ((account as { current_action_count: number }).current_action_count ?? 0) + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', accountId);
+        if (rpcError) {
+          console.warn(
+            `[execution-worker] run ${this.params.runId} step ${step.id} failed to increment action count:`,
+            rpcError
+          );
         }
       }
     } catch {

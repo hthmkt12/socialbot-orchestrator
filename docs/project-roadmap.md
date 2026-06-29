@@ -90,19 +90,27 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Anti-detection engine (random delays, variance) in worker ✅
 
 ### Phase 8: Parallel Execution (Fleet Speed) (Q1 2028)
-- Refactored orchestrateRun to utilize concurrent device tracks
-- Applied chunked Promise.all to prevent database/memory exhaustion
-- Worker now interleaves steps for multi-device targets
+**Status**: `Completed`
+**Components**:
+- Node.js `worker_threads` integration for isolated step execution ✅
+- Refactored `MultiTargetRunExecutor` to act as a lightweight Dispatcher ✅
+- Database race condition patches (e.g. RPC atomic counter for `current_action_count`) ✅
+- Verification scripts testing concurrency boundary ✅
 
 ### Phase 9: Laixi Clean-path Proof (Q2 2028)
-- Implement `laixi-step-backend.ts` execution mappings
-- Build HTTP wrapper for Laixi Gateway API calls
-- Verify worker payload translation for `DEVICE_BACKEND=laixi`
+**Status**: `Completed`
+**Components**:
+- Implement `laixi-step-backend.ts` execution mappings ✅
+- Build HTTP wrapper for Laixi Gateway API calls with timeouts ✅
+- Verify worker payload translation for `DEVICE_BACKEND=laixi` ✅
+- Implement Mock Gateway Server for automated testing ✅
 
 ### Phase 10: User Documentation System (Q3 2028)
-- Add in-app markdown documentation viewer (`react-markdown`)
-- Author user guides for device connection, macros, and account setup
-- Integrate docs portal into the main navigation sidebar
+**Status**: `Completed`
+**Components**:
+- In-app markdown documentation viewer (`react-markdown` + `remark-gfm`) ✅
+- User guides authored: Introduction, Connecting Devices, Macro Builder, Anti-Detection Engine, Account Setup, Warm-up Schedules ✅
+- Doc navigation sidebar integrated into main app sidebar ✅
 
 ### Phase 11: Playwright E2E Testing Suite (Q4 2028)
 - Install and configure `@playwright/test` ✅

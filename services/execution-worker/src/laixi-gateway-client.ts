@@ -33,12 +33,28 @@ export class LaixiGatewayClient implements DeviceCommandClient {
       timeoutMs: this.commandTimeoutMs,
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.commandTimeoutMs);
+
     try {
       const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/dispatch-step`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status} ${response.statusText}`;
+        if (response.status === 502) errorMessage = '502 Bad Gateway: Gateway server is down or unreachable';
+        if (response.status === 504) errorMessage = '504 Gateway Timeout: Gateway server timed out';
+
+        return {
+          success: false,
+          error: errorMessage,
+          deviceId,
+        };
+      }
 
       const raw = (await response.json()) as GatewayDispatchResponse;
       if (!raw.success || !raw.result) {
@@ -52,11 +68,16 @@ export class LaixiGatewayClient implements DeviceCommandClient {
 
       return raw.result;
     } catch (error) {
+      const isAbort = error instanceof Error && error.name === 'AbortError';
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to dispatch via gateway',
+        error: isAbort
+          ? `Command timed out after ${this.commandTimeoutMs}ms`
+          : (error instanceof Error ? error.message : 'Failed to dispatch via gateway'),
         deviceId,
       };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

@@ -1,12 +1,33 @@
+import { Worker } from 'node:worker_threads';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { executeOwnedDeviceRun } from './execute-owned-device-run';
-import { aggregateRunResults } from './worker-step-store';
-import { finalizeOwnedRun, loadSingleDeviceRunContext, markOwnedRunStatus } from './worker-run-store';
-import { createDeviceStepBackend } from './device-step-backend-factory';
+import { loadSingleDeviceRunContext } from './single-device-run-context';
 import type { WorkerConfig } from './run-claim-coordinator';
+import { aggregateRunResults } from './worker-step-store';
+import { finalizeOwnedRun, isRunCancelled, markOwnedRunStatus } from './worker-run-store';
+import type { OwnedDeviceRunResult } from './execute-owned-device-run';
+
+function runDeviceWorker(workerFile: string, workerData: any): Promise<OwnedDeviceRunResult> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const worker = new Worker(workerFile, { workerData });
+    worker.on('message', (message) => {
+      if (message.type === 'DONE') {
+        resolvePromise(message.result);
+      } else if (message.type === 'ERROR') {
+        rejectPromise(new Error(message.error));
+      }
+    });
+    worker.on('error', rejectPromise);
+    worker.on('exit', (code) => {
+      if (code !== 0) rejectPromise(new Error(`Worker stopped with exit code ${code}`));
+    });
+  });
+}
 
 export class SingleDeviceRunExecutor {
   private readonly supabase: SupabaseClient;
+  private readonly __dirname = fileURLToPath(new URL('.', import.meta.url));
 
   constructor(
     private readonly config: WorkerConfig,
@@ -16,23 +37,42 @@ export class SingleDeviceRunExecutor {
   }
 
   async executeClaimedRun(runId: string, claimToken: string) {
-    const backend = createDeviceStepBackend(this.config);
-
     try {
       const context = await loadSingleDeviceRunContext(this.supabase, runId, claimToken);
-      await backend.connect();
+      
       await markOwnedRunStatus(this.supabase, context.runId, claimToken, 'RUNNING');
-      const result = await executeOwnedDeviceRun({
-        supabase: this.supabase,
-        backend,
-        runId: context.runId,
-        claimToken,
-        device: context.device,
-        definition: context.definition,
-        triggeredByUserId: context.triggeredByUserId,
-        inputVariables: context.inputVariables,
-      });
+
+      if (await isRunCancelled(this.supabase, context.runId, claimToken)) {
+        await finalizeOwnedRun(this.supabase, context.runId, claimToken, 'CANCELLED', {
+          totalDevices: 1,
+          cancelled: 1,
+        });
+        return;
+      }
+
+      const workerFile = resolve(this.__dirname, './execute-device-worker-thread.js');
+      let result: OwnedDeviceRunResult;
+      
+      try {
+          result = await runDeviceWorker(workerFile, {
+            config: this.config,
+            runId: context.runId,
+            claimToken,
+            device: context.device,
+            definition: context.macroDefinition
+          });
+      } catch (error) {
+          result = {
+              status: 'FAILED',
+              error: {
+                  code: 'WORKER_CRASH',
+                  message: error instanceof Error ? error.message : String(error)
+              }
+          };
+      }
+
       const aggregate = await aggregateRunResults(this.supabase, context.runId);
+
       const status =
         result.status === 'COMPLETED'
           ? 'COMPLETED'
@@ -41,16 +81,14 @@ export class SingleDeviceRunExecutor {
             : result.status === 'CANCELLED'
               ? 'CANCELLED'
               : 'FAILED';
+
       await finalizeOwnedRun(this.supabase, context.runId, claimToken, status, {
         ...(result.error ? { error: result.error } : {}),
         totalDevices: 1,
-        succeeded: status === 'COMPLETED' ? 1 : 0,
+        succeeded: status === 'COMPLETED' || status === 'WAITING_APPROVAL' ? 1 : 0,
         failed: status === 'FAILED' ? 1 : 0,
         cancelled: status === 'CANCELLED' ? 1 : 0,
         partial: 0,
-        totalSteps: aggregate.totalSteps,
-        completedSteps: aggregate.completedSteps,
-        failedSteps: aggregate.failedSteps,
         avgCompletionRate: aggregate.avgCompletionRate,
       });
     } catch (error) {
@@ -63,7 +101,6 @@ export class SingleDeviceRunExecutor {
         // Keep original execution failure as primary signal.
       }
     } finally {
-      await backend.disconnect().catch(() => undefined);
       this.releaseClaim(runId, claimToken);
     }
   }
