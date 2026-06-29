@@ -24,7 +24,8 @@ const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
 const DemoPage = lazy(() => import('./pages/DemoPage'));
 const DeviceSetupPage = lazy(() => import('./pages/DeviceSetupPage'));
 const MobileMcpOrchestratorPage = lazy(() => import('./pages/mobile-mcp-orchestrator-page'));
-const AccountSetupPage = lazy(() => import('./pages/AccountSetupPage'));
+const AccountsPage = lazy(() => import('./pages/AccountsPage'));
+const AccountDetailPage = lazy(() => import('./pages/AccountDetailPage'));
 const SocialDashboardPage = lazy(() => import('./pages/social-dashboard-page'));
 const FleetHealthPage = lazy(() => import('./pages/fleet-health-page'));
 const SystemMonitorPage = lazy(() => import('./pages/system-monitor-page'));
@@ -75,7 +76,8 @@ function AuthGate() {
           path="/mobile-mcp-orchestrator"
           element={withPageFallback(<MobileMcpOrchestratorPage />)}
         />
-        <Route path="/account-setup" element={withPageFallback(<AccountSetupPage />)} />
+        <Route path="/accounts" element={withPageFallback(<AccountsPage />)} />
+        <Route path="/accounts/:id" element={withPageFallback(<AccountDetailPage />)} />
         <Route path="/social-dashboard" element={withPageFallback(<SocialDashboardPage />)} />
         <Route path="/fleet-health" element={withPageFallback(<FleetHealthPage />)} />
         <Route path="/system-monitor" element={withPageFallback(<SystemMonitorPage />)} />
