@@ -28,6 +28,7 @@ This plan implements Phase 1 (MVP) of the Social Media Automation Platform pivot
 | 1 | [Anti-Detection Engine](./phase-01-anti-detection-engine.md) | Completed |
 | 2 | [Account Lifecycle Tracking](./phase-02-account-lifecycle-tracking.md) | Completed |
 | 3 | [UI Updates](./phase-03-ui-updates.md) | Completed |
+| 4 | [Concrete Social Bots](./phase-04-concrete-bots-foreach.md) | Completed |
 
 ## Dependencies
 - Requires completion of `project/plans/20260629-social-pivot-phase-0-docs` (and the previously applied `20260627000001_account_tables.sql` migration).
