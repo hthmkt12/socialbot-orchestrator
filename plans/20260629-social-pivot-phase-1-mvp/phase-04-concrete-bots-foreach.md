@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Concrete Social Bots & Foreach Execution"
-status: pending
+status: completed
 priority: P1
 dependencies: []
 ---
@@ -36,9 +36,9 @@ Expand the worker execution engine to support a new `foreach` step type and crea
 4. Create the "Instagram Mass Hashtag Liker" and "Instagram Mass Account Follower" templates using the new `foreach` logic in `social-engagement-templates.ts`.
 
 ## Success Criteria
-- [ ] The engine correctly iterates through an array input variable and resolves the loop item within inner steps.
-- [ ] A template utilizing `foreach` can be executed successfully without crashing the runner.
-- [ ] The `foreach` loop maintains state and doesn't conflict with database state checkpoints.
+- [x] The engine correctly iterates through an array input variable and resolves the loop item within inner steps.
+- [x] A template utilizing `foreach` can be executed successfully without crashing the runner.
+- [x] The `foreach` loop maintains state and doesn't conflict with database state checkpoints.
 
 ## Risk Assessment
 - Risk: State pollution between iterations (e.g., variables getting overwritten and failing the next loop).
