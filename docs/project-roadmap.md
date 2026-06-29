@@ -85,9 +85,9 @@ Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposi
 - Generate signed URLs in frontend ✅
 
 ### Phase 7: Concrete Social Bots (Q4 2027)
-- Concrete Instagram/TikTok macro templates
-- Execution engine looping / `foreach` steps
-- Anti-detection engine (random delays, variance) in worker
+- Concrete Instagram/TikTok macro templates ✅
+- Execution engine looping / `foreach` steps ✅
+- Anti-detection engine (random delays, variance) in worker ✅
 
 ### Phase 8: Parallel Execution (Fleet Speed) (Q1 2028)
 - Refactored orchestrateRun to utilize concurrent device tracks
