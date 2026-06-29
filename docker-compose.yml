@@ -1,5 +1,5 @@
 services:
-  laixi-orchestrator:
+  frontend:
     build:
       context: .
       args:
@@ -7,4 +7,32 @@ services:
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
     ports:
       - "3000:80"
+    restart: unless-stopped
+    depends_on:
+      worker:
+        condition: service_started
+
+  worker:
+    build:
+      context: services/execution-worker
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      DEVICE_BACKEND: ${DEVICE_BACKEND:-mobile-mcp}
+      MOBILE_MCP_WS_URL: ${MOBILE_MCP_WS_URL:-ws://host.docker.internal:4311}
+      LAIXI_GATEWAY_URL: ${LAIXI_GATEWAY_URL:-http://gateway:8080}
+      COMMAND_TIMEOUT_MS: "30000"
+      CLAIM_POLL_INTERVAL_MS: "5000"
+      LEASE_DURATION_MS: "60000"
+    ports:
+      - "4310:4310"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  gateway:
+    build:
+      context: services/laixi-gateway
+    ports:
+      - "8080:8080"
     restart: unless-stopped
