@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -34,15 +34,6 @@ const SchedulesPage = lazy(() => import('./pages/SchedulesPage'));
 const DocsPage = lazy(() => import('./pages/DocsPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 10_000,
-      retry: 1,
-    },
-  },
-});
 
 function AuthGate() {
   const { session, loading } = useAuth();
@@ -105,6 +96,15 @@ function PageFallback() {
 }
 
 export default function App() {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 10_000,
+        retry: 1,
+      },
+    },
+  }));
+
   return (
     <QueryClientProvider client={queryClient}>
       <ErrorBoundary>

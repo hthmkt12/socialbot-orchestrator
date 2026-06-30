@@ -233,7 +233,7 @@ No runtime check. If env missing, `createClient` gets `undefined` and fails with
 5. ~~**I2** — Split step runner~~ ⏭️ Deferred (tight coupling, high-risk refactor)
 6. ~~**I3** — Delete orphan scripts~~ ✅ FIXED
 7. ~~**I8** — Graceful worker shutdown~~ ✅ FIXED
-8. I4, I5, I7 also completed alongside above
+8. I4, I5, I7, M4, M5, M6 also completed alongside above
 
 ### Deferred
 - **I2** — Split `single-device-step-runner.ts` (802 lines): Handler methods tightly coupled to runner internals. Extraction requires significant refactor. Consider in future when step types grow further.
@@ -259,6 +259,13 @@ No runtime check. If env missing, `createClient` gets `undefined` and fails with
 | I6: Permissive RLS | New migration: INSERT restricted to own accounts only | `20260630000001_fix_action_history_rls.sql` (new) |
 | I7: Gateway interval leak | `stopFreshnessLoop()`, interval ID stored | `gateway-session-manager.ts` |
 | I8: No graceful shutdown | `coordinator.stop()`, SIGTERM/SIGINT handlers | `run-claim-coordinator.ts`, `worker/index.ts` |
+
+### MINOR
+| Finding | Fix | Files |
+|---------|-----|-------|
+| M4: queryClient scope | Moved queryClient instantiation inside App component tree | `App.tsx` |
+| M5: definition_json types | Typed definition_json and input_schema_json strictly | `database.types.ts` |
+| M6: env var validation | Added check for VITE_SUPABASE_URL and ANON_KEY | `supabase.ts` |
 
 ---
 

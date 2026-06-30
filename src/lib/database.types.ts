@@ -1,3 +1,5 @@
+import type { MacroDefinition, MacroInputField } from '../contracts/macro';
+
 export type UserRole = 'ADMIN' | 'OPERATOR' | 'VIEWER';
 export type DeviceStatus = 'ONLINE' | 'OFFLINE' | 'BUSY' | 'ERROR';
 export type DeviceHeartbeatFreshness = 'fresh' | 'stale' | 'offline';
@@ -66,8 +68,8 @@ export interface MacroVersion {
   macro_id: string;
   version_number: number;
   status: MacroVersionStatus;
-  definition_json: Record<string, unknown>;
-  input_schema_json: Record<string, unknown>;
+  definition_json: MacroDefinition;
+  input_schema_json: Record<string, MacroInputField>;
   tags_json: string[];
   created_by_user_id: string;
   created_at: string;
