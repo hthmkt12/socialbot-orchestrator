@@ -13,3 +13,11 @@
 {"ts":"2026-06-27T08:54:04.486Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'N', \"NOT_VALID_JSON{{{\" is not valid JSON"}
 {"ts":"2026-06-27T08:54:18.834Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"empty-input","dur":0,"status":"skip","exit":0,"error":""}
 {"ts":"2026-06-27T08:54:21.140Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'o', \"not valid json{{{\" is not valid JSON"}
+{"ts":"2026-06-30T05:56:25.341Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'N', \"NOT_VALID_JSON{{{\" is not valid JSON"}
+{"ts":"2026-06-30T05:56:27.228Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"empty-input","dur":7,"status":"skip","exit":0,"error":""}
+{"ts":"2026-06-30T07:07:51.363Z","hook":"descriptive-name","event":"PreToolUse","tool":"Write","target":"","note":"","dur":3,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-30T07:07:51.397Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'N', \"NOT_VALID_JSON{{{\" is not valid JSON"}
+{"ts":"2026-06-30T07:39:13.044Z","hook":"descriptive-name","event":"PreToolUse","tool":"Write","target":"","note":"","dur":6,"status":"ok","exit":0,"error":""}
+{"ts":"2026-06-30T07:39:13.173Z","hook":"plan-format-kanban","event":"PostToolUse","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'N', \"NOT_VALID_JSON{{{\" is not valid JSON"}
+{"ts":"2026-06-30T07:39:16.539Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"empty-input","dur":0,"status":"skip","exit":0,"error":""}
+{"ts":"2026-06-30T07:39:17.536Z","hook":"task-completed-handler","event":"TaskCompleted","tool":"","target":"","note":"","dur":0,"status":"crash","exit":0,"error":"Unexpected token 'o', \"not valid json{{{\" is not valid JSON"}

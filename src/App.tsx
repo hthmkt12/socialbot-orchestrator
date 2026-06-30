@@ -52,7 +52,7 @@ function AuthGate() {
 
   return (
     <Routes>
-      <Route element={<AppLayout />}>
+      <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
         <Route path="/devices" element={withPageFallback(<DevicesPage />)} />
         <Route path="/device-groups" element={withPageFallback(<DeviceGroupsPage />)} />
         <Route path="/macros" element={withPageFallback(<MacrosPage />)} />
