@@ -31,12 +31,15 @@ function readConfig(): WorkerConfig {
     mobileMcpBridgeUrl: process.env.MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321',
     deviceBackend,
     commandTimeoutMs: Number(process.env.DEVICE_COMMAND_TIMEOUT_MS ?? process.env.GATEWAY_COMMAND_TIMEOUT_MS ?? 15000),
+    bridgeToken: process.env.MOBILE_MCP_BRIDGE_TOKEN || undefined,
   };
 }
 
+const WORKER_CORS_ORIGIN = process.env.WORKER_CORS_ORIGIN ?? 'http://localhost:5173';
+
 function corsHeaders() {
   return {
-    'access-control-allow-origin': '*',
+    'access-control-allow-origin': WORKER_CORS_ORIGIN,
     'access-control-allow-methods': 'GET,OPTIONS',
     'access-control-allow-headers': 'content-type',
   };
@@ -97,6 +100,16 @@ function main() {
   startHealthServer(config, coordinator);
   coordinator.start();
   scheduleTrigger.start();
+
+  // Graceful shutdown: release claims before exit
+  const shutdown = async (signal: string) => {
+    console.log(`[execution-worker] received ${signal}, shutting down...`);
+    scheduleTrigger.stop();
+    await coordinator.stop();
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
 main();

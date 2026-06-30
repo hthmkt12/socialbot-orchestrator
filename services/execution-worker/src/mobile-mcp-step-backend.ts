@@ -24,7 +24,8 @@ const SUPPORTED_MOBILE_MCP_STEPS = new Set([
 export class MobileMcpStepBackend implements DeviceStepBackend {
   constructor(
     protected readonly baseUrl: string,
-    private readonly commandTimeoutMs: number
+    private readonly commandTimeoutMs: number,
+    private readonly bridgeToken?: string,
   ) {}
 
   async connect() {
@@ -103,7 +104,10 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
     try {
       const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/devices/${encodeURIComponent(serial)}/execute-step`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(this.bridgeToken ? { 'x-bridge-token': this.bridgeToken } : {}),
+        },
         signal: controller.signal,
         body: JSON.stringify({
           runId: args.runId,

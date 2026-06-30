@@ -58,6 +58,7 @@ export class GatewaySessionManager {
   private readonly socketToDeviceId = new Map<WebSocket, string>();
   private readonly pendingDispatches = new Map<string, PendingDispatch>();
   private requestCounter = 0;
+  private freshnessIntervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private readonly protocolVersion: string,
@@ -73,11 +74,20 @@ export class GatewaySessionManager {
   }
 
   startFreshnessLoop(intervalMs: number = DEVICE_HEARTBEAT_INTERVAL_MS) {
-    setInterval(() => {
+    this.stopFreshnessLoop();
+    this.freshnessIntervalId = setInterval(() => {
       for (const deviceId of this.sessions.keys()) {
         void this.persistSessionHealth(deviceId);
       }
-    }, intervalMs).unref();
+    }, intervalMs);
+    this.freshnessIntervalId.unref();
+  }
+
+  stopFreshnessLoop() {
+    if (this.freshnessIntervalId) {
+      clearInterval(this.freshnessIntervalId);
+      this.freshnessIntervalId = null;
+    }
   }
 
   getSessionSnapshots() {

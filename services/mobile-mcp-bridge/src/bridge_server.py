@@ -10,9 +10,21 @@ from json_response import make_response, to_json_bytes
 
 MANAGER = DeviceSessionManager()
 SERIAL_RE = re.compile(r"^/devices/([^/]+)/(health|execute-step|tools/call)$")
+BRIDGE_TOKEN = os.environ.get("MOBILE_MCP_BRIDGE_TOKEN", "")
+ALLOWED_ORIGIN = os.environ.get("BRIDGE_CORS_ORIGIN", "http://localhost:5173")
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
+    def _check_auth(self):
+        """Validate X-Bridge-Token header. Returns True if OK, sends 401 and returns False otherwise."""
+        if not BRIDGE_TOKEN:
+            return True  # no token configured = dev mode, skip auth
+        token = self.headers.get("x-bridge-token", "")
+        if token != BRIDGE_TOKEN:
+            self._send_json(401, {"success": False, "error": "Unauthorized: invalid or missing X-Bridge-Token"})
+            return False
+        return True
+
     def do_OPTIONS(self):
         self._send(204, {})
 
@@ -24,6 +36,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "sessionCount": MANAGER.session_count(),
             })
+            return
+        if not self._check_auth():
             return
         if path == "/devices":
             self._handle_result(lambda: make_response(True, {"devices": MANAGER.list_devices()}))
@@ -40,6 +54,8 @@ class BridgeHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"success": False, "error": "Not found"})
 
     def do_POST(self):
+        if not self._check_auth():
+            return
         match = SERIAL_RE.match(urlparse(self.path).path)
         if not match:
             self._send_json(404, {"success": False, "error": "Not found"})
@@ -82,9 +98,9 @@ class BridgeHandler(BaseHTTPRequestHandler):
 
     def _send(self, status, headers, body=b""):
         self.send_response(status)
-        self.send_header("access-control-allow-origin", "*")
+        self.send_header("access-control-allow-origin", ALLOWED_ORIGIN)
         self.send_header("access-control-allow-methods", "GET,POST,OPTIONS")
-        self.send_header("access-control-allow-headers", "content-type")
+        self.send_header("access-control-allow-headers", "content-type, x-bridge-token")
         for key, value in headers.items():
             self.send_header(key, value)
         self.end_headers()

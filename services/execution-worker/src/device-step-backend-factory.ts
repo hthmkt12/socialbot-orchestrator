@@ -8,10 +8,10 @@ export type DeviceBackendKind = 'laixi' | 'mobile-mcp' | 'mobilerun';
 
 export function createDeviceStepBackend(config: WorkerConfig) {
   if (config.deviceBackend === 'mobilerun') {
-    return new MobilerunStepBackend(config.mobileMcpBridgeUrl, config.commandTimeoutMs);
+    return new MobilerunStepBackend(config.mobileMcpBridgeUrl, config.commandTimeoutMs, config.bridgeToken);
   }
   if (config.deviceBackend === 'mobile-mcp') {
-    return new MobileMcpStepBackend(config.mobileMcpBridgeUrl, config.commandTimeoutMs);
+    return new MobileMcpStepBackend(config.mobileMcpBridgeUrl, config.commandTimeoutMs, config.bridgeToken);
   }
 
   return new LaixiStepBackend(new LaixiGatewayClient(config.gatewayBaseUrl, config.commandTimeoutMs));

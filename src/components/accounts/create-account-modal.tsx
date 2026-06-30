@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import Modal from '../ui/Modal';
 import { computeDefaultBudgets, ACTION_TYPE_LABELS } from '../../lib/action-budget-types';
+import { encryptPassword } from '../../lib/account-password-crypto';
 import type { AccountPlatform } from '../../lib/database.types';
 
 interface CreateAccountModalProps {
@@ -24,9 +25,10 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    const encrypted = await encryptPassword(password);
     await onSubmit({
       username,
-      encrypted_password: password,
+      encrypted_password: encrypted,
       platform,
       daily_action_limit: dailyLimit,
     });

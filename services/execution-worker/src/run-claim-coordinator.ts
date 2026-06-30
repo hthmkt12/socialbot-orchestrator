@@ -14,6 +14,7 @@ export interface WorkerConfig {
   mobileMcpBridgeUrl: string;
   deviceBackend: 'laixi' | 'mobile-mcp' | 'mobilerun';
   commandTimeoutMs: number;
+  bridgeToken?: string;
 }
 
 interface ClaimedWorkflowRun {
@@ -43,6 +44,8 @@ export class RunClaimCoordinator {
   private readonly supabase: SupabaseClient;
   private readonly activeClaims = new Map<string, ActiveClaim>();
   private pollInFlight = false;
+  private pollIntervalId: ReturnType<typeof setInterval> | null = null;
+  private stopped = false;
 
   constructor(
     private readonly config: WorkerConfig,
@@ -58,7 +61,37 @@ export class RunClaimCoordinator {
     );
 
     void this.poll();
-    setInterval(() => void this.poll(), this.config.pollIntervalMs).unref();
+    this.pollIntervalId = setInterval(() => void this.poll(), this.config.pollIntervalMs);
+    this.pollIntervalId.unref();
+  }
+
+  /** Stop polling and release all active claims. */
+  async stop() {
+    this.stopped = true;
+    if (this.pollIntervalId) {
+      clearInterval(this.pollIntervalId);
+      this.pollIntervalId = null;
+    }
+
+    // Release all active claims so runs become claimable by other workers
+    for (const [runId, claim] of this.activeClaims.entries()) {
+      try {
+        await this.supabase
+          .from('workflow_runs')
+          .update({
+            execution_owner: null,
+            execution_claim_token: null,
+            execution_lease_expires_at: null,
+          })
+          .eq('id', runId)
+          .eq('execution_claim_token', claim.claimToken);
+        console.log(`[execution-worker] released claim for run ${runId}`);
+      } catch (error) {
+        console.error(`[execution-worker] failed to release claim for run ${runId}`, error);
+      }
+    }
+    this.activeClaims.clear();
+    console.log('[execution-worker] graceful shutdown complete');
   }
 
   getHealthSnapshot() {
@@ -83,7 +116,7 @@ export class RunClaimCoordinator {
   }
 
   private async poll() {
-    if (this.pollInFlight) return;
+    if (this.pollInFlight || this.stopped) return;
     this.pollInFlight = true;
 
     try {

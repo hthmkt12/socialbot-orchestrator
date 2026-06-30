@@ -3,6 +3,7 @@ import {
   fetchAccounts,
   fetchAccount,
   createAccount,
+  createAccountsBatch,
   updateAccount,
   deleteAccount,
   fetchAccountHistory,
@@ -70,6 +71,22 @@ export function useDeleteAccount() {
 
   return useMutation({
     mutationFn: (id: string) => deleteAccount(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+}
+
+export function useBatchCreateAccounts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (rows: {
+      username: string;
+      encrypted_password: string;
+      platform: AccountPlatform;
+      daily_action_limit?: number;
+    }[]) => createAccountsBatch(rows),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
     },

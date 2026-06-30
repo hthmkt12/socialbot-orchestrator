@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from './hooks/useAuth';
 import AppLayout from './components/layout/AppLayout';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import ToastContainer from './components/ui/Toast';
 import Spinner from './components/ui/Spinner';
 import LoginPage from './pages/LoginPage';
@@ -106,10 +107,12 @@ function PageFallback() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthGate />
-        <ToastContainer />
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <AuthGate />
+          <ToastContainer />
+        </BrowserRouter>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

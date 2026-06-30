@@ -13,8 +13,8 @@ const AI_TASK_TIMEOUT_MS = 300_000; // 5 min default for LLM-driven tasks
  * MobileAgent executes autonomously on the device.
  */
 export class MobilerunStepBackend extends MobileMcpStepBackend {
-  constructor(baseUrl: string, commandTimeoutMs: number) {
-    super(baseUrl, commandTimeoutMs);
+  constructor(baseUrl: string, commandTimeoutMs: number, private readonly mobilerunBridgeToken?: string) {
+    super(baseUrl, commandTimeoutMs, mobilerunBridgeToken);
   }
 
   override async executeStep(args: DeviceStepExecutionArgs): Promise<StepExecutionResult> {
@@ -44,7 +44,10 @@ export class MobilerunStepBackend extends MobileMcpStepBackend {
         `${this.baseUrl.replace(/\/$/, '')}/devices/${encodeURIComponent(serial)}/execute-step`,
         {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            ...(this.mobilerunBridgeToken ? { 'x-bridge-token': this.mobilerunBridgeToken } : {}),
+          },
           signal: controller.signal,
           body: JSON.stringify({
             runId: args.runId,

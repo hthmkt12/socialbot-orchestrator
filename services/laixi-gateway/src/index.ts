@@ -49,9 +49,11 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return raw ? JSON.parse(raw) : {};
 }
 
+const ALLOWED_ORIGIN = process.env.GATEWAY_CORS_ORIGIN ?? 'http://localhost:5173';
+
 function corsHeaders() {
   return {
-    'access-control-allow-origin': '*',
+    'access-control-allow-origin': ALLOWED_ORIGIN,
     'access-control-allow-methods': 'GET,POST,OPTIONS',
     'access-control-allow-headers': 'content-type',
   };

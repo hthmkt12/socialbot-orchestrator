@@ -57,6 +57,45 @@ export async function createAccount(input: {
   return data as Account;
 }
 
+/** Batch-insert accounts in a single DB round-trip. Fetches profile once. */
+export async function createAccountsBatch(rows: {
+  username: string;
+  encrypted_password: string;
+  platform: AccountPlatform;
+  daily_action_limit?: number;
+}[]): Promise<{ success: number; failed: number }> {
+  if (rows.length === 0) return { success: 0, failed: 0 };
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('user_id')
+    .maybeSingle();
+
+  if (profileError || !profile) throw new Error('User profile not found');
+
+  const insertRows = rows.map((r) => ({
+    user_id: profile.user_id,
+    username: r.username,
+    encrypted_password: r.encrypted_password,
+    platform: r.platform,
+    daily_action_limit: r.daily_action_limit ?? 100,
+  }));
+
+  const { data, error } = await supabase
+    .from('accounts')
+    .insert(insertRows)
+    .select();
+
+  if (error) throw new Error(`Batch insert failed: ${error.message}`);
+
+  const inserted = data?.length ?? 0;
+  for (const account of data ?? []) {
+    await logAudit('account.create', 'account', account.id, { username: account.username, platform: account.platform });
+  }
+
+  return { success: inserted, failed: rows.length - inserted };
+}
+
 export async function updateAccount(
   id: string,
   updates: Partial<Pick<Account, 'daily_action_limit' | 'warm_up_stage' | 'warm_up_started_at' | 'is_blocked' | 'detected_block_reason' | 'current_action_count' | 'last_action_reset_at'>>,

@@ -26,6 +26,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 }
 
 let authListenerRegistered = false;
+let initializePromise: Promise<void> | null = null;
 
 export const useAuthStore = create<AuthState>((set) => ({
   session: null,
@@ -37,19 +38,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (loading) => set({ loading }),
 
   initialize: async () => {
-    set({ loading: true });
-    const { data: { session } } = await supabase.auth.getSession();
-    set({ session });
+    // Deduplicate: reuse in-flight or completed init
+    if (initializePromise) return initializePromise;
 
-    if (session?.user) {
-      const profile = await fetchProfile(session.user.id);
-      set({ profile });
-    }
+    initializePromise = (async () => {
+      set({ loading: true });
+      const { data: { session } } = await supabase.auth.getSession();
+      set({ session });
 
-    set({ loading: false });
+      if (session?.user) {
+        const profile = await fetchProfile(session.user.id);
+        set({ profile });
+      }
 
-    if (!authListenerRegistered) {
-      authListenerRegistered = true;
+      set({ loading: false });
+
+      if (!authListenerRegistered) {
+        authListenerRegistered = true;
       supabase.auth.onAuthStateChange((_event, newSession) => {
         set({ session: newSession });
         if (newSession?.user) {
@@ -66,6 +71,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       });
     }
+    })();
+
+    return initializePromise;
   },
 
   signIn: async (email, password) => {
