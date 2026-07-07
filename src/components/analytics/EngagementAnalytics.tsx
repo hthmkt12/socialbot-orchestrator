@@ -4,7 +4,8 @@ import {
   AreaChart, Area
 } from 'recharts';
 import { TrendingUp, Users, Heart, Activity } from 'lucide-react';
-import { useAccountAnalytics, useAccountGrowth, useGenerateMockAnalytics } from '../../hooks/use-analytics';
+import { useAccountAnalytics, useAccountGrowth } from '../../hooks/use-analytics';
+import { classifyAnalyticsSource } from '../../lib/analytics-source';
 import Spinner from '../ui/Spinner';
 
 interface EngagementAnalyticsProps {
@@ -15,27 +16,39 @@ export default function EngagementAnalytics({ accountId }: EngagementAnalyticsPr
   const [days, setDays] = useState(30);
   const { data: analytics, isLoading: isLoadingAnalytics } = useAccountAnalytics(accountId, days);
   const { data: growth, isLoading: isLoadingGrowth } = useAccountGrowth(accountId, days);
-  const generateMock = useGenerateMockAnalytics();
 
   if (isLoadingAnalytics || isLoadingGrowth) {
     return <div className="flex justify-center p-8"><Spinner size="md" /></div>;
   }
+
+  const source = classifyAnalyticsSource(analytics);
 
   if (!analytics || analytics.length === 0) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
         <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h3 className="text-gray-900 font-medium mb-2">No analytics data yet</h3>
-        <p className="text-gray-500 text-sm mb-6">
-          Analytics are recorded daily when the account is active.
+        <p className="text-xs font-medium text-amber-700 bg-amber-50 rounded-full px-3 py-1 inline-flex mb-3">
+          Data source: {source.label}
         </p>
-        <button 
-          onClick={() => void generateMock.mutateAsync(accountId)}
-          disabled={generateMock.isPending}
-          className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors"
-        >
-          {generateMock.isPending ? 'Generating...' : 'Generate Demo Data'}
-        </button>
+        <p className="text-gray-500 text-sm mb-6">
+          {source.detail}
+        </p>
+      </div>
+    );
+  }
+
+  if (source.state === 'unknown') {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <Activity className="w-12 h-12 text-amber-300 mx-auto mb-4" />
+        <h3 className="text-gray-900 font-medium mb-2">Analytics source needs review</h3>
+        <p className="text-xs font-medium text-amber-700 bg-amber-50 rounded-full px-3 py-1 inline-flex mb-3">
+          Data source: {source.label}
+        </p>
+        <p className="text-gray-500 text-sm mb-6">
+          {source.detail}
+        </p>
       </div>
     );
   }
@@ -53,7 +66,12 @@ export default function EngagementAnalytics({ accountId }: EngagementAnalyticsPr
     <div className="space-y-6">
       {/* Time Range Selector */}
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-gray-900">Engagement Overview</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Engagement Overview</h2>
+          <p className="mt-1 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full px-3 py-1 inline-flex">
+            Data source: {source.label}
+          </p>
+        </div>
         <select 
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}

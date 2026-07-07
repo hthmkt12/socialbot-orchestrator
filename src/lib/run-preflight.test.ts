@@ -34,6 +34,15 @@ function buildSummary(overrides: Partial<Parameters<typeof buildRunPreflightSumm
   });
 }
 
+const activeAccount = {
+  id: 'account-1',
+  username: 'operator_account',
+  is_blocked: false,
+  daily_action_limit: 100,
+  current_action_count: 10,
+  warm_up_stage: 3,
+};
+
 describe('run preflight', () => {
   it('maps macro target modes to database target types', () => {
     expect(targetModeToTargetType('single_device')).toBe('SINGLE_DEVICE');
@@ -61,6 +70,29 @@ describe('run preflight', () => {
     expect(summary.blockingIssues.map((issue) => issue.id)).toEqual(
       expect.arrayContaining(['viewer-role-block', 'input-required-appName', 'target-mode-mismatch'])
     );
+  });
+
+  it('blocks social engagement runs when account selection is missing or unhealthy', () => {
+    const missing = buildSummary({ requiresAccount: true, selectedAccount: null });
+    expect(missing.blockingIssues.map((issue) => issue.id)).toContain('account-required');
+
+    const blocked = buildSummary({
+      requiresAccount: true,
+      selectedAccount: { ...activeAccount, is_blocked: true },
+    });
+    expect(blocked.blockingIssues.map((issue) => issue.id)).toContain('selected-account-blocked');
+
+    const notWarm = buildSummary({
+      requiresAccount: true,
+      selectedAccount: { ...activeAccount, warm_up_stage: 1 },
+    });
+    expect(notWarm.blockingIssues.map((issue) => issue.id)).toContain('selected-account-warmup-not-started');
+
+    const exhausted = buildSummary({
+      requiresAccount: true,
+      selectedAccount: { ...activeAccount, current_action_count: 100, daily_action_limit: 100 },
+    });
+    expect(exhausted.blockingIssues.map((issue) => issue.id)).toContain('selected-account-daily-limit-exhausted');
   });
 
   it('blocks unresolved input refs and step refs that point forward', () => {

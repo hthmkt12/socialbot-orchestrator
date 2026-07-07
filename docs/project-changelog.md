@@ -1,5 +1,22 @@
 # Project Changelog
 
+## 2026-07-07
+
+- **Use-case implementation sequence completed**: Implemented the role/flow sequence from Visitor through Viewer, Operator, Scheduler, Admin, Worker, Mobile MCP Bridge, and out-of-scope guardrails. Added `docs/use-cases.md`, `docs/use-cases-architecture-spec.md`, `docs/use-case-coding-sequence.md`, and final traceability report `docs/use-case-final-coverage.md`.
+- **RBAC and service guard hardening**: Added shared role/permission helpers, read-only Viewer UI/service boundaries, Operator account/run preflight guards, schedule validation, Admin governance checks, audit scoping, and admin-only dependency delete protection.
+- **Worker and bridge guardrails**: Added scheduler duplicate-fire protection, Mobile MCP V1 unsupported-step checks, structured bridge auth/error mapping, artifact inline-payload policy, Python bridge platform/package/session/screenshot guards, and focused unit coverage.
+- **Out-of-scope guardrails**: Pricing/billing is no longer a runtime page, billing/marketplace/collaboration/offline/native-mobile paths are blocked by guardrail helper, and `OOS-001..016` have traceability status.
+- **Stabilization plan execution**: Restored local verification gates by fixing macro JSON typing, narrowing anti-detection params, cleaning test casts, and excluding generated/local artifact folders from ESLint.
+- **Account credential hardening**: Replaced the hardcoded social account password encryption passphrase with required `VITE_ACCOUNT_PASSWORD_KEY`, added v2 encrypted payload format, and added crypto tests for missing/short key, round-trip, and legacy rejection.
+- **Mobile MCP bridge auth hardening**: Protected bridge endpoints now fail closed when `MOBILE_MCP_BRIDGE_TOKEN` is missing unless `MOBILE_MCP_ALLOW_INSECURE_DEV=true` is explicitly set for isolated local development.
+- **Mobile MCP real-device verification**: Verified full local Mobile MCP flow on Android serial `97249fb5` / model `25053RT47C`; browser UI smoke completed run `ec7f6fab-81fc-4dfd-8ceb-8a98e1835fff` with 4 steps.
+- **Android bridge Portal behavior**: Android sessions are now ADB-first by default and only attempt Mobilerun Portal setup when `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=true`, avoiding local smoke timeouts on devices that block USB app installs.
+- **Roadmap truth cleanup**: Rewrote the roadmap with evidence-based readiness labels instead of future-dated completion claims.
+- **Next use-case backlog**: Added proposed `Pilot Readiness And Safe Scale` use cases in `docs/use-cases-next-pilot-readiness-safe-scale.md` without promoting them into the implemented MVP source of truth.
+- **Pilot readiness Phase A implemented**: Added `pilot_readiness_reports`, `/readiness`, readiness submit/review permissions, secret-scrubbed evidence handling, admin-only `pilot_verified` decisions, analytics source labels, and Phase 3 gap analysis covering all old plus new use cases.
+- **Retry/backoff policy implemented**: Added bounded retry/backoff fields to execution profiles, admin validation/UI, worker policy application, retry metadata persistence, and run detail/monitor retry timeline visibility.
+- **Target failure policy implemented**: Added execution-profile `fail_fast` / `skip_failed_target` behavior for multi-target runs, persisted target failure decisions, skipped counts, and run summary visibility without adding backup rotation yet.
+
 ## 2026-06-27
 
 - **Action budget management system**: Created `action-budget-types.ts` and `action-budget-enforcer.ts` defining per-action-type budgets (like/follow/comment/post/share) as configurable daily/hourly limits derived from `daily_action_limit`. Budget enforcement library provides `checkActionBudget()`, `getAccountBudgets()`, `getTodayActionCounts()`, and `getBudgetUsages()` for shared use between frontend and worker. Default budget split: 40% likes, 25% follows, 15% comments, 10% posts, 10% shares.
@@ -10,7 +27,7 @@
 - **Social pivot Phase 0 (Foundation) started**: Repositioned platform for social media automation (Instagram, TikTok, Facebook). Updated README, project-overview-pdr, roadmap, and codebase-summary with social-first positioning and 6-phase strategic roadmap.
 - **Account schema**: Created migration `20260627000001_account_tables.sql` with `accounts` table (platform, warm-up stages, action limits, block detection) and `account_action_history` table (per-action audit trail). RLS enforced, indexes added.
 - **Account types and hooks**: Added `Account`, `AccountActionHistory` types to `database.types.ts`. Created `account-service-helpers.ts` with full CRUD + action recording. Created `use-accounts.ts` React Query hooks (useAccounts, useAccount, useCreateAccount, useUpdateAccount, useDeleteAccount, useAccountHistory, useRecordAccountAction).
-- **Account Setup UI**: New `/account-setup` page with accounts table (username, platform badge, warm-up stage, action counts, blocked status), create modal (username, password, platform, daily limit), and delete. Lazy-loaded at 7.5 kB. Added "Accounts" nav link in sidebar.
+- **Accounts UI**: Accounts table includes username, platform badge, warm-up stage, action counts, blocked status, create modal, and delete. Added "Accounts" nav link in sidebar.
 - **Anti-detection engine**: Created `anti-detection-helpers.ts` with randomized delays, scroll variance, tap coordinate jitter, and cooldown utilities. Defined `AntiDetectionConfig` interface in `contracts/macro.ts` as canonical source. Sidebar branding updated to "Social Automation".
 - **Social engagement templates**: Pre-built `MacroDefinition` workflows for Instagram (like hashtag, follow accounts) and TikTok (like trending) in `social-engagement-templates.ts`. Registered in macro starter template picker alongside generic templates.
 - **Anti-detection execution integration**: `SingleDeviceStepRunner` now applies coordinate jitter and delay randomization to resolved step params when `antiDetection` config present in `MacroDefinition`. Adds random cooldown between successful steps for human-like pacing.
@@ -26,18 +43,16 @@
   - Installed and configured `@playwright/test` for robust E2E testing.
   - Implemented `tests/e2e/utils/auth.ts` to mock Supabase authentication via network interception (`page.route`).
   - Added baseline navigation tests (`navigation.spec.ts`) ensuring core routes load and render correctly.
-  - Added documentation viewer tests (`docs.spec.ts`) ensuring markdown renders and internal navigation works.
+  - Documentation viewer E2E coverage was removed when the runtime `/docs` route left MVP scope.
   - Updated `playwright.config.ts` with correct ESM path resolution and CI-ready configuration.
 
 - **Phase 12 (Advanced Macros) started**: Added conditional branching, while loops, variables extraction/interpolation, and error boundaries to the development roadmap. Phase 12 plan drafted in `plans/20260627-1200-advanced-macros/phase-12-advanced-macros.md`.
 
 - **Phase 13 (AI Workflow Builder) implemented**:
-  - Created `supabase/functions/ai-macro-generator/` Supabase Edge Function with OpenAI and Anthropic provider support, JWT auth, and JSON output mode.
+  - AI macro generator was later removed from runtime scope during use-case cleanup.
   - Built `system-prompt.ts` with full MacroStep schema, ConditionalOperator enum, 10 rules, and 3 few-shot examples (battery check + conditional, Instagram like loop, simple screenshot).
   - Built `output-sanitizer.ts` to normalize LLM output: validates step types, clamps coordinates to 0-1, ensures unique IDs, sanitizes conditional operators, caps maxIterations.
-  - Created `src/lib/ai-macro-generator-client.ts` frontend API client using `supabase.functions.invoke()`.
-  - Created `src/components/macros/ai-macro-prompt-box.tsx` with expandable prompt panel, Ctrl+Enter shortcut, loading spinner, error display.
-  - Wired `AiMacroPromptBox` into `MacroDefinitionAuthoringModal` between template picker and mode toggle.
+  - Removed stale frontend AI macro generator client and prompt UI.
   - Added `handleAiGenerated` to `useMacroDefinitionAuthoringState` hook for validation + hydration into builder state.
   - Env vars: `AI_MACRO_LLM_PROVIDER` (openai/anthropic), `AI_MACRO_LLM_MODEL`, `AI_MACRO_LLM_API_KEY`.
 

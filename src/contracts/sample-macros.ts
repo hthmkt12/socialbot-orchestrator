@@ -4,7 +4,7 @@ export const SAMPLE_MACROS: MacroDefinition[] = [
 
   {
     version: 1,
-    meta: { key: 'foreach_hashtag_demo', name: 'Foreach Hashtag Demo', description: 'Iterate over a list of hashtags and perform an action for each.', tags: ['foreach', 'loop', 'demo'] },
+    meta: { key: 'foreach_hashtag_demo', name: 'Foreach Hashtag Sample', description: 'Iterate over a list of hashtags and perform an action for each.', tags: ['foreach', 'loop', 'sample'] },
     inputs: { hashtags: { type: 'string', required: true, description: 'Comma separated list of hashtags' }, appName: { type: 'string', required: true } },
     target: { mode: 'single_device' },
     execution: { defaultTimeoutMs: 20000, maxRetries: 1, onError: 'continue' },
@@ -25,7 +25,7 @@ export const SAMPLE_MACROS: MacroDefinition[] = [
 
   {
     version: 1,
-    meta: { key: 'launch_app_and_capture', name: 'Launch App And Capture', description: 'Má»Ÿ app, chá» vÃ i giÃ¢y, chá»¥p mÃ n hÃ¬nh, láº¥y app hiá»‡n táº¡i', tags: ['basic', 'screenshot', 'demo'] },
+    meta: { key: 'launch_app_and_capture', name: 'Launch App And Capture', description: 'Má»Ÿ app, chá» vÃ i giÃ¢y, chá»¥p mÃ n hÃ¬nh, láº¥y app hiá»‡n táº¡i', tags: ['basic', 'screenshot', 'sample'] },
     inputs: { appName: { type: 'string', required: true, description: 'App package name to launch' } },
     target: { mode: 'single_device' },
     execution: { defaultTimeoutMs: 10000, maxRetries: 1, onError: 'stop' },
@@ -38,7 +38,7 @@ export const SAMPLE_MACROS: MacroDefinition[] = [
   },
   {
     version: 1,
-    meta: { key: 'input_text_demo', name: 'Input Text Demo', description: 'Má»Ÿ app, cháº¡m vÃ¹ng nháº­p, nháº­p text, chá»¥p mÃ n hÃ¬nh', tags: ['input', 'demo', 'ui'] },
+    meta: { key: 'input_text_demo', name: 'Input Text Sample', description: 'Má»Ÿ app, cháº¡m vÃ¹ng nháº­p, nháº­p text, chá»¥p mÃ n hÃ¬nh', tags: ['input', 'sample', 'ui'] },
     inputs: { appName: { type: 'string', required: true }, textValue: { type: 'string', required: true } },
     target: { mode: 'single_device' },
     execution: { defaultTimeoutMs: 12000, maxRetries: 1, onError: 'stop' },
@@ -54,7 +54,7 @@ export const SAMPLE_MACROS: MacroDefinition[] = [
   },
   {
     version: 1,
-    meta: { key: 'open_and_swipe_feed', name: 'Open And Swipe Feed', description: 'Má»Ÿ app vÃ  cuá»™n feed vÃ i láº§n Ä‘á»ƒ kiá»ƒm tra UI', tags: ['swipe', 'feed', 'demo'] },
+    meta: { key: 'open_and_swipe_feed', name: 'Open And Swipe Feed', description: 'Má»Ÿ app vÃ  cuá»™n feed vÃ i láº§n Ä‘á»ƒ kiá»ƒm tra UI', tags: ['swipe', 'feed', 'sample'] },
     inputs: { appName: { type: 'string', required: true } },
     target: { mode: 'single_device' },
     execution: { defaultTimeoutMs: 15000, maxRetries: 1, onError: 'stop' },
@@ -147,7 +147,7 @@ export const SAMPLE_MACROS: MacroDefinition[] = [
   },
   {
     version: 1,
-    meta: { key: 'simple_form_fill_demo', name: 'Simple Form Fill Demo', description: 'Äiá»n 2 Ã´ nháº­p liá»‡u demo rá»“i chá»¥p mÃ n hÃ¬nh', tags: ['form', 'input', 'demo'] },
+    meta: { key: 'simple_form_fill_demo', name: 'Simple Form Fill Sample', description: 'Äiá»n 2 Ã´ nháº­p liá»‡u sample rá»“i chá»¥p mÃ n hÃ¬nh', tags: ['form', 'input', 'sample'] },
     inputs: { appName: { type: 'string', required: true }, firstValue: { type: 'string', required: true }, secondValue: { type: 'string', required: true } },
     target: { mode: 'single_device' },
     execution: { defaultTimeoutMs: 15000, maxRetries: 1, onError: 'stop' },
@@ -165,7 +165,7 @@ export const SAMPLE_MACROS: MacroDefinition[] = [
   },
   {
     version: 1,
-    meta: { key: 'grouped_demo_sequence', name: 'Grouped Demo Sequence', description: 'Macro nhÃ³m step: má»Ÿ app, thao tÃ¡c nháº¹, chá»¥p mÃ n hÃ¬nh', tags: ['group', 'sequence', 'demo'] },
+    meta: { key: 'grouped_demo_sequence', name: 'Grouped Sample Sequence', description: 'Macro nhÃ³m step: má»Ÿ app, thao tÃ¡c nháº¹, chá»¥p mÃ n hÃ¬nh', tags: ['group', 'sequence', 'sample'] },
     inputs: { appName: { type: 'string', required: true } },
     target: { mode: 'single_device' },
     execution: { defaultTimeoutMs: 20000, maxRetries: 1, onError: 'stop' },

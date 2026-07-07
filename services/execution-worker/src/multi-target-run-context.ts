@@ -1,6 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition } from '../../../src/contracts/macro';
 import type { Device, TargetType } from '../../../src/lib/database.types';
+import { normalizeRetryBackoffPolicy, type RetryBackoffPolicy } from './retry-backoff-policy.js';
+import { normalizeTargetFailurePolicy, type TargetFailurePolicy } from './target-failure-policy.js';
 
 type MultiTargetType = Exclude<TargetType, 'SINGLE_DEVICE'>;
 
@@ -12,6 +14,8 @@ export interface MultiTargetRunContext {
   inputVariables: Record<string, unknown>;
   devices: Device[];
   definition: MacroDefinition;
+  retryBackoffPolicy: RetryBackoffPolicy;
+  targetFailurePolicy: TargetFailurePolicy;
   summaryJson: Record<string, unknown>;
   resolvedDeviceIdsPersisted: boolean;
 }
@@ -24,6 +28,7 @@ interface WorkflowRunRow {
   triggered_by_user_id: string;
   macro_version_id: string;
   execution_claim_token: string | null;
+  execution_profile_id: string | null;
   summary_json: unknown;
 }
 
@@ -154,7 +159,7 @@ export async function loadMultiTargetRunContext(
 ): Promise<MultiTargetRunContext> {
   const { data, error } = await supabase
     .from('workflow_runs')
-    .select('id, target_type, target_selector_json, input_variables_json, triggered_by_user_id, macro_version_id, execution_claim_token, summary_json')
+    .select('id, target_type, target_selector_json, input_variables_json, triggered_by_user_id, macro_version_id, execution_claim_token, execution_profile_id, summary_json')
     .eq('id', runId)
     .maybeSingle();
 
@@ -165,7 +170,39 @@ export async function loadMultiTargetRunContext(
   if (run.target_type === 'SINGLE_DEVICE') throw new Error(`Run ${runId} is not a multi-target run`);
   if (run.execution_claim_token !== claimToken) throw new Error(`Run ${runId} is no longer owned by this worker`);
 
-  const definition = await loadMacroDefinition(supabase, run.macro_version_id);
+  let definition = await loadMacroDefinition(supabase, run.macro_version_id);
+  let retryBackoffPolicy = normalizeRetryBackoffPolicy({ maxRetries: definition.execution.maxRetries });
+  let targetFailurePolicy = normalizeTargetFailurePolicy(null);
+
+  if (run.execution_profile_id) {
+    const { data: executionProfile, error: profileError } = await supabase
+      .from('execution_profiles')
+      .select('default_timeout_ms, max_retries, retry_base_delay_ms, retry_max_delay_ms, retry_max_elapsed_ms, target_failure_policy')
+      .eq('id', run.execution_profile_id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error(`Failed to load execution profile for run ${runId}: ${profileError.message}`);
+    }
+
+    if (executionProfile) {
+      definition = {
+        ...definition,
+        execution: {
+          ...definition.execution,
+          defaultTimeoutMs: executionProfile.default_timeout_ms ?? definition.execution.defaultTimeoutMs,
+          maxRetries: executionProfile.max_retries ?? definition.execution.maxRetries,
+        },
+      };
+      retryBackoffPolicy = normalizeRetryBackoffPolicy({
+        maxRetries: executionProfile.max_retries ?? definition.execution.maxRetries,
+        baseDelayMs: executionProfile.retry_base_delay_ms ?? 1000,
+        maxDelayMs: executionProfile.retry_max_delay_ms ?? 30000,
+        maxElapsedMs: executionProfile.retry_max_elapsed_ms ?? 120000,
+      });
+      targetFailurePolicy = normalizeTargetFailurePolicy(executionProfile.target_failure_policy);
+    }
+  }
   const { devices, resolvedDeviceIdsPersisted } = await resolveMultiTargetDevices(supabase, run);
   if (devices.length === 0) throw new Error(`Run ${runId} resolved no online devices`);
 
@@ -177,6 +214,8 @@ export async function loadMultiTargetRunContext(
     inputVariables: isRecord(run.input_variables_json) ? run.input_variables_json : {},
     devices,
     definition,
+    retryBackoffPolicy,
+    targetFailurePolicy,
     summaryJson: isRecord(run.summary_json) ? run.summary_json : {},
     resolvedDeviceIdsPersisted,
   };

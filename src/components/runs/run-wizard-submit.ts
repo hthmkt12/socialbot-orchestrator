@@ -2,6 +2,7 @@ import type { MacroDefinition } from '../../contracts/macro';
 import type { Device, Profile, TargetType } from '../../lib/database.types';
 import type { RunPreflightSummary } from '../../lib/run-preflight';
 import { fetchAccount } from '../../lib/account-service-helpers';
+import { canPerformAction } from '../../lib/account-warmup-engine';
 
 export async function submitRunWizard({
   addToast,
@@ -59,6 +60,11 @@ export async function submitRunWizard({
     if (selectedAccountId) {
       const account = await fetchAccount(selectedAccountId);
       if (account) {
+        const actionCheck = canPerformAction(account);
+        if (!actionCheck.allowed) {
+          addToast(`Selected account cannot run: ${actionCheck.reason}`, 'error');
+          return;
+        }
         resolvedInputs.accountId = account.id;
         resolvedInputs.accountUsername = account.username;
         resolvedInputs.accountPlatform = account.platform;

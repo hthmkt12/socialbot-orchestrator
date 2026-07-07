@@ -2,7 +2,7 @@
 import { AUTOJS_CONNECTION_SCRIPT } from './device-setup-autojs-connection';
 
 export function buildAutoJsInitScript(gatewayWsUrl: string) {
-  return `// Laixi AutoJS agent bootstrap
+  return `// Device bridge AutoJS agent bootstrap
 const GATEWAY_URL = "${gatewayWsUrl}";
 const PROTOCOL_VERSION = "${GATEWAY_PROTOCOL_VERSION}";
 const DEVICE_ID = device.serial || android.os.Build.SERIAL || "unknown";

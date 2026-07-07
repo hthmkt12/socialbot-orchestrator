@@ -1,7 +1,10 @@
 import type { LaixiClient } from '../adapters/laixi/client';
 import { executeStepOnDevice } from '../adapters/laixi/mapper';
 import type { MacroStep } from '../contracts/macro';
-import type { RunStepStatus } from '../lib/database.types';
+import { handlePotentialBlock } from '../lib/account-block-detector';
+import { recordAccountAction } from '../lib/account-service-helpers';
+import type { AccountActionType, RunStepStatus } from '../lib/database.types';
+import { supabase } from '../lib/supabase';
 import { resolveParams } from './resolver';
 import {
   buildRunnerDeviceStepError,
@@ -93,6 +96,7 @@ export async function executeRunnerDeviceStep({
         }
 
         await persistStep(ctx.runId, step, ctx.deviceId, stepIndex, 'SUCCESS', attempt, result.output);
+        await recordSelectedAccountActionIfPresent(ctx, step, resolvedParams, true);
         ctx.onStepComplete?.(step.id, 'SUCCESS', result.output);
         return { status: 'success' };
       }
@@ -118,6 +122,7 @@ export async function executeRunnerDeviceStep({
         attempt,
         details: { resolvedParams, output: result.output },
       });
+      await markSelectedAccountBlockedIfDetected(ctx, error.message);
       const failureResult = await finalizeFailedRunnerDeviceStep({
         attempt,
         captureFailureScreenshot,
@@ -147,12 +152,68 @@ export async function executeRunnerDeviceStep({
         step,
         stepIndex,
       });
+      await markSelectedAccountBlockedIfDetected(ctx, error.message);
       ctx.onStepComplete?.(step.id, 'FAILED', {});
       return failureResult;
     }
   }
 
   const error = buildStructuredError('STEP_FAILED', `Step ${step.id} did not execute`);
+  await markSelectedAccountBlockedIfDetected(ctx, error.message);
   await persistStepFinal(ctx.runId, step, ctx.deviceId, stepIndex, 'FAILED', 0, undefined, error, null);
   return { status: 'failed', error };
+}
+
+async function markSelectedAccountBlockedIfDetected(ctx: ExecutionContext, errorMessage: string) {
+  const accountId = ctx.inputVariables.accountId;
+  if (typeof accountId !== 'string' || accountId.length === 0) return;
+
+  await handlePotentialBlock(supabase, accountId, errorMessage);
+}
+
+async function recordSelectedAccountActionIfPresent(
+  ctx: ExecutionContext,
+  step: MacroStep,
+  resolvedParams: Record<string, unknown>,
+  success: boolean
+) {
+  const accountId = ctx.inputVariables.accountId;
+  const actionType = resolvedParams.actionBudgetType ?? step.params.actionBudgetType;
+  if (typeof accountId !== 'string' || accountId.length === 0) return;
+  if (!isAccountActionType(actionType)) return;
+
+  try {
+    await recordAccountAction({
+      account_id: accountId,
+      action_type: actionType,
+      step_id: step.id,
+      success,
+    });
+    if (success) await incrementSelectedAccountActionCount(accountId);
+  } catch {
+    // Best effort: action history should never change execution outcome.
+  }
+}
+
+function isAccountActionType(value: unknown): value is AccountActionType {
+  return value === 'like' || value === 'follow' || value === 'comment' || value === 'post' || value === 'share';
+}
+
+async function incrementSelectedAccountActionCount(accountId: string) {
+  const { data, error } = await supabase
+    .from('accounts')
+    .select('current_action_count')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  if (error || !data) return;
+
+  const currentCount = typeof data.current_action_count === 'number' ? data.current_action_count : 0;
+  await supabase
+    .from('accounts')
+    .update({
+      current_action_count: currentCount + 1,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', accountId);
 }

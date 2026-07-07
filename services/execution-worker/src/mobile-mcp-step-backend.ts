@@ -1,13 +1,15 @@
 import type { Device } from '../../../src/lib/database.types';
 import type { StepArtifactRef } from '../../../packages/shared/src';
-import type { StepExecutionResult } from './execute-device-step';
-import type { DeviceStepBackend, DeviceStepExecutionArgs } from './device-step-backend';
-import { applyCoordinateVariance, getRandomDelay, sleep } from './lib/anti-detection';
+import type { StepExecutionResult } from './execute-device-step.js';
+import type { DeviceStepBackend, DeviceStepExecutionArgs } from './device-step-backend.js';
+import { applyCoordinateVariance, getRandomDelay, sleep } from './lib/anti-detection.js';
 
 interface MobileMcpBridgeResponse {
   success: boolean;
   output?: Record<string, unknown>;
   error?: string;
+  status?: number;
+  code?: string;
 }
 
 const SUPPORTED_MOBILE_MCP_STEPS = new Set([
@@ -76,10 +78,20 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
     const bridge = await this.postExecuteStep(serial, args, platform);
     const output = bridge.output ?? {};
     const artifacts = extractArtifacts(output.artifacts);
+    if (args.step.type === 'screenshot' && bridge.success && !artifacts?.some((artifact) => artifact.type === 'SCREENSHOT' && typeof artifact.base64 === 'string')) {
+      return {
+        success: false,
+        output: this.normalizeOutput(args.step.type, output, args.resolvedParams, serial),
+        error: 'BRIDGE_SCREENSHOT_MISSING_ARTIFACT: screenshot response did not include a SCREENSHOT artifact',
+      };
+    }
 
     return {
       success: bridge.success,
-      output: this.normalizeOutput(args.step.type, output, args.resolvedParams, serial),
+      output: {
+        ...this.normalizeOutput(args.step.type, output, args.resolvedParams, serial),
+        ...(bridge.success ? {} : { bridgeStatus: bridge.status ?? null, bridgeErrorCode: bridge.code ?? null }),
+      },
       error: bridge.error,
       screenshotBase64: artifacts?.find((artifact) => artifact.type === 'SCREENSHOT')?.base64,
       artifacts,
@@ -123,11 +135,30 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
           },
         }),
       });
-      return (await response.json()) as MobileMcpBridgeResponse;
+      const body = await response.json().catch(() => ({})) as Partial<MobileMcpBridgeResponse>;
+      if (!response.ok) {
+        return {
+          success: false,
+          status: response.status,
+          code: response.status === 401
+            ? 'BRIDGE_UNAUTHORIZED'
+            : response.status === 503
+              ? 'BRIDGE_AUTH_NOT_CONFIGURED'
+              : 'BRIDGE_HTTP_ERROR',
+          error: typeof body.error === 'string' ? body.error : `Mobile MCP bridge returned HTTP ${response.status}`,
+          output: { status: response.status, code: body.code },
+        };
+      }
+
+      return body as MobileMcpBridgeResponse;
     } catch (error) {
+      const code = error instanceof Error && error.name === 'AbortError'
+        ? 'BRIDGE_TIMEOUT'
+        : 'BRIDGE_REQUEST_FAILED';
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Mobile MCP bridge request failed',
+        code,
+        error: error instanceof Error ? `${code}: ${error.message}` : `${code}: Mobile MCP bridge request failed`,
       };
     } finally {
       clearTimeout(timer);

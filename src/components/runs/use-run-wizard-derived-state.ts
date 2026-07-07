@@ -6,6 +6,7 @@ import type {
   MacroVersion,
   TargetType,
   UserRole,
+  Account,
 } from '../../lib/database.types';
 import type { DeviceLock } from '../../lib/database.types';
 import {
@@ -16,6 +17,7 @@ import {
 import { useRunWizardTargetDerivations } from './use-run-wizard-target-derivations';
 
 export function useRunWizardDerivedState({
+  accounts,
   deviceLocks,
   deviceLocksError,
   devices,
@@ -24,6 +26,7 @@ export function useRunWizardDerivedState({
   macroSearch,
   macros,
   profileRole,
+  selectedAccountId,
   selectedDeviceIds,
   selectedGroupId,
   selectedMacroId,
@@ -31,6 +34,7 @@ export function useRunWizardDerivedState({
   targetType,
   versions,
 }: {
+  accounts: Account[] | undefined;
   deviceLocks: DeviceLock[] | undefined;
   deviceLocksError: unknown;
   devices: Device[] | undefined;
@@ -39,6 +43,7 @@ export function useRunWizardDerivedState({
   macroSearch: string;
   macros: Macro[] | undefined;
   profileRole: UserRole | undefined;
+  selectedAccountId: string;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   selectedMacroId: string;
@@ -56,6 +61,7 @@ export function useRunWizardDerivedState({
     targetDevices,
     targetState,
   } = useRunWizardTargetDerivations({
+    accounts,
     deviceLocks,
     deviceLocksError,
     devices,
@@ -63,6 +69,7 @@ export function useRunWizardDerivedState({
     inputValues,
     macros,
     profileRole,
+    selectedAccountId,
     selectedDeviceIds,
     selectedGroupId,
     selectedMacroId,

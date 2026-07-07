@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { logAudit } from '../lib/audit';
+import { deleteAdminResource } from '../lib/admin-governance';
 import type { DeviceGroup, DeviceGroupMember } from '../lib/database.types';
 
 export function useDeviceGroups() {
@@ -85,6 +86,20 @@ export function useRemoveDeviceFromGroup() {
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['device-group-members', vars.groupId] });
+    },
+  });
+}
+
+export function useDeleteDeviceGroup() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      await deleteAdminResource('device_group', groupId);
+    },
+    onSuccess: (_, groupId) => {
+      queryClient.invalidateQueries({ queryKey: ['device-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['device-group-members', groupId] });
     },
   });
 }

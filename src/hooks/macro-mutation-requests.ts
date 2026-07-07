@@ -1,5 +1,6 @@
 import type { MacroDefinition } from '../contracts/macro';
 import { logAudit } from '../lib/audit';
+import { deleteAdminResource } from '../lib/admin-governance';
 import type { Macro } from '../lib/database.types';
 import { supabase } from '../lib/supabase';
 import { buildMacroVersionInsert } from './macro-query-helpers';
@@ -109,4 +110,26 @@ export async function activateMacroVersionRequest({
     .eq('id', macroId);
 
   await logAudit('macro_version.activate', 'macro_version', versionId, { macroId });
+}
+
+export async function archiveMacroVersionRequest({
+  macroId,
+  versionId,
+}: {
+  macroId: string;
+  versionId: string;
+}) {
+  const { error } = await supabase
+    .from('macro_versions')
+    .update({ status: 'ARCHIVED' })
+    .eq('id', versionId)
+    .neq('status', 'ACTIVE');
+
+  if (error) throw error;
+
+  await logAudit('macro_version.archive', 'macro_version', versionId, { macroId });
+}
+
+export async function deleteMacroRequest(macroId: string) {
+  await deleteAdminResource('macro', macroId);
 }

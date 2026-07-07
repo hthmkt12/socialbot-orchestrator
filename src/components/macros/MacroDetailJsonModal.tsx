@@ -1,7 +1,7 @@
 import Modal from '../ui/Modal';
 
 interface MacroDetailJsonModalProps {
-  definition: Record<string, unknown> | null;
+  definition: unknown | null;
   onClose: () => void;
 }
 

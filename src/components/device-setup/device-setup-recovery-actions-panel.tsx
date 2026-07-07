@@ -1,4 +1,5 @@
-import { Check, Copy, RefreshCw } from 'lucide-react';
+import { Check, Copy, RefreshCw, ShieldAlert } from 'lucide-react';
+import type { Device, DeviceLock } from '../../lib/database.types';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
 import {
@@ -7,31 +8,42 @@ import {
 import { formatTimestamp } from './device-setup-formatters';
 
 export function RecoveryActionsPanel({
+  activeLocks,
+  canForceClearLocks,
   canManageLocks,
   checkedAt,
   cleanupExpiredLocksLoading,
+  devices,
   deviceLocksError,
   expiredLockCount,
+  forceClearLockId,
   loading,
   onCleanupExpiredLocks,
+  onForceClearDeviceLock,
   onPrepareReconnect,
   onRecheck,
   profileRole,
   selectedDeviceLabel,
 }: {
+  activeLocks: DeviceLock[];
+  canForceClearLocks: boolean;
   canManageLocks: boolean;
   checkedAt: string | null;
   cleanupExpiredLocksLoading: boolean;
+  devices: Device[];
   deviceLocksError: string | null;
   expiredLockCount: number;
+  forceClearLockId: string | null;
   loading: boolean;
   onCleanupExpiredLocks: () => void;
+  onForceClearDeviceLock: (lockId: string) => void;
   onPrepareReconnect: () => void;
   onRecheck: () => void;
   profileRole: string | undefined;
   selectedDeviceLabel: string | null;
 }) {
   const hasProfile = profileRole !== undefined;
+  const deviceNameById = new Map(devices.map((device) => [device.id, device.name || device.laixi_device_id]));
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
@@ -103,6 +115,58 @@ export function RecoveryActionsPanel({
             Clear expired locks
           </button>
         </RecoveryActionCard>
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h5 className="text-sm font-semibold text-amber-950">Admin stuck-lock cleanup</h5>
+            <p className="text-xs text-amber-800 mt-1">
+              Force clear a visible active lock only when the owning run is known to be stuck.
+            </p>
+          </div>
+          <Badge variant={activeLocks.length > 0 ? 'yellow' : 'gray'}>
+            {activeLocks.length} active
+          </Badge>
+        </div>
+
+        {activeLocks.length === 0 ? (
+          <p className="text-xs text-amber-800">No active lock rows are visible right now.</p>
+        ) : (
+          <div className="space-y-2">
+            {activeLocks.map((lock) => {
+              const deviceLabel = deviceNameById.get(lock.device_id) ?? lock.device_id;
+              const isClearing = forceClearLockId === lock.id;
+              return (
+                <div
+                  key={lock.id}
+                  className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 rounded-lg border border-amber-200 bg-white p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{deviceLabel}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Run {lock.workflow_run_id} - expires {formatTimestamp(lock.expires_at)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onForceClearDeviceLock(lock.id)}
+                    disabled={isClearing || deviceLocksError !== null || !hasProfile || !canForceClearLocks}
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-semibold transition-colors"
+                  >
+                    {isClearing ? <Spinner size="sm" /> : <ShieldAlert className="w-4 h-4" />}
+                    Force clear
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!canForceClearLocks && (
+          <p className="text-xs text-amber-800">
+            Role {profileRole ?? 'unknown'} can inspect lock state, but only admins can force clear active locks.
+          </p>
+        )}
       </div>
     </div>
   );

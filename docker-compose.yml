@@ -5,6 +5,7 @@ services:
       args:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_ACCOUNT_PASSWORD_KEY: ${VITE_ACCOUNT_PASSWORD_KEY}
     ports:
       - "3000:80"
     restart: unless-stopped
@@ -19,11 +20,12 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       DEVICE_BACKEND: ${DEVICE_BACKEND:-mobile-mcp}
-      MOBILE_MCP_WS_URL: ${MOBILE_MCP_WS_URL:-ws://host.docker.internal:4311}
-      LAIXI_GATEWAY_URL: ${LAIXI_GATEWAY_URL:-http://gateway:8080}
-      COMMAND_TIMEOUT_MS: "30000"
-      CLAIM_POLL_INTERVAL_MS: "5000"
-      LEASE_DURATION_MS: "60000"
+      MOBILE_MCP_BRIDGE_URL: ${MOBILE_MCP_BRIDGE_URL:-http://host.docker.internal:4321}
+      MOBILE_MCP_BRIDGE_TOKEN: ${MOBILE_MCP_BRIDGE_TOKEN}
+      GATEWAY_BASE_URL: ${GATEWAY_BASE_URL:-http://gateway:8080}
+      DEVICE_COMMAND_TIMEOUT_MS: "30000"
+      RUN_POLL_INTERVAL_MS: "5000"
+      RUN_LEASE_TTL_MS: "60000"
     ports:
       - "4310:4310"
     restart: unless-stopped

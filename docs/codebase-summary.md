@@ -1,6 +1,6 @@
 # Codebase Summary
 
-Date: 2026-06-29 (updated)
+Date: 2026-07-07 (updated)
 
 ## Product
 SocialBot Orchestrator orchestrates Android/iOS device automation workflows through Supabase, a backend worker, and device bridges (Mobile MCP with Mobilerun AndroidDriver/IOSDriver). Purpose-built for **social media automation teams** running 5-50 devices with anti-detection, account lifecycle tracking, and multi-app workflows (Instagram, TikTok, Facebook).
@@ -10,10 +10,10 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 
 ## Main Areas
 - `src/`: React/Vite SPA.
-- `src/pages/`: app routes for devices, setup, runs, approvals, audit, demo, Mobile MCP orchestrator.
+- `src/pages/`: app routes for devices, setup, runs, approvals, audit, accounts, analytics, admin, and Mobile MCP orchestrator.
 - `src/hooks/`: Supabase React Query hooks.
 - `src/lib/`: Supabase client, run control fallback, role access, preflight, device setup helpers, run artifact normalization.
-- `src/contracts/`: macro JSON contracts, samples, Social Macro DSL.
+- `src/contracts/`: macro JSON contracts, samples, and social engagement templates.
 - `services/execution-worker/`: backend run claim, lease, execution, Mobile MCP/Laixi dispatch, smoke tests.
 - `services/laixi-gateway/`: Laixi device session manager and HTTP dispatch service.
 - `services/mobile-mcp-bridge/`: local Python Android/iOS bridge using Mobilerun AndroidDriver + IOSDriver.
@@ -24,13 +24,13 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - `docs/`: project summary, roadmap, changelog, standards, and operational notes.
 
 ## Current Verification Baseline
-- `npm.cmd test`: 13 files, 155 tests pass on 2026-06-29.
-- `npm.cmd run typecheck`: pass on 2026-06-29.
-- `npm.cmd run lint`: 0 errors (1 warning — vendored file) on 2026-06-29.
-- `npm.cmd run build`: 6.85s, pass on 2026-06-29; main chunk 366 kB gzip 111 kB.
-- `npm.cmd run build:worker`: pass on 2026-06-29.
-- `npm.cmd run build:gateway`: pass on 2026-06-29.
-- `npm.cmd run smoke:backend`: pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
+- `npm.cmd run test`: 24 files, 203 tests pass on 2026-07-07.
+- `npm.cmd run typecheck`: pass on 2026-07-07.
+- `npm.cmd run lint`: pass on 2026-07-07.
+- `npm.cmd run build`: pass on 2026-07-07.
+- `npm.cmd run build:worker`: pass on 2026-07-07.
+- `npm.cmd run build:gateway`: pass on 2026-07-07.
+- `npm.cmd run smoke:backend`: last documented pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.
 - Docker: full-stack compose (frontend + worker + gateway) with Dockerfiles.
 
@@ -39,35 +39,35 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Worker claim/lease path exists.
 - **Phase 8: Parallel Execution** — Worker-per-device topology via Node.js `worker_threads`. Race condition fix (`accounts.current_action_count` → PostgreSQL RPC). Concurrent device execution with `MAX_CONCURRENT_DEVICES = 10`. Smoke test passes.
 - **Phase 9: Laixi Clean-path Proof** — `LaixiGatewayClient` with `AbortController` timeout, 502/504 error handling. Mock Gateway Server (port 8080) for E2E smoke testing.
-- **Phase 10: User Documentation** — In-app markdown viewer (`react-markdown` + `remark-gfm`), 6 user guides (Introduction, Connecting Devices, Macro Builder, Anti-Detection Engine, Account Setup, Warm-up Schedules), sidebar integration.
-- **All 13 roadmap phases completed** as of 2026-06-29.
+- **Phase 10: User Documentation** — Removed from runtime scope during use-case cleanup; operational guidance now lives in focused in-app setup panels and repo docs.
+- MVP runtime scope is implemented for the current use-case set; docs/pricing/AI builder are intentionally out of runtime scope.
 - **ESLint cleanup** — 17 type/lint errors resolved; 0 errors across the codebase.
 - **CI pipeline** — GitHub Actions workflow (lint → typecheck → build → test).
 - **Docker** — Multi-stage Dockerfiles for worker + gateway, 3-service docker-compose.yml.
-- Mobile MCP real-device UI smoke passed (2026-05-06 with R58MC1XNTLR).
+- Mobile MCP real-device UI smoke passed on 2026-07-07 with device `97249fb5`.
 - `OPS-08` is closed for Mobile MCP proof.
 - Laixi gateway health proof is documented separately; clean-path proof is blocked by missing external Laixi VIP/API/session availability.
 - Spec Kit feature `001-normalize-pilot-artifact` is implemented for artifact display normalization and storage-decision documentation.
 - Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
 - Spec Kit feature `003-artifact-storage-thresholds` is completed and merged.
-- **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). 12/12 preflight checks pass. Full verify blocked on Supabase DNS.
+- **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). Full `npm.cmd run verify:mobile-mcp` passed on 2026-07-07 with browser UI smoke run `ec7f6fab-81fc-4dfd-8ceb-8a98e1835fff`.
 - Foreach loop execution integration in backend worker (`handleForeachLoop` in `single-device-step-runner.ts`) along with a critical bug fix resolving loop step repetition/skipping defects across all loop types.
 - Extended unit testing suite with 100% line coverage for `anti-detection-helpers.ts` and `account-service-helpers.ts`.
 
 ## Known Risks
 - All source files are below 200 lines after the complete file-size refactor.
-- Main Vite chunk is 366 kB (111 kB gzip), below the 500 kB warning threshold.
+- Main Vite chunk remains below the 500 kB warning threshold.
 - Mobile MCP V1 does not execute `run_autox`.
-- Full Mobile MCP verify / UI smoke blocked on Supabase DNS resolution from this machine.
+- Full Mobile MCP verify / UI smoke passed on the connected Android device; keep `MOBILE_MCP_EXPECTED_SERIALS` aligned with the attached serial before rerunning.
 - No remote git remote configured; 8 local commits not pushed anywhere.
 - Inline artifact storage is acceptable for small pilot volume; object storage is deferred until higher screenshot volume, longer retention, or external sharing.
-- Fresh Mobile MCP artifact-producing smoke is blocked until the expected Android device is visible to ADB.
+- Fresh Mobile MCP artifact-producing smoke requires the expected Android device to be visible to ADB.
 - Laixi clean-path proof cannot run without VIP/API access and a live Laixi-compatible device session.
 
 ## Unresolved Questions
 - Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
 - What is the next Spec Kit feature after artifact threshold policy?
-- Is `QC4DKJUO6PW4FMQW` still the active pilot Android device serial?
+- Should `MOBILE_MCP_EXPECTED_SERIALS` stay pinned to `97249fb5` for this workstation?
 - Social pivot Phase 0-5 needs user validation — is "SocialBot Orchestrator" the right product name?
 - Instagram/TikTok API vs pure UI automation for account actions?
 - Encrypted password storage or OAuth tokens for social account credentials?

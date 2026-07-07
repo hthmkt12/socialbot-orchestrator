@@ -43,7 +43,7 @@ Worker (Node/TypeScript)
 | Aspect | Android | iOS |
 |--------|---------|-----|
 | Driver | `AndroidDriver(serial)` via ADB | `IOSDriver(url)` Portal REST API |
-| Portal setup | Auto via `ensure_portal_ready()` | Manual: install iOS Portal + `iproxy` |
+| Portal setup | Optional via `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=true`; ADB-first by default | Manual: install iOS Portal + `iproxy` |
 | Device ID | ADB serial (e.g. `RF8R81CXXXX`) | Portal URL (e.g. `http://127.0.0.1:6643`) |
 | Supported buttons | back, home, enter | home only |
 | `adb` step | ✅ ADB shell | ❌ Not supported |

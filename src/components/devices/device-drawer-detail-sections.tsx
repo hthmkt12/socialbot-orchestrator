@@ -22,7 +22,7 @@ export function DeviceDrawerFacts({
   const facts = [
     ['Status', sc.label],
     ['Heartbeat', health.freshnessLabel],
-    ['Laixi ID', device.laixi_device_id],
+    ['Bridge ID', device.laixi_device_id],
     ['Model', device.model],
     ['Brand', device.brand],
     ['OS', `${deviceOsLabel(device)} ${device.android_version || '--'}`],

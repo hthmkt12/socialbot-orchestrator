@@ -24,14 +24,17 @@ interface DeviceSetupDeviceRow {
 
 export function DeviceSetupVerifyTab({
   activeProbeBackend,
+  canForceClearLocks,
   canManageLocks,
   checklist,
   cleanupExpiredLocksLoading,
   deviceLockSnapshot,
   deviceRows,
+  forceClearLockId,
   gatewayBaseUrl,
   gatewayWsUrl,
   handleCleanupExpiredLocks,
+  handleForceClearDeviceLock,
   handlePrepareReconnect,
   mobileMcpBridgeUrl,
   operatorDiagnostics,
@@ -53,14 +56,17 @@ export function DeviceSetupVerifyTab({
   workerBaseUrl,
 }: {
   activeProbeBackend: 'mobile-mcp' | 'laixi';
+  canForceClearLocks: boolean;
   canManageLocks: boolean;
   checklist: DeviceSetupChecklistItem[];
   cleanupExpiredLocksLoading: boolean;
   deviceLockSnapshot: DeviceLockSnapshot;
   deviceRows: DeviceSetupDeviceRow[];
+  forceClearLockId: string | null;
   gatewayBaseUrl: string;
   gatewayWsUrl: string;
   handleCleanupExpiredLocks: () => Promise<void>;
+  handleForceClearDeviceLock: (lockId: string) => Promise<void>;
   handlePrepareReconnect: () => void;
   mobileMcpBridgeUrl: string;
   operatorDiagnostics: DeviceSetupDiagnostic[];
@@ -115,13 +121,18 @@ export function DeviceSetupVerifyTab({
       />
 
       <RecoveryActionsPanel
+        activeLocks={deviceLockSnapshot.activeLocks}
+        canForceClearLocks={canForceClearLocks}
         canManageLocks={canManageLocks}
         checkedAt={verification.checkedAt}
         cleanupExpiredLocksLoading={cleanupExpiredLocksLoading}
+        devices={verification.devices}
         deviceLocksError={verification.deviceLocksError}
         expiredLockCount={deviceLockSnapshot.expiredLocks.length}
+        forceClearLockId={forceClearLockId}
         loading={verification.loading}
         onCleanupExpiredLocks={() => void handleCleanupExpiredLocks()}
+        onForceClearDeviceLock={(lockId) => void handleForceClearDeviceLock(lockId)}
         onPrepareReconnect={() => void handlePrepareReconnect()}
         onRecheck={() => void runVerification()}
         profileRole={profileRole}

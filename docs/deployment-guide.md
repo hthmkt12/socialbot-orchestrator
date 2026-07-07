@@ -32,6 +32,8 @@ Health check: `http://127.0.0.1:8080/health`
 - Check: `npm run runtime:mobile-mcp:check`
 - Verify: `npm run preflight:mobile-mcp` → `npm run verify:mobile-mcp`
 - Expected device serials: configured via `MOBILE_MCP_EXPECTED_SERIALS` env
+- Protected bridge endpoints require `MOBILE_MCP_BRIDGE_TOKEN`.
+- Set `MOBILE_MCP_ALLOW_INSECURE_DEV=true` only for isolated local development without real account credentials.
 
 ## Docker (Full Stack)
 
@@ -51,10 +53,14 @@ Required environment variables in `.env`:
 |----------|----------|-------------|
 | `VITE_SUPABASE_URL` | frontend | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | frontend | Supabase anon key |
+| `VITE_ACCOUNT_PASSWORD_KEY` | frontend | 32+ character pilot encryption key for social account passwords |
 | `SUPABASE_URL` | worker | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | worker | Supabase service role key |
 | `DEVICE_BACKEND` | worker | `mobile-mcp` (default) or `laixi` |
-| `MOBILE_MCP_WS_URL` | worker | Bridge WebSocket URL |
+| `MOBILE_MCP_BRIDGE_URL` | worker | Mobile MCP bridge HTTP URL |
+| `MOBILE_MCP_BRIDGE_TOKEN` | worker/bridge | Shared token for protected bridge endpoints |
+| `MOBILE_MCP_ALLOW_INSECURE_DEV` | bridge | Optional local-only bypass when no token is configured |
+| `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION` | bridge | Optional Android Portal setup on session start; leave false for ADB-first smoke devices |
 
 ## CI/CD
 
@@ -75,7 +81,6 @@ GitHub Actions workflow at `.github/workflows/ci.yml`:
 | Command | What it tests |
 |---------|---------------|
 | `npm run smoke:backend` | Worker resilience smoke |
-| `npm run smoke:social-macro` | Social macro exporter |
 | `npm run smoke:mobile-mcp` | Mobile MCP device smoke |
 | `npm run smoke:mobile-mcp:multi` | Multi-device smoke |
 | `npm run smoke:mobile-mcp:db-multi` | DB-driven multi-device smoke |

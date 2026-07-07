@@ -1,5 +1,6 @@
-import { Smartphone, X } from 'lucide-react';
+import { Smartphone, Trash2, X } from 'lucide-react';
 import Badge from '../ui/Badge';
+import Spinner from '../ui/Spinner';
 import { getDeviceHealthSummary } from '../../lib/device-health';
 import { describeDeviceLockState, type DeviceLockState } from '../../lib/device-locks';
 import type { Device } from '../../lib/database.types';
@@ -8,12 +9,15 @@ import { DeviceBatteryIcon } from './DeviceBatteryIcon';
 import { DeviceDrawerFacts, DeviceDrawerRawMetadata } from './device-drawer-detail-sections';
 
 interface DeviceDrawerProps {
+  canDelete: boolean;
+  deletePending: boolean;
   device: Device;
   lockState: DeviceLockState;
   onClose: () => void;
+  onDelete: () => void;
 }
 
-export function DeviceDrawer({ device, lockState, onClose }: DeviceDrawerProps) {
+export function DeviceDrawer({ canDelete, deletePending, device, lockState, onClose, onDelete }: DeviceDrawerProps) {
   const meta = device.metadata_json ?? {};
   const batteryLevel = meta.batteryLevel as number | undefined;
   const isCharging = meta.isCharging as boolean | undefined;
@@ -25,9 +29,21 @@ export function DeviceDrawer({ device, lockState, onClose }: DeviceDrawerProps) 
       <div className="relative w-full max-w-md bg-white shadow-2xl overflow-y-auto animate-in">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
           <h3 className="text-lg font-semibold text-gray-900">Device Details</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {canDelete && (
+              <button
+                onClick={onDelete}
+                disabled={deletePending}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-50 transition-colors"
+                title="Delete device"
+              >
+                {deletePending ? <Spinner size="sm" /> : <Trash2 className="w-5 h-5" />}
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <div className="p-6 space-y-6">
           <DeviceDrawerIdentity device={device} health={health} lockState={lockState} />

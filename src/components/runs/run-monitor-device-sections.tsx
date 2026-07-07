@@ -76,6 +76,15 @@ export function RunMonitorDeviceCard({
 }
 
 function RunMonitorStepCard({ expanded, onToggle, step }: RunMonitorStepCardProps) {
+  const retryReason = typeof step.output_json?.retryReason === 'string'
+    ? step.output_json.retryReason
+    : typeof step.error_json?.terminalFailureReason === 'string'
+      ? step.error_json.terminalFailureReason
+      : null;
+  const nextRetryDelayMs = typeof step.output_json?.nextRetryDelayMs === 'number'
+    ? step.output_json.nextRetryDelayMs
+    : null;
+
   return (
     <div className="bg-white rounded-lg border border-gray-200">
       <button
@@ -105,6 +114,12 @@ function RunMonitorStepCard({ expanded, onToggle, step }: RunMonitorStepCardProp
               </p>
             )}
             <RunStepErrorPanel error={step.error_json} compact />
+            {(retryReason || nextRetryDelayMs !== null) && (
+              <p className="text-xs text-amber-700 mt-1">
+                {retryReason ? `Retry: ${retryReason}` : 'Retry scheduled'}
+                {nextRetryDelayMs !== null ? ` (${nextRetryDelayMs}ms)` : ''}
+              </p>
+            )}
           </div>
         </div>
         {expanded ? (

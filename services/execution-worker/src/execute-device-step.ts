@@ -11,7 +11,7 @@ import {
   buildTap,
 } from '../../../packages/laixi-adapter/src';
 import type { StepArtifactRef } from '../../../packages/shared/src';
-import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client';
+import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client.js';
 
 export interface StepExecutionResult {
   success: boolean;

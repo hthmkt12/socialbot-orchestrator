@@ -56,13 +56,6 @@ export async function handlePotentialBlock(
       })
       .eq('id', accountId);
 
-    // Also record the block event in history
-    await supabase.from('account_action_history').insert({
-      account_id: accountId,
-      action_type: 'post', // we use a dummy or just log it, but wait, action_type is an enum. Let's not write to history or use 'share' for now.
-      // actually history tracks specific actions. Let's just update the account.
-    });
-
     return true;
   } catch {
     // Best effort

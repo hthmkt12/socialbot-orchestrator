@@ -69,6 +69,14 @@ function RunDetailStepRow({
   const artifactCount = artifactCountsByStepKey.get(
     buildRunArtifactStepKey(step.device_id, step.step_id) ?? ''
   ) ?? 0;
+  const retryReason = typeof step.output_json?.retryReason === 'string'
+    ? step.output_json.retryReason
+    : typeof step.error_json?.terminalFailureReason === 'string'
+      ? step.error_json.terminalFailureReason
+      : null;
+  const nextRetryDelayMs = typeof step.output_json?.nextRetryDelayMs === 'number'
+    ? step.output_json.nextRetryDelayMs
+    : null;
 
   return (
     <div className={`px-5 py-4 flex items-start gap-4 transition-colors ${
@@ -90,6 +98,12 @@ function RunDetailStepRow({
           )}
         </div>
         <RunStepErrorPanel error={step.error_json} compact />
+        {(retryReason || nextRetryDelayMs !== null) && (
+          <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-800">
+            {retryReason && <p>Retry reason: {retryReason}</p>}
+            {nextRetryDelayMs !== null && <p>Next retry delay: {nextRetryDelayMs}ms</p>}
+          </div>
+        )}
         {step.output_json && Object.keys(step.output_json).length > 0 && (
           <pre className="text-[10px] text-gray-500 mt-1 max-w-md truncate font-mono">{JSON.stringify(step.output_json)}</pre>
         )}

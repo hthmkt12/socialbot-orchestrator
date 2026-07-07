@@ -96,7 +96,10 @@ function serviceDefinitions() {
       name: 'mobile-mcp-bridge',
       health: () => fetchOk(`${bridgeUrl}/health`),
       command: [npmCommand, ['--prefix', 'services/mobile-mcp-bridge', 'run', 'dev']],
-      env: { MOBILE_MCP_BRIDGE_PORT: new URL(bridgeUrl).port || '4321' },
+      env: {
+        MOBILE_MCP_BRIDGE_PORT: new URL(bridgeUrl).port || '4321',
+        MOBILE_MCP_ALLOW_INSECURE_DEV: mergedEnv.MOBILE_MCP_BRIDGE_TOKEN ? 'false' : 'true',
+      },
       preflight() {
         const pythonPath = join(rootDir, 'services', 'mobile-mcp-bridge', '.venv', 'Scripts', 'python.exe');
         if (isWindows && !existsSync(pythonPath)) {

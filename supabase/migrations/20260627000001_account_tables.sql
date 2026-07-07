@@ -93,7 +93,7 @@ CREATE POLICY "Users can delete own accounts"
 
 -- Accounts: admins can manage all accounts
 CREATE POLICY "Admins can manage all accounts"
-  ON accounts ALL
+  ON accounts FOR ALL
   TO authenticated
   USING (get_user_role() = 'ADMIN')
   WITH CHECK (get_user_role() = 'ADMIN');

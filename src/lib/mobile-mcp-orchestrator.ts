@@ -27,6 +27,8 @@ export interface MobileMcpStepResult {
   screenshotBase64?: string;
 }
 
+const MOBILE_MCP_V1_UNSUPPORTED_STEPS = new Set(['run_autox']);
+
 function trimTrailingSlash(value: string) {
   return value.replace(/\/$/, '');
 }
@@ -79,6 +81,10 @@ export async function executeMobileMcpStep(
   screenWidth = 720,
   screenHeight = 1600
 ): Promise<MobileMcpStepResult> {
+  if (MOBILE_MCP_V1_UNSUPPORTED_STEPS.has(stepType)) {
+    throw new Error(`${stepType} is not supported by Mobile MCP V1`);
+  }
+
   const normalized = normalizeMobileMcpBridgeUrl(baseUrl);
   const raw = await fetchJson<{ success: boolean; output?: Record<string, unknown>; error?: string }>(
     `${normalized}/devices/${encodeURIComponent(serial)}/execute-step`,

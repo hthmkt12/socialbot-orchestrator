@@ -23,12 +23,13 @@ function loadDotEnv(path) {
   );
 }
 
-const env = { ...loadDotEnv(join(rootDir, '.env')), ...process.env };
+const dotEnv = loadDotEnv(join(rootDir, '.env'));
+const env = { ...dotEnv, ...process.env };
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const uiUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
 const macroName = env.UI_SMOKE_MACRO_NAME ?? 'Mobile MCP DB Multi Smoke';
-const expectedSerials = parseCsv(env.MOBILE_MCP_EXPECTED_SERIALS);
+const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
 const deviceMatches = (env.UI_SMOKE_DEVICE_MATCHES ?? '23106RN0DA,SM-A515F')
   .split(',')
   .map((value) => value.trim())

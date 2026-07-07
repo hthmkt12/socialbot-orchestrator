@@ -23,8 +23,9 @@ function loadDotEnv(path) {
   );
 }
 
-const env = { ...loadDotEnv(join(rootDir, '.env')), ...process.env };
-const expectedSerials = parseCsv(env.MOBILE_MCP_EXPECTED_SERIALS);
+const dotEnv = loadDotEnv(join(rootDir, '.env'));
+const env = { ...dotEnv, ...process.env };
+const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
 
 function parseCsv(value) {
   if (!value) return [];

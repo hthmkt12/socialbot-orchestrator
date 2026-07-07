@@ -46,7 +46,7 @@ export function SelectedDeviceSummaryPanel({
         <StatCard
           title="Heartbeat"
           value={selectedDevice.health.freshnessLabel}
-          hint={`Laixi ID: ${selectedDevice.device.laixi_device_id}`}
+          hint={`Bridge ID: ${selectedDevice.device.laixi_device_id}`}
           tone={
             selectedDevice.health.lifecycle.freshness === 'fresh' ? 'green' :
             selectedDevice.health.lifecycle.freshness === 'stale' ? 'yellow' :

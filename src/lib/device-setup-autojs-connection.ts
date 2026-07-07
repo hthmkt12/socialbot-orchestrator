@@ -1,6 +1,6 @@
 ﻿export const AUTOJS_CONNECTION_SCRIPT = `
 function connect() {
-  log("Connecting to Laixi Gateway...");
+  log("Connecting to Device Gateway...");
   ws = new WebSocket(GATEWAY_URL);
 
   ws.onopen = function () {

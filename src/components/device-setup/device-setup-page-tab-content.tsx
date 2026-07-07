@@ -19,14 +19,17 @@ export function DeviceSetupPageTabContent({
   activeProbeBackend,
   activeTab,
   autoJsScript,
+  canForceClearLocks,
   canManageLocks,
   checklist,
   cleanupExpiredLocksLoading,
   deviceLockSnapshot,
   deviceRows,
+  forceClearLockId,
   gatewayBaseUrl,
   gatewayWsUrl,
   handleCleanupExpiredLocks,
+  handleForceClearDeviceLock,
   handlePrepareReconnect,
   mobileMcpBridgeUrl,
   operatorDiagnostics,
@@ -52,14 +55,17 @@ export function DeviceSetupPageTabContent({
   activeProbeBackend: 'mobile-mcp' | 'laixi';
   activeTab: DeviceSetupTab;
   autoJsScript: string;
+  canForceClearLocks: boolean;
   canManageLocks: boolean;
   checklist: DeviceSetupChecklistItem[];
   cleanupExpiredLocksLoading: boolean;
   deviceLockSnapshot: DeviceLockSnapshot;
   deviceRows: DeviceSetupDeviceRow[];
+  forceClearLockId: string | null;
   gatewayBaseUrl: string;
   gatewayWsUrl: string;
   handleCleanupExpiredLocks: () => Promise<void>;
+  handleForceClearDeviceLock: (lockId: string) => Promise<void>;
   handlePrepareReconnect: () => Promise<void>;
   mobileMcpBridgeUrl: string;
   operatorDiagnostics: DeviceSetupDiagnostic[];
@@ -86,14 +92,17 @@ export function DeviceSetupPageTabContent({
     return (
       <DeviceSetupVerifyTab
         activeProbeBackend={activeProbeBackend}
+        canForceClearLocks={canForceClearLocks}
         canManageLocks={canManageLocks}
         checklist={checklist}
         cleanupExpiredLocksLoading={cleanupExpiredLocksLoading}
         deviceLockSnapshot={deviceLockSnapshot}
         deviceRows={deviceRows}
+        forceClearLockId={forceClearLockId}
         gatewayBaseUrl={gatewayBaseUrl}
         gatewayWsUrl={gatewayWsUrl}
         handleCleanupExpiredLocks={handleCleanupExpiredLocks}
+        handleForceClearDeviceLock={handleForceClearDeviceLock}
         handlePrepareReconnect={handlePrepareReconnect}
         mobileMcpBridgeUrl={mobileMcpBridgeUrl}
         operatorDiagnostics={operatorDiagnostics}

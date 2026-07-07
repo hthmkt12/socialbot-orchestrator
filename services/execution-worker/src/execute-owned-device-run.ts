@@ -1,5 +1,5 @@
-import { acquireDeviceLock, releaseDeviceLock, renewDeviceLock } from './worker-device-locks';
-import { SingleDeviceStepRunner, type RunnerParams } from './single-device-step-runner';
+import { acquireDeviceLock, releaseDeviceLock, renewDeviceLock } from './worker-device-locks.js';
+import { SingleDeviceStepRunner, type RunnerParams } from './single-device-step-runner.js';
 
 const LOCK_RENEW_INTERVAL_MS = 5 * 60 * 1000;
 

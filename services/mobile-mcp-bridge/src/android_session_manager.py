@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import binascii
 import os
 import re
 import threading
@@ -31,7 +32,8 @@ class DeviceSession:
         else:
             self.driver = AndroidDriver(serial=identifier)
             self._run(self.driver.connect())
-            self._run(ensure_portal_ready(self.driver.device))
+            if os.environ.get("MOBILE_MCP_ENSURE_PORTAL_ON_SESSION", "").lower() in {"1", "true", "yes"}:
+                self._run(ensure_portal_ready(self.driver.device))
 
     def _run(self, coro):
         return self._loop.run_until_complete(coro)
@@ -58,9 +60,13 @@ class DeviceSession:
     # -- step dispatch --------------------------------------------------------
 
     def execute_step(self, step_type, params, device):
+        platform_error = validate_step_platform(self.platform, step_type)
+        if platform_error:
+            return platform_error
+
         handler = _STEP_HANDLERS.get(step_type)
         if handler is None:
-            return {"success": False, "message": f"Unsupported step type: {step_type}"}
+            return {"success": False, "code": "UNSUPPORTED_STEP_TYPE", "message": f"Unsupported step type: {step_type}"}
         return handler(self, params, device)
 
     # -- tool dispatch --------------------------------------------------------
@@ -94,8 +100,18 @@ class DeviceSession:
 
 def _handle_launch_app(session, params, _device):
     pkg = str(params.get("appName", ""))
-    result = session._run(session.driver.start_app(pkg))
-    return {"success": True, "message": result, "appName": pkg}
+    if not pkg:
+        return {"success": False, "code": "APP_NAME_REQUIRED", "message": "appName is required"}
+    if session.platform == "ios":
+        result = session._run(session.driver.start_app(pkg))
+        return {"success": True, "message": result, "appName": pkg}
+    package_error = validate_android_package_name(pkg)
+    if package_error:
+        return package_error
+    output = session._run(
+        session.driver.device.shell(f"monkey -p {pkg} -c android.intent.category.LAUNCHER 1")
+    )
+    return {"success": "Events injected" in output, "message": output, "appName": pkg}
 
 
 def _handle_tap(session, params, device):
@@ -129,7 +145,11 @@ def _handle_input_text(session, params, _device):
 
 def _handle_screenshot(session, params, _device):
     raw_bytes = session._run(session.driver.screenshot())
+    if not isinstance(raw_bytes, (bytes, bytearray)) or len(raw_bytes) == 0:
+        return {"success": False, "code": "SCREENSHOT_FAILED", "message": "screenshot returned no image bytes"}
     b64 = base64.b64encode(raw_bytes).decode("ascii")
+    if not is_valid_base64(b64):
+        return {"success": False, "code": "SCREENSHOT_FAILED", "message": "screenshot encoding failed"}
 
     # Also persist to disk for artifact archival
     safe_desc = "".join(
@@ -150,7 +170,7 @@ def _handle_screenshot(session, params, _device):
 
 def _handle_get_current_app(session, _params, _device):
     if session.platform == "ios":
-        return {"success": False, "message": "get_current_app is not supported on iOS"}
+        return ios_adb_only_error("get_current_app")
     try:
         output = session._run(session.driver.device.shell("dumpsys activity activities"))
         package, activity = _parse_current_app(output)
@@ -161,15 +181,15 @@ def _handle_get_current_app(session, _params, _device):
 
 def _handle_adb(session, params, _device):
     if session.platform == "ios":
-        return {"success": False, "message": "ADB shell is not supported on iOS"}
+        return ios_adb_only_error("adb")
     command = str(params.get("command", "")).strip()
     if not command:
-        return {"success": False, "message": "ADB command is required"}
+        return {"success": False, "code": "ADB_COMMAND_REQUIRED", "message": "ADB command is required"}
     try:
         output = session._run(session.driver.device.shell(command))
         return {"success": True, "command": command, "output": output, "code": 0, "message": "adb shell completed"}
     except Exception as exc:
-        return {"success": False, "command": command, "output": "", "stderr": str(exc), "code": 1, "message": "adb shell failed"}
+        return {"success": False, "command": command, "output": "", "stderr": str(exc), "code": "ADB_FAILED", "exitCode": 1, "message": "adb shell failed"}
 
 
 def _handle_press_button(session, params, _device):
@@ -201,10 +221,10 @@ def _handle_extract_var(session, params, _device):
     
     if source == "adb":
         if session.platform == "ios":
-            return {"success": False, "message": "ADB shell source is not supported on iOS"}
+            return ios_adb_only_error("extract_var:adb")
         command = str(params.get("command", "")).strip()
         if not command:
-            return {"success": False, "message": "command is required for adb source"}
+            return {"success": False, "code": "ADB_COMMAND_REQUIRED", "message": "command is required for adb source"}
         try:
             output = session._run(session.driver.device.shell(command))
             
@@ -221,7 +241,7 @@ def _handle_extract_var(session, params, _device):
                 
             return {"success": True, "value": extracted, "raw_output": output}
         except Exception as exc:
-            return {"success": False, "message": f"extract_var adb failed: {str(exc)}"}
+            return {"success": False, "code": "ADB_FAILED", "message": f"extract_var adb failed: {str(exc)}"}
             
     elif source == "ui_tree":
         # Extract from a UI tree element
@@ -286,6 +306,41 @@ def _handle_ai_task(session, params, _device):
         }
     except Exception as exc:
         return {"success": False, "reason": str(exc), "steps": 0, "structured_output": None}
+
+
+IOS_ADB_ONLY_STEPS = {"adb", "get_current_app"}
+
+
+def validate_step_platform(platform, step_type):
+    if platform == "ios" and step_type in IOS_ADB_ONLY_STEPS:
+        return ios_adb_only_error(step_type)
+    return None
+
+
+def ios_adb_only_error(step_type):
+    return {
+        "success": False,
+        "code": "IOS_ADB_ONLY_STEP",
+        "message": f"{step_type} is Android/ADB-only and is not supported on iOS",
+    }
+
+
+def validate_android_package_name(package_name):
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+", package_name):
+        return {
+            "success": False,
+            "code": "INVALID_ANDROID_PACKAGE",
+            "message": f"Invalid Android package name: {package_name}",
+        }
+    return None
+
+
+def is_valid_base64(value):
+    try:
+        base64.b64decode(value.encode("ascii"), validate=True)
+        return True
+    except (binascii.Error, UnicodeEncodeError):
+        return False
 
 
 _STEP_HANDLERS = {

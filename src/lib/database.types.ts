@@ -9,6 +9,9 @@ export type RunStepStatus = 'PENDING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIP
 export type TargetType = 'SINGLE_DEVICE' | 'DEVICE_GROUP' | 'MULTI_DEVICE' | 'ALL_DEVICES';
 export type ArtifactType = 'SCREENSHOT' | 'LOG_BLOB' | 'SCRIPT_FILE' | 'JSON_RESULT';
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+export type PilotReadinessBackend = 'mobile_mcp' | 'laixi' | 'ios_portal' | 'unknown';
+export type PilotReadinessStatus = 'draft' | 'submitted' | 'pilot_verified' | 'not_verified' | 'needs_rerun';
+export type TargetFailurePolicy = 'fail_fast' | 'skip_failed_target';
 
 export interface Profile {
   id: string;
@@ -162,8 +165,26 @@ export interface ExecutionProfile {
   concurrency_per_device: number;
   default_timeout_ms: number;
   max_retries: number;
+  retry_base_delay_ms: number;
+  retry_max_delay_ms: number;
+  retry_max_elapsed_ms: number;
+  target_failure_policy: TargetFailurePolicy;
   require_approval_for_adb: boolean;
   require_approval_for_autox: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PilotReadinessReport {
+  id: string;
+  backend: PilotReadinessBackend;
+  status: PilotReadinessStatus;
+  report_path: string | null;
+  evidence_json: Record<string, unknown>;
+  created_by_user_id: string | null;
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -252,6 +273,7 @@ export interface Database {
       approvals: { Row: Approval; Insert: Partial<Approval> & { workflow_run_id: string; requested_by_user_id: string }; Update: Partial<Approval> };
       audit_logs: { Row: AuditLog; Insert: Partial<AuditLog> & { action: string }; Update: Partial<AuditLog> };
       execution_profiles: { Row: ExecutionProfile; Insert: Partial<ExecutionProfile> & { name: string }; Update: Partial<ExecutionProfile> };
+      pilot_readiness_reports: { Row: PilotReadinessReport; Insert: Partial<PilotReadinessReport>; Update: Partial<PilotReadinessReport> };
       device_locks: { Row: DeviceLock; Insert: Partial<DeviceLock> & { device_id: string; workflow_run_id: string }; Update: Partial<DeviceLock> };
       accounts: { Row: Account; Insert: Partial<Account> & { user_id: string; username: string; encrypted_password: string; platform: AccountPlatform }; Update: Partial<Account> };
       account_analytics: { Row: AccountAnalytics; Insert: Partial<AccountAnalytics> & { account_id: string }; Update: Partial<AccountAnalytics> };

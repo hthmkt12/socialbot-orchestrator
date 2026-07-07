@@ -1,27 +1,34 @@
 import { useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import Spinner from '../ui/Spinner';
-import { useAddDeviceToGroup, useDeviceGroupMembers, useRemoveDeviceFromGroup } from '../../hooks/useDeviceGroups';
+import { useAddDeviceToGroup, useDeleteDeviceGroup, useDeviceGroupMembers, useRemoveDeviceFromGroup } from '../../hooks/useDeviceGroups';
 import { useDevices } from '../../hooks/useDevices';
 import { useUIStore } from '../../stores/ui';
 import type { DeviceGroup } from '../../lib/database.types';
 
 interface DeviceGroupDetailDrawerProps {
+  canDelete: boolean;
+  canManage: boolean;
   group: DeviceGroup;
   onClose: () => void;
 }
 
-export function DeviceGroupDetailDrawer({ group, onClose }: DeviceGroupDetailDrawerProps) {
+export function DeviceGroupDetailDrawer({ canDelete, canManage, group, onClose }: DeviceGroupDetailDrawerProps) {
   const { data: members, isLoading } = useDeviceGroupMembers(group.id);
   const { data: allDevices } = useDevices();
   const addDevice = useAddDeviceToGroup();
   const removeDevice = useRemoveDeviceFromGroup();
+  const deleteGroup = useDeleteDeviceGroup();
   const addToast = useUIStore((s) => s.addToast);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const memberDeviceIds = new Set(members?.map((member) => member.device_id) ?? []);
   const availableDevices = allDevices?.filter((device) => !memberDeviceIds.has(device.id)) ?? [];
 
   const handleAdd = async (deviceId: string) => {
+    if (!canManage) {
+      addToast('Only operators and admins can change device group membership', 'error');
+      return;
+    }
     try {
       await addDevice.mutateAsync({ groupId: group.id, deviceId });
       addToast('Device added to group', 'success');
@@ -33,11 +40,32 @@ export function DeviceGroupDetailDrawer({ group, onClose }: DeviceGroupDetailDra
   };
 
   const handleRemove = async (deviceId: string) => {
+    if (!canManage) {
+      addToast('Only operators and admins can change device group membership', 'error');
+      return;
+    }
     try {
       await removeDevice.mutateAsync({ groupId: group.id, deviceId });
       addToast('Device removed from group', 'success');
     } catch {
       addToast('Failed to remove device', 'error');
+    }
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!canDelete) {
+      addToast('Only admins can delete device groups', 'error');
+      return;
+    }
+
+    if (!confirm(`Delete device group "${group.name}"?`)) return;
+
+    try {
+      await deleteGroup.mutateAsync(group.id);
+      addToast('Device group deleted', 'success');
+      onClose();
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Failed to delete device group', 'error', 5000);
     }
   };
 
@@ -50,17 +78,31 @@ export function DeviceGroupDetailDrawer({ group, onClose }: DeviceGroupDetailDra
             <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
             <p className="text-xs text-gray-500">{members?.length ?? 0} devices</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {canDelete && (
+              <button
+                onClick={() => void handleDeleteGroup()}
+                disabled={deleteGroup.isPending}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-50"
+                title="Delete device group"
+              >
+                {deleteGroup.isPending ? <Spinner size="sm" /> : <Trash2 className="w-5 h-5" />}
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-gray-700">Members</h4>
-            <button onClick={() => setShowAddDevice(!showAddDevice)} className="text-xs text-sky-600 hover:text-sky-700 font-medium">
-              + Add Device
-            </button>
+            {canManage && (
+              <button onClick={() => setShowAddDevice(!showAddDevice)} className="text-xs text-sky-600 hover:text-sky-700 font-medium">
+                + Add Device
+              </button>
+            )}
           </div>
 
           {showAddDevice && availableDevices.length > 0 && (
@@ -76,6 +118,7 @@ export function DeviceGroupDetailDrawer({ group, onClose }: DeviceGroupDetailDra
               {members.map((member) => (
                 <MemberRow
                   key={member.id}
+                  canManage={canManage}
                   device={member.device as Record<string, unknown>}
                   onRemove={() => handleRemove(member.device_id)}
                 />
@@ -112,9 +155,11 @@ function AvailableDevicesList({
 }
 
 function MemberRow({
+  canManage,
   device,
   onRemove,
 }: {
+  canManage: boolean;
   device: Record<string, unknown>;
   onRemove: () => void;
 }) {
@@ -124,9 +169,11 @@ function MemberRow({
         <p className="text-sm font-medium text-gray-900">{String(device.name || device.model || '')}</p>
         <p className="text-xs text-gray-500">{String(device.brand || '')} - {String(device.status || '')}</p>
       </div>
-      <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-        <Trash2 className="w-4 h-4" />
-      </button>
+      {canManage && (
+        <button onClick={onRemove} className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
     </div>
   );
 }

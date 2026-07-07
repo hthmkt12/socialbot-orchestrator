@@ -5,6 +5,7 @@ import type {
   DeviceGroupMember,
   Macro,
   MacroVersion,
+  Account,
   TargetType,
   UserRole,
 } from '../../lib/database.types';
@@ -42,7 +43,9 @@ export function buildRunWizardPreflight(args: {
   inputValues: Record<string, string>;
   lockedTargetDevicesCount: number;
   profileRole: UserRole | undefined;
+  requiresAccount?: boolean;
   runnableDeviceCount: number;
+  selectedAccount?: Pick<Account, 'id' | 'username' | 'is_blocked' | 'daily_action_limit' | 'current_action_count' | 'warm_up_stage'> | null;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   staleDeviceCount: number;
@@ -59,7 +62,9 @@ export function buildRunWizardPreflight(args: {
     inputValues,
     lockedTargetDevicesCount,
     profileRole,
+    requiresAccount,
     runnableDeviceCount,
+    selectedAccount,
     selectedDeviceIds,
     selectedGroupId,
     staleDeviceCount,
@@ -71,6 +76,8 @@ export function buildRunWizardPreflight(args: {
     definition,
     targetType,
     profileRole,
+    requiresAccount,
+    selectedAccount,
     selectedDeviceIds,
     selectedGroupId,
     targetDevicesCount,

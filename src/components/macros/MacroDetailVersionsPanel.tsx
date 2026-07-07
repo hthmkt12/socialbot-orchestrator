@@ -1,24 +1,29 @@
-import { CheckCircle, FileJson } from 'lucide-react';
+import { Archive, CheckCircle, FileJson } from 'lucide-react';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
+import type { MacroDefinition } from '../../contracts/macro';
 import type { MacroVersion } from '../../lib/database.types';
 import { macroDetailVersionStatusVariant } from './macro-detail-step-config';
 
 interface MacroDetailVersionsPanelProps {
   activatePending: boolean;
+  archivePending: boolean;
   canEditMacros: boolean;
   versions: MacroVersion[] | undefined;
   versionsLoading: boolean;
   onActivate: (versionId: string) => void;
-  onViewJson: (definition: Record<string, unknown>) => void;
+  onArchive: (versionId: string) => void;
+  onViewJson: (definition: MacroDefinition) => void;
 }
 
 export function MacroDetailVersionsPanel({
   activatePending,
+  archivePending,
   canEditMacros,
   versions,
   versionsLoading,
   onActivate,
+  onArchive,
   onViewJson,
 }: MacroDetailVersionsPanelProps) {
   return (
@@ -38,9 +43,11 @@ export function MacroDetailVersionsPanel({
             <MacroDetailVersionRow
               key={version.id}
               activatePending={activatePending}
+              archivePending={archivePending}
               canEditMacros={canEditMacros}
               version={version}
               onActivate={onActivate}
+              onArchive={onArchive}
               onViewJson={onViewJson}
             />
           ))}
@@ -52,9 +59,11 @@ export function MacroDetailVersionsPanel({
 
 function MacroDetailVersionRow({
   activatePending,
+  archivePending,
   canEditMacros,
   version,
   onActivate,
+  onArchive,
   onViewJson,
 }: Omit<MacroDetailVersionsPanelProps, 'versions' | 'versionsLoading'> & { version: MacroVersion }) {
   return (
@@ -80,9 +89,16 @@ function MacroDetailVersionRow({
           <FileJson className="w-3.5 h-3.5" /> View JSON
         </button>
         {version.status !== 'ACTIVE' && (
-          <button onClick={() => onActivate(version.id)} disabled={activatePending || !canEditMacros} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors">
-            <CheckCircle className="w-3.5 h-3.5" /> Activate
-          </button>
+          <>
+            <button onClick={() => onActivate(version.id)} disabled={activatePending || !canEditMacros} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors">
+              <CheckCircle className="w-3.5 h-3.5" /> Activate
+            </button>
+            {version.status !== 'ARCHIVED' && (
+              <button onClick={() => onArchive(version.id)} disabled={archivePending || !canEditMacros} className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-50 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors">
+                <Archive className="w-3.5 h-3.5" /> Archive
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

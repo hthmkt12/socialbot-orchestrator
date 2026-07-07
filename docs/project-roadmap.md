@@ -1,147 +1,174 @@
 # Project Roadmap
 
-Date: 2026-06-27
+Date: 2026-07-07
+
+## Readiness Legend
+
+| Status | Meaning |
+|--------|---------|
+| Implemented | Code exists in the repo. |
+| Unit/smoke verified | Automated local tests or smoke scripts cover the behavior. |
+| Pilot verified | Verified against the intended pilot runtime, device, and auth context. |
+| Blocked | Work cannot be truthfully completed until an external/runtime dependency is available. |
+| Planned | Product direction exists, but implementation or verification is incomplete. |
 
 ## Completed
-- Backend-owned run execution path.
-- Worker claim and lease handling.
-- Gateway and Mobile MCP bridge integration.
-- Mobile MCP real-device clean path.
-- Mobile MCP missing-device failure path.
-- `OPS-08` closure for Mobile MCP pilot backend.
-- Spec Kit local bootstrap.
-- Repo-local agent instruction hardening with common-issue logging, bug-fix rules, Karpathy coding principles, and verified plan rules.
-- Project baseline commit.
-- 2026-05-05 hard-priority plan and Phase 04 pilot hardening backlog.
-- First Spec Kit feature completed: `001-normalize-pilot-artifact` normalized pilot artifact labels, linkage warnings, preview availability copy, and storage-decision documentation without adding object storage.
-- Spec Kit feature `002-laixi-gateway-live-proof` created and current outcome recorded: gateway health OK, no Laixi sessions, clean-path proof blocked until Laixi VIP/API access is available.
-- Spec Kit feature `003-artifact-storage-thresholds` completed to define numeric inline artifact and object-storage trigger policy without implementing storage.
-- **Phase 1** — Swapped mobile-mcp-ai driver to Mobilerun AndroidDriver (ADB + Portal APK) in the bridge.
-- **Phase 2** — Added `DEVICE_BACKEND=mobilerun` with `ai_task` step type via MobileAgent (LLM-driven goals).
-- **Phase 3** — Added iOS support via Mobilerun IOSDriver with platform-aware session manager, device discovery (ADB + Portal probe), and step compatibility guards.
-- Foreach loop execution worker integration and loop repetition defect fix.
-- Extended unit testing baseline to 155 tests, with 100% line coverage for account-service-helpers, account-action-reset, and anti-detection-helpers.
-- TypeError warning-free cleanup of supabase storage in backend resilience smoke tests.
+
+- Backend-owned run execution path. Status: Unit/smoke verified.
+- Worker claim and lease handling. Status: Unit/smoke verified.
+- Gateway and Mobile MCP bridge integration. Status: Implemented.
+- Mobile MCP real-device and missing-device clean paths. Status: Pilot verified for prior runs; current local readiness depends on expected devices being online.
+- Spec Kit local bootstrap and repo-local agent instruction hardening. Status: Implemented.
+- `001-normalize-pilot-artifact`. Status: Implemented and unit verified.
+- `002-laixi-gateway-live-proof`. Status: Blocked for live proof; gateway health works, but live Laixi sessions require VIP/API access.
+- `003-artifact-storage-thresholds`. Status: Implemented as policy; object storage is intentionally deferred.
+- Mobilerun AndroidDriver bridge swap, `DEVICE_BACKEND=mobilerun`, `ai_task`, and iOS driver support. Status: Implemented; verify per backend before claiming pilot readiness.
+- Foreach loop execution worker integration and loop repetition fix. Status: Unit/smoke verified.
+- Testing baseline. Status: `npm.cmd test` currently covers 160 tests after the stabilization work.
 
 ## Now
-- Keep Mobile MCP as pilot-default backend while Laixi remains future-compatible until VIP/API access and a live session are available.
-- Use `docs/backend-capability-matrix.md` as the pilot backend capability source of truth.
+
+- Keep Mobile MCP as the pilot-default backend.
+- Require `MOBILE_MCP_BRIDGE_TOKEN` for protected bridge endpoints unless `MOBILE_MCP_ALLOW_INSECURE_DEV=true` is explicitly set for isolated local development.
+- Require `VITE_ACCOUNT_PASSWORD_KEY` before saving social account credentials; treat the browser key as pilot-only until credential encryption moves server-side.
+- Use `docs/backend-capability-matrix.md` as the backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
-- Run manual run-detail smoke for `001-normalize-pilot-artifact` when an authenticated UI session and artifact-bearing completed run are available.
-- Restore current Mobile MCP local readiness by making expected Android serial `QC4DKJUO6PW4FMQW` visible to ADB/Windows, then rerun preflight/verify/fresh UI smoke.
-- If UI/auth/Supabase are available before the device returns, manually inspect prior artifact-bearing run `f2bc8499-5475-4c86-ae82-55ac0c17c274` to close the Run Detail evidence UI check.
-- Use the artifact storage thresholds before approving larger screenshot volume, longer retention, or external sharing.
+- Restore current Mobile MCP local readiness by making expected Android serial `QC4DKJUO6PW4FMQW` visible to ADB/Windows, then rerun preflight, verification, and fresh UI smoke.
+- Run manual Run Detail smoke for an authenticated artifact-bearing completed run when UI/auth/Supabase are available.
 
 ## Next
-- Normalize docs/spec workflow around `specs/` for new work. ✅
-- Modularize oversized UI files after runtime proof remains stable. ✅
 
 - Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
-- Keep authenticated route lazy-loading in place; main Vite chunk is now below warning threshold.
+- Keep authenticated route lazy-loading in place; main Vite chunk is below the warning threshold.
+- Tighten account credential handling by moving encryption/decryption server-side before production social credentials are stored at scale.
+- Finish navigation cleanup so operators can reach runs, approvals, devices, setup, schedules, fleet health, and other in-scope operational screens from the primary sidebar.
 
-## Social Pivot (Strategic Direction)
+## Social Pivot
 
-Strategic decision per `plans/brainstorm-report-social-first-roadmap.md`: reposition from generic device orchestration → **social media automation platform**.
+Strategic direction: reposition from generic device orchestration to a social media automation platform.
 
 ### Phase 0: Foundation (Jun-Jul 2026)
-**Status**: `Completed`
-- Update docs/messaging to reflect social positioning ✅
-- Set up `accounts` + `account_action_history` schema ✅
-- Verify Mobile MCP backend stable (12/12 preflight passes) ✅
-- Proof: Mobile MCP runs stable for 5 consecutive devices on simple workflow ✅
 
-### Phase 1: Anti-Detection & Account Lifecycle (Q3 2026) — MVP
-**Status**: `Completed`
-- Anti-detection engine: random delays, scroll variance, device fingerprinting ✅
-- Account state tracking: warm-up stages, daily action limits, block detection ✅
-- Account input UI: form + CSV import, Supabase RLS per team ✅
-- Account health dashboard (engagement rate, risk score) ✅
-- Warm-up auto-advancement engine + scheduler ✅
-- Proof: 5 devices × 10 Instagram follow-actions without bot detection ✅
+Status: Unit/smoke verified, with current Mobile MCP readiness dependent on local device availability.
 
-### Phase 2: Social Macro Templates & Multi-App (Q4 2026)
-- Pre-built Instagram (like/follow/comment on hashtag), TikTok, Facebook templates ✅
-- Multi-app macro step routing (detect app in focus, adapt commands) ✅
-- Account-to-macro mapping in run wizard ✅
+- Social positioning docs and app messaging: Implemented.
+- `accounts` and `account_action_history` schema: Implemented.
+- Mobile MCP pilot backend proof: Previously verified; rerun required for current workstation state.
+- Proof target: 5 devices on a simple workflow. Current evidence should be refreshed before claiming this again.
 
-### Phase 3: Safety Limits & Warm-Up Sequences (Q1 2027)
-- Action budget types + enforcement library created ✅ (per-type budgets, checkActionBudget, getBudgetUsages)
-- Budget breakdown in health cards and account form ✅
-- Worker runtime enforcement (check budget before social step execution) ✅
-- Automated warm-up sequences ✅ (gradual action increase over 7-21 days)
-- Account health dashboard ✅
-- Daily action count reset ✅ (per-calendar-day reset + limit adjustment)
+### Phase 1: Anti-Detection and Account Lifecycle (Q3 2026 MVP)
 
-### Phase 4: Failover & Device Rotation (Q2 2027)
-- Account block detection + auto-rotate to healthy device ✅
-- Exponential backoff retry ✅
-- Fleet health dashboard ✅
-- System Monitor ✅
-- Audit Logs UI ✅
+Status: Implemented with unit coverage; pilot proof still needs current real-device evidence.
 
-### Phase 5: Scheduling & Analytics (Q3 2027)
-- Cron-like scheduling (daily 9am, weekdays only, etc.) ✅
-- Engagement analytics (followers gained, likes per post, 30-day trending) ✅
-- Tiered pricing: Free/Pro/Enterprise ✅
+- Anti-detection helpers and worker integration: Implemented.
+- Account state tracking, warm-up stages, daily limits, block detection: Implemented.
+- Account input UI and CSV import: Implemented.
+- Account health dashboard and warm-up auto-advancement: Implemented.
+- Proof target: 5 devices x 10 Instagram follow-actions without bot detection. Status: Planned verification, not currently claimed.
+
+### Phase 2: Social Macro Templates and Multi-App (Q4 2026)
+
+Status: Implemented in code; pilot readiness depends on current verification.
+
+- Instagram/TikTok/Facebook starter templates: Implemented.
+- Multi-app macro step routing: Implemented.
+- Account-to-macro mapping in run wizard: Implemented.
+
+### Phase 3: Safety Limits and Warm-Up Sequences (Q1 2027)
+
+Status: Implemented in code; production readiness depends on current verification and product policy review.
+
+- Action budget types and enforcement library: Implemented.
+- Budget breakdown in UI: Implemented.
+- Worker runtime enforcement via `params.actionBudgetType`: Implemented.
+- Automated warm-up sequences and daily action reset: Implemented.
+
+### Phase 4: Failover and Device Rotation (Q2 2027)
+
+Status: Partially implemented.
+
+- Account block detection: Implemented.
+- Device rotation/failover policy: Planned verification.
+- Fleet health dashboard, system monitor, audit logs UI: Implemented.
+- Exponential backoff retry: Planned verification.
+
+### Phase 5: Scheduling and Analytics (Q3 2027)
+
+Status: Partially implemented.
+
+- Cron-like scheduling: Implemented.
+- Engagement analytics UI/data path: Implemented; use real persisted analytics data or explicit seed data.
+- Tiered pricing page: Removed from MVP runtime scope; billing/payment/subscription remain out of scope.
 
 ### Phase 6: Object Storage (Q3 2027)
-- Large payload extraction from DB ✅
-- Supabase Storage buckets & RLS ✅
-- Generate signed URLs in frontend ✅
+
+Status: Implemented for threshold policy and Supabase storage path; scale readiness remains conditional.
+
+- Large payload extraction and signed URL flow: Implemented.
+- Use storage thresholds before increasing screenshot volume, retention, exports, or external sharing.
 
 ### Phase 7: Concrete Social Bots (Q4 2027)
-- Concrete Instagram/TikTok macro templates ✅
-- Execution engine looping / `foreach` steps ✅
-- Anti-detection engine (random delays, variance) in worker ✅
 
-### Phase 8: Parallel Execution (Fleet Speed) (Q1 2028)
-**Status**: `Completed`
-**Components**:
-- Node.js `worker_threads` integration for isolated step execution ✅
-- Refactored `MultiTargetRunExecutor` to act as a lightweight Dispatcher ✅
-- Database race condition patches (e.g. RPC atomic counter for `current_action_count`) ✅
-- Verification scripts testing concurrency boundary ✅
+Status: Partially implemented through templates; real-platform proof still required.
 
-### Phase 9: Laixi Clean-path Proof (Q2 2028)
-**Status**: `Completed`
-**Components**:
-- Implement `laixi-step-backend.ts` execution mappings ✅
-- Build HTTP wrapper for Laixi Gateway API calls with timeouts ✅
-- Verify worker payload translation for `DEVICE_BACKEND=laixi` ✅
-- Implement Mock Gateway Server for automated testing ✅
+- Concrete Instagram/TikTok macro templates: Implemented.
+- `foreach` execution support: Implemented.
+- Anti-detection engine in worker: Implemented.
 
-### Phase 10: User Documentation System (Q3 2028)
-**Status**: `Completed`
-**Components**:
-- In-app markdown documentation viewer (`react-markdown` + `remark-gfm`) ✅
-- User guides authored: Introduction, Connecting Devices, Macro Builder, Anti-Detection Engine, Account Setup, Warm-up Schedules ✅
-- Doc navigation sidebar integrated into main app sidebar ✅
+### Phase 8: Parallel Execution (Fleet Speed)
 
-### Phase 11: Playwright E2E Testing Suite (Q4 2028)
-- Install and configure `@playwright/test` ✅
-- Write baseline navigation and UI structure tests ✅
-- Add Supabase Auth mocking (network interception) ✅
-- Add CI/CD test hooks to `package.json` ✅
+Status: Unit/smoke verified.
 
-### Phase 12: Advanced Macros (Q1 2029)
-- Conditionals (If/Else logic and evaluation) ✅
-- While Loops (conditional repetition) ✅
-- Variables (extraction and interpolation) ✅
-- Error Boundaries (Try/Catch fallbacks) ✅
+- Worker thread execution boundary: Implemented.
+- `MultiTargetRunExecutor` dispatcher refactor: Implemented.
+- Atomic counter RPC: Implemented.
+- Keep sequential multi-target execution acceptable for small pilot unless SLA requires parallelism.
 
-### Phase 13: AI Workflow Builder (Q2 2029)
-- Natural Language to Macro generation ✅
-- LLM prompt translation layer ✅
-- Conversational macro editing interface ✅
+### Phase 9: Laixi Clean-Path Proof
+
+Status: Mock verified; live proof blocked.
+
+- `laixi-step-backend.ts` mappings and HTTP wrapper: Implemented.
+- Mock gateway server: Implemented.
+- Live proof requires Laixi VIP/API access and a live session.
+
+### Phase 10: User Documentation System
+
+Status: Implemented.
+
+- In-app markdown docs viewer: Removed from runtime scope during use-case cleanup.
+- Operational guidance remains in focused setup panels and repo docs.
+
+### Phase 11: Playwright E2E Testing Suite
+
+Status: Implemented baseline.
+
+- Playwright config and baseline navigation tests: Implemented.
+- CI coverage and auth mocking: Implemented.
+- Continue expanding around run wizard and account flows.
+
+### Phase 12: Advanced Macros
+
+Status: Implemented in code; broaden coverage before production claims.
+
+- Conditionals, while loops, variables, and error boundaries: Implemented.
+
+### Phase 13: AI Workflow Builder
+
+Status: Removed from MVP runtime scope during use-case cleanup.
+
+- Natural language macro generation, provider-backed prompt translation, and conversational editing are not part of the current MVP.
 
 ## Later
-- Parallelize multi-target execution if pilot requires fleet speed.
-- Add Laixi-specific clean-path proof if VIP/API access becomes available or that backend becomes mandatory.
+
+- Move social account credential encryption server-side.
+- Add Laixi-specific live clean-path proof when access is available.
+- Parallelize multi-target execution only when pilot fleet speed requires it.
 
 ## Unresolved Questions
+
 - When will Laixi VIP/API access be available for clean-path proof?
-- What is the next real Spec Kit feature branch after artifact threshold policy?
-- What authenticated artifact-bearing run should be used for the deferred run-detail smoke?
+- What authenticated artifact-bearing run should be used for deferred Run Detail smoke?
 - Is `QC4DKJUO6PW4FMQW` still the pilot device, or should `MOBILE_MCP_EXPECTED_SERIALS` be updated?
 - Instagram/TikTok API vs UI automation for initial accounts?
-- Encrypted password storage or OAuth tokens for social accounts?
+- What is the required credential boundary before production social credentials are allowed?

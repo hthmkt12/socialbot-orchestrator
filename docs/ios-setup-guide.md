@@ -14,7 +14,7 @@ iOS Device                 macOS/Linux Host             Bridge
 
 The Mobilerun Portal iOS app exposes a REST API on the device. `iproxy` forwards a local port (default 6643) to the device's Portal port. The bridge's `IOSDriver` communicates with Portal over HTTP.
 
-Unlike Android (auto-setup via `ensure_portal_ready()`), iOS setup is manual — you install the Portal app once and keep iproxy running whenever the device is needed.
+Unlike Android's ADB-first local smoke path, iOS setup is manual — you install the Portal app once and keep iproxy running whenever the device is needed. Android Portal setup is optional via `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=true`.
 
 ## Prerequisites
 

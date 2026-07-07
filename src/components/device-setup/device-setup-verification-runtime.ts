@@ -19,3 +19,12 @@ export const deleteExpiredDeviceLocks = async (): Promise<number> => {
   if (error) throw error;
   return data?.length ?? 0;
 };
+
+export const deleteDeviceLockById = async (lockId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('device_locks')
+    .delete()
+    .eq('id', lockId);
+
+  if (error) throw error;
+};

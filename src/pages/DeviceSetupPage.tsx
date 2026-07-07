@@ -21,14 +21,17 @@ export default function DeviceSetupPage() {
     activeProbeBackend,
     activeTab,
     autoJsScript,
+    canForceClearLocks,
     canManageLocks,
     checklist,
     cleanupExpiredLocksLoading,
     deviceLockSnapshot,
     deviceRows,
+    forceClearLockId,
     gatewayBaseUrl,
     gatewayWsUrl,
     handleCleanupExpiredLocks,
+    handleForceClearDeviceLock,
     handlePrepareReconnect,
     mobileMcpBridgeUrl,
     operatorDiagnostics,
@@ -86,14 +89,17 @@ export default function DeviceSetupPage() {
             activeProbeBackend={activeProbeBackend}
             activeTab={activeTab}
             autoJsScript={autoJsScript}
+            canForceClearLocks={canForceClearLocks}
             canManageLocks={canManageLocks}
             checklist={checklist}
             cleanupExpiredLocksLoading={cleanupExpiredLocksLoading}
             deviceLockSnapshot={deviceLockSnapshot}
             deviceRows={deviceRows}
+            forceClearLockId={forceClearLockId}
             gatewayBaseUrl={gatewayBaseUrl}
             gatewayWsUrl={gatewayWsUrl}
             handleCleanupExpiredLocks={handleCleanupExpiredLocks}
+            handleForceClearDeviceLock={handleForceClearDeviceLock}
             handlePrepareReconnect={handlePrepareReconnect}
             mobileMcpBridgeUrl={mobileMcpBridgeUrl}
             operatorDiagnostics={operatorDiagnostics}

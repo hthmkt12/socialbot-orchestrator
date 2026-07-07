@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Camera, Play, RefreshCw, Smartphone, Terminal } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Badge from '../components/ui/Badge';
+import RoleAccessNotice from '../components/ui/RoleAccessNotice';
 import Spinner from '../components/ui/Spinner';
 import MobileMcpDeviceCard from '../components/mobile-mcp/mobile-mcp-device-card';
 import {
@@ -11,6 +12,8 @@ import {
   type MobileMcpFleetSnapshot,
   type MobileMcpStepResult,
 } from '../lib/mobile-mcp-orchestrator';
+import { canManageDevices, getRoleLabel } from '../lib/role-access';
+import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 
 const DEFAULT_BRIDGE_URL = import.meta.env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
@@ -25,7 +28,9 @@ export default function MobileMcpOrchestratorPage() {
   const [results, setResults] = useState<Record<string, MobileMcpStepResult>>({});
   const [loading, setLoading] = useState(false);
   const [runningAction, setRunningAction] = useState<ActionKind | null>(null);
+  const profile = useAuthStore((s) => s.profile);
   const addToast = useUIStore((s) => s.addToast);
+  const canExecuteDeviceActions = canManageDevices(profile?.role);
 
   const selectedCount = selectedSerials.length;
   const selectedSet = useMemo(() => new Set(selectedSerials), [selectedSerials]);
@@ -55,6 +60,10 @@ export default function MobileMcpOrchestratorPage() {
   };
 
   const runAction = async (action: ActionKind) => {
+    if (!canExecuteDeviceActions) {
+      addToast('Only operators and admins can send Mobile MCP device actions', 'error');
+      return;
+    }
     if (selectedSerials.length === 0) {
       addToast('Select at least one device serial first', 'error');
       return;
@@ -92,6 +101,13 @@ export default function MobileMcpOrchestratorPage() {
       />
 
       <main className="flex-1 overflow-auto p-6 space-y-6">
+        {!canExecuteDeviceActions && (
+          <RoleAccessNotice
+            title={`${getRoleLabel(profile?.role)} role can inspect Mobile MCP fleet state but not control devices`}
+            detail="You can refresh and inspect connected serials. Only operators and admins can launch apps, query current apps, or request screenshot grids."
+          />
+        )}
+
         <section className="rounded-2xl bg-white border border-gray-200 p-5">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <label className="space-y-1">
@@ -112,9 +128,9 @@ export default function MobileMcpOrchestratorPage() {
 
         <section className="rounded-2xl bg-white border border-gray-200 p-5">
           <div className="flex flex-wrap items-center gap-3">
-            <button onClick={() => runAction('launch_app')} disabled={!!runningAction} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white"><Play className="w-4 h-4" />Launch app</button>
-            <button onClick={() => runAction('get_current_app')} disabled={!!runningAction} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white"><Terminal className="w-4 h-4" />Current app</button>
-            <button onClick={() => runAction('screenshot')} disabled={!!runningAction} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white"><Camera className="w-4 h-4" />Screenshot grid</button>
+            <button onClick={() => runAction('launch_app')} disabled={!!runningAction || !canExecuteDeviceActions} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white"><Play className="w-4 h-4" />Launch app</button>
+            <button onClick={() => runAction('get_current_app')} disabled={!!runningAction || !canExecuteDeviceActions} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed text-white"><Terminal className="w-4 h-4" />Current app</button>
+            <button onClick={() => runAction('screenshot')} disabled={!!runningAction || !canExecuteDeviceActions} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white"><Camera className="w-4 h-4" />Screenshot grid</button>
             {runningAction && <span className="inline-flex items-center gap-2 text-sm text-gray-500"><Spinner size="sm" />Running {runningAction}</span>}
           </div>
         </section>

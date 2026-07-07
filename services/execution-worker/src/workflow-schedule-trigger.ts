@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import cronParser from 'cron-parser';
+import { CronExpressionParser } from 'cron-parser';
 import type { WorkerConfig } from './run-claim-coordinator';
 
 interface DueSchedule {
@@ -18,13 +18,42 @@ interface DueSchedule {
   next_run_at?: string | null;
 }
 
+export function buildScheduleTargetSelector(schedule: Pick<DueSchedule, 'target_type' | 'target_device_id' | 'target_group_id'>) {
+  if (schedule.target_type === 'SINGLE_DEVICE') {
+    if (!schedule.target_device_id) {
+      return { ok: false as const, error: 'Schedule target device is required' };
+    }
+
+    return { ok: true as const, selector: { deviceIds: [schedule.target_device_id] } };
+  }
+
+  if (schedule.target_type === 'DEVICE_GROUP') {
+    if (!schedule.target_group_id) {
+      return { ok: false as const, error: 'Schedule target group is required' };
+    }
+
+    return { ok: true as const, selector: { groupId: schedule.target_group_id } };
+  }
+
+  if (schedule.target_type === 'ALL_DEVICES' || schedule.target_type === 'MULTI_DEVICE') {
+    return { ok: true as const, selector: {} };
+  }
+
+  return { ok: false as const, error: `Unsupported schedule target type: ${schedule.target_type}` };
+}
+
+export function computeScheduleNextRunIso(cronExpression: string, timezone = 'UTC') {
+  const interval = CronExpressionParser.parse(cronExpression, { tz: timezone });
+  return interval.next().toISOString();
+}
+
 export class WorkflowScheduleTrigger {
   private readonly supabase: SupabaseClient;
   private pollInFlight = false;
   private timer: NodeJS.Timeout | null = null;
 
-  constructor(private readonly config: WorkerConfig) {
-    this.supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
+  constructor(config: WorkerConfig, supabaseClient?: SupabaseClient) {
+    this.supabase = supabaseClient ?? createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
   }
 
   start() {
@@ -85,10 +114,7 @@ export class WorkflowScheduleTrigger {
     try {
       let nextRunIso: string | null = null;
       try {
-        const interval = cronParser.parseExpression(schedule.cron_expression, {
-          tz: schedule.timezone || 'UTC',
-        });
-        nextRunIso = interval.next().toISOString();
+        nextRunIso = computeScheduleNextRunIso(schedule.cron_expression, schedule.timezone || 'UTC');
       } catch (err) {
         console.error(`[execution-worker] invalid cron for schedule ${schedule.id}`, err);
         // Deactivate invalid schedules
@@ -97,7 +123,7 @@ export class WorkflowScheduleTrigger {
       }
 
       // 1. Update next_run_at to prevent double triggering
-      const { error: updateError } = await this.supabase
+      const { data: claimedSchedule, error: updateError } = await this.supabase
         .from('workflow_schedules')
         .update({
           next_run_at: nextRunIso,
@@ -105,27 +131,45 @@ export class WorkflowScheduleTrigger {
           updated_at: nowIso,
         })
         .eq('id', schedule.id)
-        .or(`next_run_at.lte.${nowIso},next_run_at.is.null`); // Concurrency guard
+        .or(`next_run_at.lte.${nowIso},next_run_at.is.null`)
+        .select('id')
+        .maybeSingle(); // Concurrency guard
 
       if (updateError) {
         console.error(`[execution-worker] failed to update next_run_at for schedule ${schedule.id}`, updateError);
         return;
       }
 
+      if (!claimedSchedule) return;
+
       if (skipRunCreation) return;
 
-      // 2. Create the workflow run
-      const selector: Record<string, unknown> = {};
-      if (schedule.target_type === 'SINGLE_DEVICE' && schedule.target_device_id) {
-        selector.deviceIds = [schedule.target_device_id];
-      } else if (schedule.target_type === 'DEVICE_GROUP' && schedule.target_group_id) {
-        selector.groupId = schedule.target_group_id;
+      const { data: macroVersion, error: macroVersionError } = await this.supabase
+        .from('macro_versions')
+        .select('id, status')
+        .eq('id', schedule.macro_version_id)
+        .maybeSingle();
+
+      if (macroVersionError) {
+        console.error(`[execution-worker] failed to verify macro version for schedule ${schedule.id}`, macroVersionError);
+        return;
+      }
+      if (!macroVersion || macroVersion.status !== 'ACTIVE') {
+        console.error(`[execution-worker] schedule ${schedule.id} references missing or inactive macro version`);
+        return;
       }
 
+      const target = buildScheduleTargetSelector(schedule);
+      if (!target.ok) {
+        console.error(`[execution-worker] invalid target for schedule ${schedule.id}: ${target.error}`);
+        return;
+      }
+
+      // 2. Create the workflow run. The worker claim loop performs device execution.
       const { error: runError } = await this.supabase.from('workflow_runs').insert({
         macro_version_id: schedule.macro_version_id,
         target_type: schedule.target_type,
-        target_selector_json: selector,
+        target_selector_json: target.selector,
         input_variables_json: schedule.input_variables ?? {},
         status: 'QUEUED',
         triggered_by_user_id: schedule.created_by,

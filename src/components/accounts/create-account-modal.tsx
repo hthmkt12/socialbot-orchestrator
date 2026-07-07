@@ -21,21 +21,27 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
   const [password, setPassword] = useState('');
   const [platform, setPlatform] = useState<AccountPlatform>('instagram');
   const [dailyLimit, setDailyLimit] = useState(100);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const budgetMap = useMemo(() => computeDefaultBudgets(dailyLimit), [dailyLimit]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const encrypted = await encryptPassword(password);
-    await onSubmit({
-      username,
-      encrypted_password: encrypted,
-      platform,
-      daily_action_limit: dailyLimit,
-    });
-    setUsername('');
-    setPassword('');
-    setPlatform('instagram');
-    setDailyLimit(100);
+    setSubmitError(null);
+    try {
+      const encrypted = await encryptPassword(password);
+      await onSubmit({
+        username,
+        encrypted_password: encrypted,
+        platform,
+        daily_action_limit: dailyLimit,
+      });
+      setUsername('');
+      setPassword('');
+      setPlatform('instagram');
+      setDailyLimit(100);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Failed to encrypt account password.');
+    }
   };
 
   return (
@@ -64,6 +70,12 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
             placeholder="Account password"
           />
         </div>
+
+        {submitError && (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {submitError}
+          </p>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 const mockSelect = vi.fn();
 const mockEq = vi.fn();
@@ -6,6 +7,7 @@ const mockOrder = vi.fn();
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockMaybeSingle = vi.fn();
+const ENCRYPTED_PASSWORD = 'v2:iv:ciphertext';
 
 vi.mock('./supabase', () => ({
   supabase: {
@@ -15,8 +17,8 @@ vi.mock('./supabase', () => ({
 }));
 
 import { supabase } from './supabase';
-const mockFrom = vi.mocked(supabase.from) as any;
-const mockGetSession = vi.mocked(supabase.auth.getSession) as any;
+const mockFrom = vi.mocked(supabase.from) as Mock;
+const mockGetSession = vi.mocked(supabase.auth.getSession) as Mock;
 
 vi.mock('./audit', () => ({
   logAudit: vi.fn(),
@@ -75,6 +77,15 @@ function setupMockSelect(data: unknown = []) {
   maybeSingleChain.mockReturnValue(maybeSingleObj);
 
   return { selectChain, eqChain, orderChain, limitChain, maybeSingleChain };
+}
+
+function mockOperatorProfile() {
+  const profileMaybeSingle = vi.fn().mockResolvedValue({
+    data: { user_id: 'user-1', role: 'OPERATOR' },
+    error: null,
+  });
+  const profileSelect = vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle });
+  return { profileMaybeSingle, profileSelect };
 }
 
 describe('account-service-helpers', () => {
@@ -147,7 +158,7 @@ describe('account-service-helpers', () => {
         error: null,
       });
 
-      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1' }, error: null });
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
       mockFrom.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
@@ -162,7 +173,7 @@ describe('account-service-helpers', () => {
 
       const result = await createAccount({
         username: 'new_user',
-        encrypted_password: 'secret',
+        encrypted_password: ENCRYPTED_PASSWORD,
         platform: 'instagram',
       });
 
@@ -171,6 +182,16 @@ describe('account-service-helpers', () => {
         username: 'new_user',
         daily_action_limit: 100,
       }));
+    });
+
+    it('rejects plaintext passwords before inserting an account', async () => {
+      await expect(createAccount({
+        username: 'plaintext',
+        encrypted_password: 'not-encrypted',
+        platform: 'instagram',
+      })).rejects.toThrow('Account password must be encrypted before saving');
+
+      expect(mockFrom).not.toHaveBeenCalledWith('accounts');
     });
 
     it('throws when profile lookup query fails', async () => {
@@ -189,7 +210,7 @@ describe('account-service-helpers', () => {
 
       await expect(createAccount({
         username: 'fail',
-        encrypted_password: 'pwd',
+        encrypted_password: ENCRYPTED_PASSWORD,
         platform: 'instagram',
       })).rejects.toThrow('Failed to get profile: Profile lookup failed');
     });
@@ -210,7 +231,7 @@ describe('account-service-helpers', () => {
 
       await expect(createAccount({
         username: 'noprofile',
-        encrypted_password: 'secret',
+        encrypted_password: ENCRYPTED_PASSWORD,
         platform: 'tiktok',
       })).rejects.toThrow('User profile not found');
     });
@@ -221,7 +242,7 @@ describe('account-service-helpers', () => {
         error: null,
       });
 
-      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1' }, error: null });
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
       mockFrom.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
@@ -236,7 +257,7 @@ describe('account-service-helpers', () => {
 
       await createAccount({
         username: 'limited',
-        encrypted_password: 'secret',
+        encrypted_password: ENCRYPTED_PASSWORD,
         platform: 'facebook',
         daily_action_limit: 50,
       });
@@ -250,7 +271,7 @@ describe('account-service-helpers', () => {
         error: null,
       });
 
-      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1' }, error: null });
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
       mockFrom.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
@@ -264,7 +285,7 @@ describe('account-service-helpers', () => {
 
       await expect(createAccount({
         username: 'fail',
-        encrypted_password: 'pwd',
+        encrypted_password: ENCRYPTED_PASSWORD,
         platform: 'instagram',
       })).rejects.toThrow('Failed to create account: Insert failed');
     });
@@ -275,7 +296,7 @@ describe('account-service-helpers', () => {
         error: null,
       });
 
-      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1' }, error: null });
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
       mockFrom.mockImplementation((table: string) => {
         if (table === 'profiles') {
           return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
@@ -289,7 +310,7 @@ describe('account-service-helpers', () => {
 
       await expect(createAccount({
         username: 'fail',
-        encrypted_password: 'pwd',
+        encrypted_password: ENCRYPTED_PASSWORD,
         platform: 'instagram',
       })).rejects.toThrow('Account not created');
     });
@@ -306,13 +327,33 @@ describe('account-service-helpers', () => {
     });
 
     it('throws when update query fails', async () => {
+      const { profileSelect } = mockOperatorProfile();
       const updateMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'Update failed' } });
       const updateSelect = vi.fn().mockReturnValue({ maybeSingle: updateMaybeSingle });
       const updateEq = vi.fn().mockReturnValue({ select: updateSelect });
       mockUpdate.mockReturnValue({ eq: updateEq });
-      mockFrom.mockReturnValue({ update: mockUpdate });
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'profiles') return { select: profileSelect };
+        return { update: mockUpdate };
+      });
 
       await expect(updateAccount('1', { daily_action_limit: 150 })).rejects.toThrow('Failed to update account: Update failed');
+    });
+
+    it('blocks viewer role from updating accounts through the service', async () => {
+      const profileMaybeSingle = vi.fn().mockResolvedValue({
+        data: { user_id: 'user-1', role: 'VIEWER' },
+        error: null,
+      });
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
+        }
+        return { update: mockUpdate };
+      });
+
+      await expect(updateAccount('1', { daily_action_limit: 150 })).rejects.toThrow('Only operators and admins can manage social accounts');
+      expect(mockUpdate).not.toHaveBeenCalled();
     });
   });
 
@@ -322,8 +363,10 @@ describe('account-service-helpers', () => {
       const deleteMaybeSingle = vi.fn().mockResolvedValue({ data: { username: 'deleted_user' }, error: null });
       const selectEqChain = vi.fn().mockReturnValue({ maybeSingle: deleteMaybeSingle });
       const deleteSelect = vi.fn().mockReturnValue({ eq: selectEqChain });
+      const { profileSelect } = mockOperatorProfile();
 
       mockFrom.mockImplementation((table: string) => {
+        if (table === 'profiles') return { select: profileSelect };
         if (table === 'accounts') {
           return {
             select: deleteSelect,
@@ -343,8 +386,10 @@ describe('account-service-helpers', () => {
       const deleteMaybeSingle = vi.fn().mockResolvedValue({ data: { username: 'deleted_user' }, error: null });
       const selectEqChain = vi.fn().mockReturnValue({ maybeSingle: deleteMaybeSingle });
       const deleteSelect = vi.fn().mockReturnValue({ eq: selectEqChain });
+      const { profileSelect } = mockOperatorProfile();
 
       mockFrom.mockImplementation((table: string) => {
+        if (table === 'profiles') return { select: profileSelect };
         if (table === 'accounts') {
           return {
             select: deleteSelect,
@@ -441,10 +486,14 @@ function chainSelectEq({ maybeSingleData }: { maybeSingleData: unknown }) {
 
 // Helper: chain update → eq → select → maybeSingle
 function setupUpdateChain(data: unknown) {
+  const { profileSelect } = mockOperatorProfile();
   const updateMaybeSingle = vi.fn().mockResolvedValue({ data, error: null });
   const updateSelect = vi.fn().mockReturnValue({ maybeSingle: updateMaybeSingle });
   const updateEq = vi.fn().mockReturnValue({ select: updateSelect });
   mockUpdate.mockReturnValue({ eq: updateEq });
-  mockFrom.mockReturnValue({ update: mockUpdate });
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'profiles') return { select: profileSelect };
+    return { update: mockUpdate };
+  });
   return { updateSelect, updateEq, updateMaybeSingle };
 }

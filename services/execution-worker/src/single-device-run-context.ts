@@ -1,11 +1,19 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Device, MacroDefinition } from '../../../packages/shared/src';
+import { normalizeRetryBackoffPolicy, type RetryBackoffPolicy } from './retry-backoff-policy.js';
 
 interface SingleTargetRunContext {
   runId: string;
   claimToken: string;
+  triggeredByUserId: string;
+  inputVariables: Record<string, unknown>;
   device: Device;
   macroDefinition: MacroDefinition;
+  retryBackoffPolicy: RetryBackoffPolicy;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export async function loadSingleDeviceRunContext(
@@ -15,7 +23,7 @@ export async function loadSingleDeviceRunContext(
 ): Promise<SingleTargetRunContext> {
   const { data: run, error: runError } = await supabase
     .from('workflow_runs')
-    .select('macro_version_id, target_selector_json')
+    .select('macro_version_id, target_selector_json, triggered_by_user_id, input_variables_json, execution_profile_id')
     .eq('id', runId)
     .eq('execution_claim_token', claimToken)
     .maybeSingle();
@@ -53,10 +61,47 @@ export async function loadSingleDeviceRunContext(
     throw new Error(`Device ${targetDeviceId} not found for run ${runId}`);
   }
 
+  let macroDefinition = definition.definition_json as unknown as MacroDefinition;
+  let retryBackoffPolicy = normalizeRetryBackoffPolicy({
+    maxRetries: macroDefinition.execution.maxRetries,
+  });
+
+  if (run.execution_profile_id) {
+    const { data: executionProfile, error: profileError } = await supabase
+      .from('execution_profiles')
+      .select('default_timeout_ms, max_retries, retry_base_delay_ms, retry_max_delay_ms, retry_max_elapsed_ms')
+      .eq('id', run.execution_profile_id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new Error(`Failed to load execution profile for run ${runId}: ${profileError.message}`);
+    }
+
+    if (executionProfile) {
+      macroDefinition = {
+        ...macroDefinition,
+        execution: {
+          ...macroDefinition.execution,
+          defaultTimeoutMs: executionProfile.default_timeout_ms ?? macroDefinition.execution.defaultTimeoutMs,
+          maxRetries: executionProfile.max_retries ?? macroDefinition.execution.maxRetries,
+        },
+      };
+      retryBackoffPolicy = normalizeRetryBackoffPolicy({
+        maxRetries: executionProfile.max_retries ?? macroDefinition.execution.maxRetries,
+        baseDelayMs: executionProfile.retry_base_delay_ms ?? 1000,
+        maxDelayMs: executionProfile.retry_max_delay_ms ?? 30000,
+        maxElapsedMs: executionProfile.retry_max_elapsed_ms ?? 120000,
+      });
+    }
+  }
+
   return {
     runId,
     claimToken,
+    triggeredByUserId: run.triggered_by_user_id,
+    inputVariables: isRecord(run.input_variables_json) ? run.input_variables_json : {},
     device: device as unknown as Device,
-    macroDefinition: definition.definition_json as unknown as MacroDefinition,
+    macroDefinition,
+    retryBackoffPolicy,
   };
 }

@@ -13,6 +13,7 @@ import {
   selectAvailableDeviceId,
   type VerificationSnapshot,
 } from './device-setup-verification-runtime';
+import { canDeleteAdminResources, canManageDeviceLocks } from '../../lib/role-access';
 import type { DeviceSetupTab } from './device-setup-shell';
 import { useDeviceSetupRuntimeConfig } from './use-device-setup-runtime-config';
 import { useDeviceSetupVerificationActions } from './use-device-setup-verification-actions';
@@ -25,6 +26,7 @@ export const useDeviceSetupVerification = () => {
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [probeLoadingKind, setProbeLoadingKind] = useState<SetupProbeKind | null>(null);
   const [cleanupExpiredLocksLoading, setCleanupExpiredLocksLoading] = useState(false);
+  const [forceClearLockId, setForceClearLockId] = useState<string | null>(null);
   const [probeResults, setProbeResults] = useState<Partial<Record<SetupProbeKind, SetupProbeResult>>>({});
   const [verification, setVerification] = useState<VerificationSnapshot>(EMPTY_VERIFICATION);
   const {
@@ -45,7 +47,8 @@ export const useDeviceSetupVerification = () => {
     () => buildDeviceSetupDerivedState({ probeResults, selectedDeviceId, verification }),
     [probeResults, selectedDeviceId, verification]
   );
-  const canManageLocks = profile?.role === 'ADMIN' || profile?.role === 'OPERATOR';
+  const canManageLocks = canManageDeviceLocks(profile?.role);
+  const canForceClearLocks = canDeleteAdminResources(profile?.role);
   const selectedDeviceLabel = derived.selectedDevice
     ? `${derived.selectedDevice.device.name || derived.selectedDevice.device.model} (${derived.selectedDevice.device.laixi_device_id})`
     : null;
@@ -76,12 +79,14 @@ export const useDeviceSetupVerification = () => {
 
   const {
     handleCleanupExpiredLocks,
+    handleForceClearDeviceLock,
     handlePrepareReconnect,
     runProbe,
   } = useDeviceSetupVerificationActions({
     activeProbeBackend,
     addToast,
     autoJsScript,
+    canForceClearLocks,
     canManageLocks,
     normalizedGatewayBaseUrl,
     normalizedMobileMcpBridgeUrl,
@@ -92,6 +97,7 @@ export const useDeviceSetupVerification = () => {
     selectedDeviceLabel,
     setActiveTab,
     setCleanupExpiredLocksLoading,
+    setForceClearLockId,
     setProbeLoadingKind,
     setProbeResults,
   });
@@ -100,12 +106,15 @@ export const useDeviceSetupVerification = () => {
     activeProbeBackend,
     activeTab,
     autoJsScript,
+    canForceClearLocks,
     canManageLocks,
     cleanupExpiredLocksLoading,
     ...derived,
     gatewayBaseUrl,
     gatewayWsUrl,
+    forceClearLockId,
     handleCleanupExpiredLocks,
+    handleForceClearDeviceLock,
     handlePrepareReconnect,
     mobileMcpBridgeUrl,
     probeLoadingKind,

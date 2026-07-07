@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { getLaixiClient } from '../adapters/laixi/client';
 import { logAudit } from '../lib/audit';
+import { deleteAdminResource } from '../lib/admin-governance';
 import type { Device, DeviceLock } from '../lib/database.types';
 
 export function useDevices() {
@@ -93,6 +94,21 @@ export function useSyncDevices() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+    },
+  });
+}
+
+export function useDeleteDevice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (deviceId: string) => {
+      await deleteAdminResource('device', deviceId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: ['device-locks'] });
+      queryClient.invalidateQueries({ queryKey: ['device-groups'] });
     },
   });
 }

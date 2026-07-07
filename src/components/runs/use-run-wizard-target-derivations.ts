@@ -7,6 +7,7 @@ import type {
   MacroVersion,
   TargetType,
   UserRole,
+  Account,
 } from '../../lib/database.types';
 import {
   buildDeviceLockSnapshot,
@@ -22,6 +23,7 @@ import {
 } from './run-wizard-preflight-helpers';
 
 interface UseRunWizardTargetDerivationsArgs {
+  accounts: Account[] | undefined;
   deviceLocks: DeviceLock[] | undefined;
   deviceLocksError: unknown;
   devices: Device[] | undefined;
@@ -29,6 +31,7 @@ interface UseRunWizardTargetDerivationsArgs {
   inputValues: Record<string, string>;
   macros: Macro[] | undefined;
   profileRole: UserRole | undefined;
+  selectedAccountId: string;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   selectedMacroId: string;
@@ -38,6 +41,7 @@ interface UseRunWizardTargetDerivationsArgs {
 }
 
 export function useRunWizardTargetDerivations({
+  accounts,
   deviceLocks,
   deviceLocksError,
   devices,
@@ -45,6 +49,7 @@ export function useRunWizardTargetDerivations({
   inputValues,
   macros,
   profileRole,
+  selectedAccountId,
   selectedDeviceIds,
   selectedGroupId,
   selectedMacroId,
@@ -57,6 +62,10 @@ export function useRunWizardTargetDerivations({
     [macros, selectedMacroId, selectedVersionId, versions]
   );
   const { declaredTargetType, definition, selectedMacro, selectedVersion } = selection;
+  const selectedAccount = useMemo(
+    () => accounts?.find((account) => account.id === selectedAccountId) ?? null,
+    [accounts, selectedAccountId]
+  );
 
   const deviceLockSnapshot: DeviceLockSnapshot = useMemo(
     () => buildDeviceLockSnapshot(deviceLocks ?? []),
@@ -89,6 +98,8 @@ export function useRunWizardTargetDerivations({
     inputValues,
     lockedTargetDevicesCount: targetState.lockedTargetDevices.length,
     profileRole,
+    requiresAccount: Boolean(definition?.antiDetection),
+    selectedAccount,
     runnableDeviceCount: targetState.onlineDeviceCount,
     selectedDeviceIds,
     selectedGroupId,
@@ -97,6 +108,7 @@ export function useRunWizardTargetDerivations({
     targetType,
   }), [
     definition,
+    selectedAccount,
     devices,
     deviceLocksError,
     groupMembers,

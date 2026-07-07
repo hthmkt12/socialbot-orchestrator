@@ -1,13 +1,13 @@
-import { Worker } from 'node:worker_threads';
-import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadSingleDeviceRunContext } from './single-device-run-context';
 import type { WorkerConfig } from './run-claim-coordinator';
 import { aggregateRunResults } from './worker-step-store';
 import { finalizeOwnedRun, isRunCancelled, markOwnedRunStatus } from './worker-run-store';
-import type { OwnedDeviceRunResult } from './execute-owned-device-run';
+import { executeOwnedDeviceRun, type OwnedDeviceRunResult } from './execute-owned-device-run.js';
 import type { Device, MacroDefinition } from '../../../packages/shared/src';
+import { createDeviceWorker, hasCompiledDeviceWorker } from './device-worker-runtime';
+import { createDeviceStepBackend } from './device-step-backend-factory.js';
 
 interface DeviceWorkerData {
   config: WorkerConfig;
@@ -15,11 +15,39 @@ interface DeviceWorkerData {
   claimToken: string;
   device: Device;
   definition: MacroDefinition;
+  retryBackoffPolicy?: import('./retry-backoff-policy.js').RetryBackoffPolicy;
+  triggeredByUserId: string;
+  inputVariables: Record<string, unknown>;
 }
 
-function runDeviceWorker(workerFile: string, workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
+async function executeDeviceRunInline(workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
+  const supabase = createClient(workerData.config.supabaseUrl, workerData.config.supabaseServiceRoleKey);
+  const backend = createDeviceStepBackend(workerData.config);
+  await backend.connect();
+  try {
+    return await executeOwnedDeviceRun({
+      supabase,
+      backend,
+      runId: workerData.runId,
+      claimToken: workerData.claimToken,
+      device: workerData.device,
+      definition: workerData.definition,
+      retryBackoffPolicy: workerData.retryBackoffPolicy,
+      triggeredByUserId: workerData.triggeredByUserId,
+      inputVariables: { ...workerData.inputVariables },
+    });
+  } finally {
+    await backend.disconnect().catch(() => undefined);
+  }
+}
+
+async function runDeviceWorker(dirname: string, workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
+  if (!hasCompiledDeviceWorker(dirname)) {
+    return executeDeviceRunInline(workerData);
+  }
+
   return new Promise((resolvePromise, rejectPromise) => {
-    const worker = new Worker(workerFile, { workerData });
+    const worker = createDeviceWorker(dirname, workerData);
     worker.on('message', (message) => {
       if (message.type === 'DONE') {
         resolvePromise(message.result);
@@ -59,16 +87,18 @@ export class SingleDeviceRunExecutor {
         return;
       }
 
-      const workerFile = resolve(this.__dirname, './execute-device-worker-thread.js');
       let result: OwnedDeviceRunResult;
       
       try {
-          result = await runDeviceWorker(workerFile, {
+          result = await runDeviceWorker(this.__dirname, {
             config: this.config,
             runId: context.runId,
             claimToken,
             device: context.device,
-            definition: context.macroDefinition
+            definition: context.macroDefinition,
+            retryBackoffPolicy: context.retryBackoffPolicy,
+            triggeredByUserId: context.triggeredByUserId,
+            inputVariables: context.inputVariables,
           });
       } catch (error) {
           result = {

@@ -1,38 +1,69 @@
-logs
+# Dependencies
+node_modules/
+services/*/node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+.vite/
+
+# Environment and local secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-.venv
-services/*/.venv
-services/mobile-mcp-bridge/artifacts
-.claude/command-archive/
-.claude/skills/
-__pycache__
-*.pyc
+# Test and coverage output
+coverage/
+playwright-report/
+test-results/
+.nyc_output/
+
+# Python / bridge runtime
+.venv/
+services/*/.venv/
+__pycache__/
+*.py[cod]
+*$py.class
 .coverage
-supabase/.temp
+htmlcov/
+
+# Supabase local state
+supabase/.temp/
+
+# Generated runtime artifacts and reports
 plans/reports/*.json
 plans/reports/*.png
-dist
-dist-ssr
-*.local
+plans/reports/mobile-mcp-runtime/
+plans/social-macro-recordings/
+services/execution-worker/plans/social-macro-recordings/
+services/mobile-mcp-bridge/artifacts/
+release-manifest.json
 
+# Editor / OS files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-.env
-coverage/
+
+# Local agent/workspace files
 .agents/
+.claude/command-archive/
+.claude/skills/
 ORIGINAL_REQUEST.md
 PROJECT.md

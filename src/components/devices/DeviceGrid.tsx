@@ -14,6 +14,7 @@ function devicePlatform(device: Device): string {
 }
 
 interface DeviceGridProps {
+  canSync: boolean;
   devices: Device[] | undefined;
   filtered: DeviceCardModel[];
   isLoading: boolean;
@@ -22,6 +23,7 @@ interface DeviceGridProps {
 }
 
 export function DeviceGrid({
+  canSync,
   devices,
   filtered,
   isLoading,
@@ -37,9 +39,13 @@ export function DeviceGrid({
       <EmptyState
         icon={<Smartphone className="w-6 h-6" />}
         title="No devices found"
-        description="Connect Laixi or start the Mobilerun bridge and sync to discover your devices."
+        description="Start the configured device bridge and sync to discover your devices."
         action={
-          <button onClick={onSync} className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors">
+          <button
+            onClick={onSync}
+            disabled={!canSync}
+            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+          >
             Sync Devices
           </button>
         }

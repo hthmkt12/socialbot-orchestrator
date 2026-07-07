@@ -11,17 +11,35 @@ from json_response import make_response, to_json_bytes
 MANAGER = DeviceSessionManager()
 SERIAL_RE = re.compile(r"^/devices/([^/]+)/(health|execute-step|tools/call)$")
 BRIDGE_TOKEN = os.environ.get("MOBILE_MCP_BRIDGE_TOKEN", "")
+ALLOW_INSECURE_DEV = os.environ.get("MOBILE_MCP_ALLOW_INSECURE_DEV", "").lower() in ("1", "true", "yes")
 ALLOWED_ORIGIN = os.environ.get("BRIDGE_CORS_ORIGIN", "http://localhost:5173")
+
+
+def bridge_auth_status(token=BRIDGE_TOKEN, allow_insecure_dev=ALLOW_INSECURE_DEV):
+    protected_available = bool(token) or bool(allow_insecure_dev)
+    return {
+        "authRequired": bool(token),
+        "insecureDevMode": bool(allow_insecure_dev and not token),
+        "authConfigured": protected_available,
+        "protectedEndpointsAvailable": protected_available,
+    }
 
 
 class BridgeHandler(BaseHTTPRequestHandler):
     def _check_auth(self):
         """Validate X-Bridge-Token header. Returns True if OK, sends 401 and returns False otherwise."""
         if not BRIDGE_TOKEN:
-            return True  # no token configured = dev mode, skip auth
+            if ALLOW_INSECURE_DEV:
+                return True
+            self._send_json(503, {
+                "success": False,
+                "code": "BRIDGE_AUTH_NOT_CONFIGURED",
+                "error": "Mobile MCP bridge token is not configured. Set MOBILE_MCP_BRIDGE_TOKEN or explicitly set MOBILE_MCP_ALLOW_INSECURE_DEV=true for local-only development.",
+            })
+            return False
         token = self.headers.get("x-bridge-token", "")
         if token != BRIDGE_TOKEN:
-            self._send_json(401, {"success": False, "error": "Unauthorized: invalid or missing X-Bridge-Token"})
+            self._send_json(401, {"success": False, "code": "BRIDGE_UNAUTHORIZED", "error": "Unauthorized: invalid or missing X-Bridge-Token"})
             return False
         return True
 
@@ -34,6 +52,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             self._send_json(200, {
                 "service": "mobile-mcp-bridge",
                 "status": "ok",
+                **bridge_auth_status(),
                 "sessionCount": MANAGER.session_count(),
             })
             return
@@ -120,7 +139,10 @@ def _execute_step(serial, payload):
         success = bool(normalized.get("success", True))
         return make_response(success, normalized, None if success else normalized.get("message"), 200)
 
-    return MANAGER.with_session(serial, run, platform=platform)
+    try:
+        return MANAGER.with_session(serial, run, platform=platform)
+    except Exception as exc:
+        return 404, {"success": False, "code": "DEVICE_SESSION_UNAVAILABLE", "error": str(exc)}
 
 
 def _call_tool(serial, payload):
@@ -134,7 +156,10 @@ def _call_tool(serial, payload):
         success = bool(normalized.get("success", True))
         return make_response(success, normalized, None if success else normalized.get("message"), 200)
 
-    return MANAGER.with_session(serial, run, platform=platform)
+    try:
+        return MANAGER.with_session(serial, run, platform=platform)
+    except Exception as exc:
+        return 404, {"success": False, "code": "DEVICE_SESSION_UNAVAILABLE", "error": str(exc)}
 
 
 def main():

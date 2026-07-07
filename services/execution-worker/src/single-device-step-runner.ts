@@ -1,14 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition, MacroStep } from '../../../src/contracts/macro';
 import type { Device } from '../../../src/lib/database.types';
-import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/engine/resolver';
-import { ExecutionContext } from './engine/execution-context';
-import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout';
-import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers';
-import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer';
-import { handlePotentialBlock } from '../../../src/lib/account-block-detector';
+import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/engine/resolver.js';
+import { ExecutionContext } from './engine/execution-context.js';
+import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout.js';
+import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers.js';
+import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer.js';
+import { handlePotentialBlock } from '../../../src/lib/account-block-detector.js';
 import type { Account, AccountActionType, AccountActionHistory } from '../../../src/lib/database.types';
-import type { DeviceStepBackend } from './device-step-backend';
+import type { DeviceStepBackend } from './device-step-backend.js';
+import {
+  getRetryDelayMs,
+  normalizeRetryBackoffPolicy,
+  shouldRetryWithBackoff,
+  type RetryBackoffPolicy,
+} from './retry-backoff-policy.js';
 import {
   createLogArtifact,
   createApprovalRequest,
@@ -16,10 +22,8 @@ import {
   isRunCancelled,
   loadLatestApprovalForStep,
   markOwnedRunStatus,
-} from './worker-run-store';
-import { loadPersistedRunSteps, persistRunStep, type StoredRunStepRecord } from './worker-step-store';
-
-const BASE_RETRY_DELAY_MS = 1000;
+} from './worker-run-store.js';
+import { loadPersistedRunSteps, persistRunStep, type StoredRunStepRecord } from './worker-step-store.js';
 
 type StepExecutionStatus = 'SUCCESS' | 'SKIPPED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
 type TraversalStatus = 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
@@ -32,6 +36,7 @@ export interface RunnerParams {
   claimToken: string;
   device: Device;
   definition: MacroDefinition;
+  retryBackoffPolicy?: RetryBackoffPolicy;
   triggeredByUserId: string;
   inputVariables: Record<string, unknown>;
 }
@@ -560,9 +565,13 @@ export class SingleDeviceStepRunner {
     }
 
     const timeoutMs = step.policy?.timeoutMs ?? this.params.definition.execution.defaultTimeoutMs;
-    const maxRetries = Math.max(0, step.policy?.maxRetries ?? this.params.definition.execution.maxRetries);
+    const retryPolicy = normalizeRetryBackoffPolicy({
+      ...this.params.retryBackoffPolicy,
+      maxRetries: step.policy?.maxRetries ?? this.params.retryBackoffPolicy?.maxRetries ?? this.params.definition.execution.maxRetries,
+    });
+    const startedAtMs = Date.now();
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= retryPolicy.maxRetries; attempt++) {
       await this.saveStep({
         runId: this.params.runId,
         step,
@@ -570,6 +579,13 @@ export class SingleDeviceStepRunner {
         stepIndex,
         status: attempt > 0 ? 'RETRYING' : 'RUNNING',
         retryCount: attempt,
+        output: attempt > 0
+          ? {
+              retryAttempt: attempt,
+              retryReason: 'Retry attempt started after previous failure',
+              elapsedMs: Date.now() - startedAtMs,
+            }
+          : undefined,
       });
 
       const resolvedParams = resolveParams(step.params, this.params.inputVariables, this.stepOutputs);
@@ -619,8 +635,28 @@ export class SingleDeviceStepRunner {
           return { status: 'SUCCESS' as const };
         }
 
-        if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, attempt)));
+        const nextDelayMs = getRetryDelayMs(retryPolicy, attempt);
+        if (shouldRetryWithBackoff({
+          attempt,
+          elapsedMs: Date.now() - startedAtMs,
+          nextDelayMs,
+          policy: retryPolicy,
+        })) {
+          await this.saveStep({
+            runId: this.params.runId,
+            step,
+            deviceId: this.params.device.id,
+            stepIndex,
+            status: 'RETRYING',
+            retryCount: attempt + 1,
+            output: {
+              retryAttempt: attempt + 1,
+              retryReason: result.error ?? `Step ${step.id} failed`,
+              nextRetryDelayMs: nextDelayMs,
+              elapsedMs: Date.now() - startedAtMs,
+            },
+          });
+          await new Promise((resolve) => setTimeout(resolve, nextDelayMs));
           continue;
         }
 
@@ -647,6 +683,8 @@ export class SingleDeviceStepRunner {
           errorPayload: cancelled ? null : {
             code: 'STEP_FAILED',
             message: result.error ?? `Step ${step.id} failed`,
+            retryAttempt: attempt,
+            terminalFailureReason: 'Retry policy exhausted or elapsed budget reached',
             timestamp: new Date().toISOString(),
           },
         });
@@ -654,8 +692,28 @@ export class SingleDeviceStepRunner {
       } catch (error) {
         const code = error instanceof StepTimeoutError ? 'STEP_TIMEOUT' : 'STEP_EXCEPTION';
         const message = error instanceof Error ? error.message : String(error);
-        if (attempt < maxRetries && !(error instanceof StepTimeoutError)) {
-          await new Promise((resolve) => setTimeout(resolve, BASE_RETRY_DELAY_MS * Math.pow(2, attempt)));
+        const nextDelayMs = getRetryDelayMs(retryPolicy, attempt);
+        if (!(error instanceof StepTimeoutError) && shouldRetryWithBackoff({
+          attempt,
+          elapsedMs: Date.now() - startedAtMs,
+          nextDelayMs,
+          policy: retryPolicy,
+        })) {
+          await this.saveStep({
+            runId: this.params.runId,
+            step,
+            deviceId: this.params.device.id,
+            stepIndex,
+            status: 'RETRYING',
+            retryCount: attempt + 1,
+            output: {
+              retryAttempt: attempt + 1,
+              retryReason: message,
+              nextRetryDelayMs: nextDelayMs,
+              elapsedMs: Date.now() - startedAtMs,
+            },
+          });
+          await new Promise((resolve) => setTimeout(resolve, nextDelayMs));
           continue;
         }
 
@@ -677,7 +735,15 @@ export class SingleDeviceStepRunner {
           stepIndex,
           status: 'FAILED',
           retryCount: attempt,
-          errorPayload: { code, message, timestamp: new Date().toISOString() },
+          errorPayload: {
+            code,
+            message,
+            retryAttempt: attempt,
+            terminalFailureReason: error instanceof StepTimeoutError
+              ? 'Step timeout is not retried'
+              : 'Retry policy exhausted or elapsed budget reached',
+            timestamp: new Date().toISOString(),
+          },
         });
         return { status: 'FAILED' as const };
       }

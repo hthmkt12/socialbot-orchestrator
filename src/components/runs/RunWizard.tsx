@@ -56,6 +56,7 @@ export default function RunWizard({ onClose }: Props) {
     inputValues,
     macroSearch,
     profileRole,
+    selectedAccountId,
     selectedDeviceIds,
     selectedGroupId,
     selectedMacroId,

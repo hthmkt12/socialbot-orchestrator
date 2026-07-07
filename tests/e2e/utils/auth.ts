@@ -1,6 +1,11 @@
 import { Page } from '@playwright/test';
 
-export async function loginAsTestUser(page: Page) {
+type TestUserOptions = {
+  role?: 'ADMIN' | 'OPERATOR' | 'VIEWER';
+};
+
+export async function loginAsTestUser(page: Page, options: TestUserOptions = {}) {
+  const role = options.role ?? 'ADMIN';
   // Setup route intercepting BEFORE navigation
   await page.route('**/auth/v1/user*', async route => {
     const json = {
@@ -20,14 +25,15 @@ export async function loginAsTestUser(page: Page) {
     const json = [{
       id: 'test-profile',
       user_id: 'test-user-id',
-      role: 'admin',
+      role,
+      email: 'test@example.com',
       created_at: new Date().toISOString()
     }];
     await route.fulfill({ json });
   });
 
   // Mock any account requests
-  await page.route('**/rest/v1/social_accounts*', async route => {
+  await page.route('**/rest/v1/accounts*', async route => {
     await route.fulfill({ json: [] });
   });
   
@@ -36,6 +42,22 @@ export async function loginAsTestUser(page: Page) {
   });
   
   await page.route('**/rest/v1/devices*', async route => {
+    await route.fulfill({ json: [] });
+  });
+
+  await page.route('**/rest/v1/workflow_schedules*', async route => {
+    await route.fulfill({ json: [] });
+  });
+
+  await page.route('**/rest/v1/macros*', async route => {
+    await route.fulfill({ json: [] });
+  });
+
+  await page.route('**/rest/v1/approvals*', async route => {
+    await route.fulfill({ json: [] });
+  });
+
+  await page.route('**/rest/v1/workflow_runs*', async route => {
     await route.fulfill({ json: [] });
   });
 

@@ -1,6 +1,47 @@
 import { supabase } from './supabase';
 import { logAudit } from './audit';
-import type { Account, AccountActionHistory, AccountPlatform, AccountActionType } from './database.types';
+import type { Account, AccountActionHistory, AccountPlatform, AccountActionType, UserRole } from './database.types';
+import { canManageAccounts } from './role-access';
+import { isMissingSchemaError } from './supabase-errors';
+
+const ENCRYPTED_PASSWORD_PREFIX = 'v2:';
+const VALID_PLATFORMS = new Set<AccountPlatform>(['instagram', 'tiktok', 'facebook']);
+
+type AccountMutationProfile = {
+  user_id: string;
+  role: UserRole;
+};
+
+async function requireAccountMutationProfile(): Promise<AccountMutationProfile> {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('user_id, role')
+    .maybeSingle();
+
+  if (profileError) throw new Error(`Failed to get profile: ${profileError.message}`);
+  if (!profile) throw new Error('User profile not found');
+  const typedProfile = profile as AccountMutationProfile;
+  if (!canManageAccounts(typedProfile.role)) {
+    throw new Error('Only operators and admins can manage social accounts');
+  }
+  return typedProfile;
+}
+
+function validateAccountCreateInput(input: {
+  username: string;
+  encrypted_password: string;
+  platform: AccountPlatform;
+  daily_action_limit?: number;
+}) {
+  if (!input.username.trim()) throw new Error('Username is required');
+  if (!VALID_PLATFORMS.has(input.platform)) throw new Error('Invalid account platform');
+  if (!input.encrypted_password.startsWith(ENCRYPTED_PASSWORD_PREFIX)) {
+    throw new Error('Account password must be encrypted before saving');
+  }
+  if (input.daily_action_limit != null && (!Number.isInteger(input.daily_action_limit) || input.daily_action_limit < 1)) {
+    throw new Error('Daily action limit must be a positive integer');
+  }
+}
 
 export async function fetchAccounts() {
   const { data, error } = await supabase
@@ -8,6 +49,7 @@ export async function fetchAccounts() {
     .select('*')
     .order('created_at', { ascending: false });
 
+  if (isMissingSchemaError(error)) return [];
   if (error) throw new Error(`Failed to fetch accounts: ${error.message}`);
   return data as Account[];
 }
@@ -19,6 +61,7 @@ export async function fetchAccount(id: string) {
     .eq('id', id)
     .maybeSingle();
 
+  if (isMissingSchemaError(error)) throw new Error('Account not found');
   if (error) throw new Error(`Failed to fetch account: ${error.message}`);
   if (!data) throw new Error('Account not found');
   return data as Account;
@@ -30,13 +73,8 @@ export async function createAccount(input: {
   platform: AccountPlatform;
   daily_action_limit?: number;
 }) {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('user_id')
-    .maybeSingle();
-
-  if (profileError) throw new Error(`Failed to get profile: ${profileError.message}`);
-  if (!profile) throw new Error('User profile not found');
+  validateAccountCreateInput(input);
+  const profile = await requireAccountMutationProfile();
 
   const { data, error } = await supabase
     .from('accounts')
@@ -65,13 +103,8 @@ export async function createAccountsBatch(rows: {
   daily_action_limit?: number;
 }[]): Promise<{ success: number; failed: number }> {
   if (rows.length === 0) return { success: 0, failed: 0 };
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('user_id')
-    .maybeSingle();
-
-  if (profileError || !profile) throw new Error('User profile not found');
+  rows.forEach(validateAccountCreateInput);
+  const profile = await requireAccountMutationProfile();
 
   const insertRows = rows.map((r) => ({
     user_id: profile.user_id,
@@ -100,6 +133,8 @@ export async function updateAccount(
   id: string,
   updates: Partial<Pick<Account, 'daily_action_limit' | 'warm_up_stage' | 'warm_up_started_at' | 'is_blocked' | 'detected_block_reason' | 'current_action_count' | 'last_action_reset_at'>>,
 ) {
+  await requireAccountMutationProfile();
+
   const { data, error } = await supabase
     .from('accounts')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -114,6 +149,7 @@ export async function updateAccount(
 }
 
 export async function deleteAccount(id: string) {
+  await requireAccountMutationProfile();
   const { data } = await supabase.from('accounts').select('username').eq('id', id).maybeSingle();
 
   const { error } = await supabase
@@ -134,6 +170,7 @@ export async function fetchAccountHistory(accountId: string, limit = 50) {
     .order('created_at', { ascending: false })
     .limit(limit);
 
+  if (isMissingSchemaError(error)) return [];
   if (error) throw new Error(`Failed to fetch account history: ${error.message}`);
   return data as AccountActionHistory[];
 }

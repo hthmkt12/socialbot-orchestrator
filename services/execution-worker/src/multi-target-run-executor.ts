@@ -1,13 +1,15 @@
-import { Worker } from 'node:worker_threads';
-import { resolve } from 'node:path';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadMultiTargetRunContext } from './multi-target-run-context';
 import type { WorkerConfig } from './run-claim-coordinator';
 import { aggregateRunResults } from './worker-step-store';
 import { finalizeOwnedRun, isRunCancelled, markOwnedRunStatus } from './worker-run-store';
-import type { OwnedDeviceRunResult } from './execute-owned-device-run';
+import { executeOwnedDeviceRun, type OwnedDeviceRunResult } from './execute-owned-device-run.js';
 import type { Device, MacroDefinition } from '../../../packages/shared/src';
 import { fileURLToPath } from 'node:url';
+import { createDeviceWorker, hasCompiledDeviceWorker } from './device-worker-runtime';
+import { createDeviceStepBackend } from './device-step-backend-factory.js';
+import type { RetryBackoffPolicy } from './retry-backoff-policy.js';
+import { buildTargetFailureDecision, type TargetFailureDecision } from './target-failure-policy.js';
 
 function mergeResolvedTargetSummary(
   summaryJson: Record<string, unknown> | null,
@@ -35,11 +37,39 @@ interface DeviceWorkerData {
   claimToken: string;
   device: Device;
   definition: MacroDefinition;
+  retryBackoffPolicy?: RetryBackoffPolicy;
+  triggeredByUserId: string;
+  inputVariables: Record<string, unknown>;
 }
 
-function runDeviceWorker(workerFile: string, workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
+async function executeDeviceRunInline(workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
+  const supabase = createClient(workerData.config.supabaseUrl, workerData.config.supabaseServiceRoleKey);
+  const backend = createDeviceStepBackend(workerData.config);
+  await backend.connect();
+  try {
+    return await executeOwnedDeviceRun({
+      supabase,
+      backend,
+      runId: workerData.runId,
+      claimToken: workerData.claimToken,
+      device: workerData.device,
+      definition: workerData.definition,
+      retryBackoffPolicy: workerData.retryBackoffPolicy,
+      triggeredByUserId: workerData.triggeredByUserId,
+      inputVariables: { ...workerData.inputVariables },
+    });
+  } finally {
+    await backend.disconnect().catch(() => undefined);
+  }
+}
+
+async function runDeviceWorker(dirname: string, workerData: DeviceWorkerData): Promise<OwnedDeviceRunResult> {
+  if (!hasCompiledDeviceWorker(dirname)) {
+    return executeDeviceRunInline(workerData);
+  }
+
   return new Promise((resolvePromise, rejectPromise) => {
-    const worker = new Worker(workerFile, { workerData });
+    const worker = createDeviceWorker(dirname, workerData);
     worker.on('message', (message) => {
       if (message.type === 'DONE') {
         resolvePromise(message.result);
@@ -90,6 +120,7 @@ export class MultiTargetRunExecutor {
       let cancelled = 0;
       let waitingApproval = false;
       let lastError: { code: string; message: string } | null = null;
+      const targetFailureDecisions: TargetFailureDecision[] = [];
 
       const incrementSuccess = () => {
         succeeded += 1;
@@ -105,8 +136,6 @@ export class MultiTargetRunExecutor {
       const MAX_CONCURRENT_DEVICES = 10;
       const chunks = chunkArray(context.devices, MAX_CONCURRENT_DEVICES);
 
-      const workerFile = resolve(this.__dirname, './execute-device-worker-thread.js');
-
       for (const chunk of chunks) {
         if (await isRunCancelled(this.supabase, context.runId, claimToken)) {
           cancelled += context.devices.length - succeeded - failed - cancelled;
@@ -120,12 +149,15 @@ export class MultiTargetRunExecutor {
           }
 
           try {
-            const result = await runDeviceWorker(workerFile, {
+            const result = await runDeviceWorker(this.__dirname, {
               config: this.config,
               runId: context.runId,
               claimToken,
               device,
-              definition: context.macroDefinition
+              definition: context.definition,
+              retryBackoffPolicy: context.retryBackoffPolicy,
+              triggeredByUserId: context.triggeredByUserId,
+              inputVariables: context.inputVariables,
             });
 
             if (result.status === 'COMPLETED') {
@@ -137,19 +169,35 @@ export class MultiTargetRunExecutor {
               incrementCancelled();
             } else {
               incrementFailed(result.error);
+              targetFailureDecisions.push(buildTargetFailureDecision({
+                device,
+                error: result.error,
+                policy: context.targetFailurePolicy,
+              }));
             }
           } catch (error) {
-             incrementFailed({
+             const structuredError = {
                 code: 'WORKER_CRASH',
                 message: error instanceof Error ? error.message : String(error)
-             });
+             };
+             incrementFailed(structuredError);
+             targetFailureDecisions.push(buildTargetFailureDecision({
+               device,
+               error: structuredError,
+               policy: context.targetFailurePolicy,
+             }));
           }
         }));
+
+        if (context.targetFailurePolicy === 'fail_fast' && failed > 0) {
+          break;
+        }
       }
 
       const aggregate = await aggregateRunResults(this.supabase, context.runId);
       const totalDevices = context.devices.length;
-      const partial = Math.max(totalDevices - succeeded - failed - cancelled, 0);
+      const skipped = Math.max(totalDevices - succeeded - failed - cancelled, 0);
+      const partial = skipped;
 
       const status =
         waitingApproval
@@ -168,7 +216,10 @@ export class MultiTargetRunExecutor {
         succeeded,
         failed,
         cancelled,
+        skipped,
         partial,
+        targetFailurePolicy: context.targetFailurePolicy,
+        targetFailureDecisions,
         avgCompletionRate: aggregate.avgCompletionRate,
       });
     } catch (error) {

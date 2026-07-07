@@ -1,6 +1,6 @@
-import { executeDeviceStep } from './execute-device-step';
-import type { DeviceCommandClient } from './device-command-client';
-import type { DeviceStepBackend, DeviceStepExecutionArgs } from './device-step-backend';
+import { executeDeviceStep } from './execute-device-step.js';
+import type { DeviceCommandClient } from './device-command-client.js';
+import type { DeviceStepBackend, DeviceStepExecutionArgs } from './device-step-backend.js';
 
 export class LaixiStepBackend implements DeviceStepBackend {
   constructor(private readonly client: DeviceCommandClient) {}

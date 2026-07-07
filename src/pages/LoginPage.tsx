@@ -4,12 +4,18 @@ import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 import Spinner from '../components/ui/Spinner';
 
-export default function LoginPage() {
+type LoginPageProps = {
+  initialMode?: 'signIn' | 'signUp';
+};
+
+export default function LoginPage({ initialMode = 'signIn' }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(initialMode === 'signUp');
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const authError = useAuthStore((s) => s.authError);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
   const addToast = useUIStore((s) => s.addToast);
@@ -17,6 +23,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFormError(null);
 
     const result = isSignUp
       ? await signUp(email, password)
@@ -25,10 +32,12 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.error) {
+      setFormError(result.error);
       addToast(result.error, 'error');
     } else if (isSignUp) {
       addToast('Account created. You can now sign in.', 'success');
       setIsSignUp(false);
+      setFormError(null);
     }
   };
 
@@ -86,6 +95,12 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {(formError || authError) && (
+            <div role="alert" className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+              {formError || authError}
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
@@ -98,7 +113,10 @@ export default function LoginPage() {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setFormError(null);
+              }}
               className="text-xs text-gray-400 hover:text-sky-400 transition-colors"
             >
               {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}

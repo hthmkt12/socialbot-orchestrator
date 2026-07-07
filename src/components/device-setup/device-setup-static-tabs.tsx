@@ -11,7 +11,7 @@ export { DeviceSetupTroubleshootTab } from './device-setup-troubleshoot-tab';
 const GUIDE_STEPS = [
   {
     title: 'Install AutoJS Pro',
-    detail: 'Use AutoJS Pro 9.x or newer on the Android device that will act as the Laixi agent.',
+    detail: 'Use AutoJS Pro 9.x or newer on the Android device that will act as the device bridge agent.',
     bullets: [
       'Enable Accessibility Service before running the agent script.',
       'Allow background execution so the websocket session survives screen-off conditions.',

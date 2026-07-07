@@ -4,7 +4,7 @@ import type {
   LaixiCommandRequest,
   LaixiCommandResponse,
 } from '../../../packages/shared/src';
-import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client';
+import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client.js';
 
 export class LaixiGatewayClient implements DeviceCommandClient {
   constructor(

@@ -6,6 +6,7 @@ import type { DeviceSetupDeviceRow } from './device-setup-derived-state';
 import type { DeviceSetupTab } from './device-setup-shell';
 import {
   cleanupExpiredLocksFlow,
+  forceClearDeviceLockFlow,
   prepareDeviceReconnectFlow,
   runDeviceSetupProbeFlow,
 } from './device-setup-action-helpers';
@@ -14,6 +15,7 @@ export function useDeviceSetupVerificationActions({
   activeProbeBackend,
   addToast,
   autoJsScript,
+  canForceClearLocks,
   canManageLocks,
   normalizedGatewayBaseUrl,
   normalizedMobileMcpBridgeUrl,
@@ -24,12 +26,14 @@ export function useDeviceSetupVerificationActions({
   selectedDeviceLabel,
   setActiveTab,
   setCleanupExpiredLocksLoading,
+  setForceClearLockId,
   setProbeLoadingKind,
   setProbeResults,
 }: {
   activeProbeBackend: 'mobile-mcp' | 'laixi';
   addToast: (message: string, tone: 'success' | 'error' | 'info', durationMs?: number) => void;
   autoJsScript: string;
+  canForceClearLocks: boolean;
   canManageLocks: boolean;
   normalizedGatewayBaseUrl: string;
   normalizedMobileMcpBridgeUrl: string;
@@ -40,6 +44,7 @@ export function useDeviceSetupVerificationActions({
   selectedDeviceLabel: string | null;
   setActiveTab: (tab: DeviceSetupTab) => void;
   setCleanupExpiredLocksLoading: (loading: boolean) => void;
+  setForceClearLockId: (lockId: string | null) => void;
   setProbeLoadingKind: (kind: SetupProbeKind | null) => void;
   setProbeResults: (
     value:
@@ -96,8 +101,28 @@ export function useDeviceSetupVerificationActions({
     setCleanupExpiredLocksLoading,
   ]);
 
+  const handleForceClearDeviceLock = useCallback(async (lockId: string) => {
+    await forceClearDeviceLockFlow({
+      addToast,
+      canForceClearLocks,
+      lockId,
+      profileRole,
+      queryClient,
+      runVerification,
+      setForceClearLockId,
+    });
+  }, [
+    addToast,
+    canForceClearLocks,
+    profileRole,
+    queryClient,
+    runVerification,
+    setForceClearLockId,
+  ]);
+
   return {
     handleCleanupExpiredLocks,
+    handleForceClearDeviceLock,
     handlePrepareReconnect,
     runProbe,
   };

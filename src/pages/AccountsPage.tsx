@@ -5,15 +5,19 @@ import { AccountTable } from '../components/accounts/account-table';
 import { CreateAccountModal } from '../components/accounts/create-account-modal';
 import { CsvImportModal } from '../components/accounts/csv-import-modal';
 import EmptyState from '../components/ui/EmptyState';
+import RoleAccessNotice from '../components/ui/RoleAccessNotice';
 import Spinner from '../components/ui/Spinner';
 import { useAccounts, useCreateAccount, useBatchCreateAccounts, useDeleteAccount, useUpdateAccount } from '../hooks/use-accounts';
 import { encryptPassword } from '../lib/account-password-crypto';
+import { canManageAccounts, getRoleLabel } from '../lib/role-access';
+import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 import type { AccountPlatform } from '../lib/database.types';
 import type { CsvAccountRow } from '../lib/account-csv-import-parser';
 
 export default function AccountsPage() {
   const { data: accounts, isLoading } = useAccounts();
+  const profile = useAuthStore((s) => s.profile);
   const [showCreate, setShowCreate] = useState(false);
   const [showCsvImport, setShowCsvImport] = useState(false);
   const createAccount = useCreateAccount();
@@ -21,6 +25,7 @@ export default function AccountsPage() {
   const deleteAccount = useDeleteAccount();
   const updateAccount = useUpdateAccount();
   const addToast = useUIStore((s) => s.addToast);
+  const canEditAccounts = canManageAccounts(profile?.role);
 
   const handleCreate = async (data: {
     username: string;
@@ -28,6 +33,10 @@ export default function AccountsPage() {
     platform: AccountPlatform;
     daily_action_limit: number;
   }) => {
+    if (!canEditAccounts) {
+      addToast('Only operators and admins can add social accounts', 'error');
+      return;
+    }
     try {
       await createAccount.mutateAsync(data);
       addToast('Account added', 'success');
@@ -38,6 +47,10 @@ export default function AccountsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canEditAccounts) {
+      addToast('Only operators and admins can delete social accounts', 'error');
+      return;
+    }
     try {
       await deleteAccount.mutateAsync(id);
       addToast('Account deleted', 'success');
@@ -47,6 +60,10 @@ export default function AccountsPage() {
   };
 
   const handleStartWarmUp = async (id: string) => {
+    if (!canEditAccounts) {
+      addToast('Only operators and admins can change account warm-up state', 'error');
+      return;
+    }
     try {
       await updateAccount.mutateAsync({
         id,
@@ -60,6 +77,10 @@ export default function AccountsPage() {
   };
 
   const handleCsvImport = async (rows: CsvAccountRow[]) => {
+    if (!canEditAccounts) {
+      addToast('Only operators and admins can import social accounts', 'error');
+      return;
+    }
     try {
       const encryptedRows = await Promise.all(
         rows.map(async (row) => ({
@@ -71,8 +92,8 @@ export default function AccountsPage() {
       );
       const { success, failed } = await batchCreate.mutateAsync(encryptedRows);
       addToast(`Imported ${success} accounts${failed ? `, ${failed} failed` : ''}`, failed ? 'info' : 'success');
-    } catch {
-      addToast('Failed to import accounts', 'error');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Failed to import accounts', 'error');
     }
     setShowCsvImport(false);
   };
@@ -89,15 +110,29 @@ export default function AccountsPage() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowCsvImport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 text-sm font-medium rounded-lg transition-colors"
+              onClick={() => {
+                if (!canEditAccounts) {
+                  addToast('Only operators and admins can import social accounts', 'error');
+                  return;
+                }
+                setShowCsvImport(true);
+              }}
+              disabled={!canEditAccounts}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium rounded-lg transition-colors"
             >
               <Upload className="w-4 h-4" />
               Import CSV
             </button>
             <button
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
+              onClick={() => {
+                if (!canEditAccounts) {
+                  addToast('Only operators and admins can add social accounts', 'error');
+                  return;
+                }
+                setShowCreate(true);
+              }}
+              disabled={!canEditAccounts}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Account
@@ -107,6 +142,13 @@ export default function AccountsPage() {
       />
 
       <div className="flex-1 overflow-auto p-6 space-y-6">
+        {!canEditAccounts && (
+          <RoleAccessNotice
+            title={`${getRoleLabel(profile?.role)} role can inspect accounts but not change them`}
+            detail="You can view account status, warm-up stage, block flags, limits, and history. Only operators and admins can add, import, delete, or advance accounts."
+          />
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
@@ -168,8 +210,15 @@ export default function AccountsPage() {
             description="Add social media accounts to start automating workflows across platforms."
             action={
               <button
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
+                onClick={() => {
+                  if (!canEditAccounts) {
+                    addToast('Only operators and admins can add social accounts', 'error');
+                    return;
+                  }
+                  setShowCreate(true);
+                }}
+                disabled={!canEditAccounts}
+                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Account
@@ -183,6 +232,7 @@ export default function AccountsPage() {
                 onDelete={handleDelete}
                 onStartWarmUp={handleStartWarmUp}
                 isDeleting={deleteAccount.isPending}
+                canManageAccounts={canEditAccounts}
             />
           </div>
         )}

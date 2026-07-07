@@ -1,5 +1,6 @@
 import { Smartphone } from 'lucide-react';
 import { useAccounts } from '../../hooks/use-accounts';
+import { canPerformAction } from '../../lib/account-warmup-engine';
 import type { Account } from '../../lib/database.types';
 import Spinner from '../ui/Spinner';
 
@@ -19,7 +20,7 @@ export function RunWizardAccountStep({ selectedAccountId, onSelectAccount }: Pro
     );
   }
 
-  const socialAccounts = (accounts ?? []).filter((a) => !a.is_blocked);
+  const socialAccounts = accounts ?? [];
 
   if (socialAccounts.length === 0) {
     return (
@@ -27,7 +28,7 @@ export function RunWizardAccountStep({ selectedAccountId, onSelectAccount }: Pro
         <Smartphone className="w-8 h-8 text-gray-300 mx-auto" />
         <p className="text-sm text-gray-500">No active social accounts found.</p>
         <p className="text-xs text-gray-400">
-          Add accounts in <span className="font-medium">Account Setup</span> before running social engagement macros.
+          Add accounts in <span className="font-medium">Accounts</span> before running social engagement macros.
         </p>
       </div>
     );
@@ -41,15 +42,22 @@ export function RunWizardAccountStep({ selectedAccountId, onSelectAccount }: Pro
       <div className="grid gap-3">
         {socialAccounts.map((account: Account) => {
           const selected = selectedAccountId === account.id;
+          const actionCheck = canPerformAction(account);
+          const disabled = !actionCheck.allowed;
           return (
             <button
               key={account.id}
               type="button"
-              onClick={() => onSelectAccount(account.id)}
+              onClick={() => {
+                if (!disabled) onSelectAccount(account.id);
+              }}
+              disabled={disabled}
               className={`flex items-center gap-4 rounded-xl border p-4 text-left transition-all ${
                 selected
                   ? 'border-sky-300 bg-sky-50 ring-1 ring-sky-300'
-                  : 'border-gray-200 hover:border-sky-200 hover:bg-gray-50'
+                  : disabled
+                    ? 'border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed'
+                    : 'border-gray-200 hover:border-sky-200 hover:bg-gray-50'
               }`}
             >
               {/* Platform icon */}
@@ -65,7 +73,10 @@ export function RunWizardAccountStep({ selectedAccountId, onSelectAccount }: Pro
 
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">{account.username}</p>
-                <p className="text-xs text-gray-500 capitalize mt-0.5">{account.platform}</p>
+                <p className="text-xs text-gray-500 capitalize mt-0.5">
+                  {account.platform}
+                  {!actionCheck.allowed && <span className="text-red-600"> · {actionCheck.reason}</span>}
+                </p>
               </div>
 
               {/* Warm-up badge */}

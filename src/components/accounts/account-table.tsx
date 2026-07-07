@@ -19,9 +19,16 @@ interface AccountTableProps {
   onDelete: (id: string) => void;
   onStartWarmUp?: (id: string) => void;
   isDeleting: boolean;
+  canManageAccounts?: boolean;
 }
 
-export function AccountTable({ accounts, onDelete, onStartWarmUp, isDeleting }: AccountTableProps) {
+export function AccountTable({
+  accounts,
+  onDelete,
+  onStartWarmUp,
+  isDeleting,
+  canManageAccounts = true,
+}: AccountTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -54,7 +61,7 @@ export function AccountTable({ accounts, onDelete, onStartWarmUp, isDeleting }: 
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600">{stageInfo.label}</span>
-                    {account.warm_up_stage === 1 && onStartWarmUp && (
+                    {account.warm_up_stage === 1 && onStartWarmUp && canManageAccounts && (
                       <button
                         onClick={() => onStartWarmUp(account.id)}
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 transition-colors"
@@ -87,14 +94,18 @@ export function AccountTable({ accounts, onDelete, onStartWarmUp, isDeleting }: 
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <button
-                    onClick={() => onDelete(account.id)}
-                    disabled={isDeleting}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                    title="Delete account"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canManageAccounts ? (
+                    <button
+                      onClick={() => onDelete(account.id)}
+                      disabled={isDeleting}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      title="Delete account"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-400">Read-only</span>
+                  )}
                 </td>
               </tr>
             );

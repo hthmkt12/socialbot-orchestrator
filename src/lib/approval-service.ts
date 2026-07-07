@@ -67,9 +67,11 @@ export async function createApprovalRequest(params: CreateApprovalParams) {
 
 export async function processApprovalDecision(decision: ApprovalDecision) {
   const approval = await fetchApprovalRecord(decision.approvalId);
-  if (approval.status === 'APPROVED') return { success: true, resumed: true };
+  if (approval.status === 'APPROVED') {
+    return { success: true, resumed: true, outcome: 'already_resolved' as const, status: approval.status };
+  }
   if (approval.status === 'REJECTED' || approval.status === 'EXPIRED') {
-    return { success: true, resumed: false };
+    return { success: true, resumed: false, outcome: 'already_resolved' as const, status: approval.status };
   }
 
   const newStatus = decision.approved ? 'APPROVED' : 'REJECTED';
@@ -85,7 +87,12 @@ export async function processApprovalDecision(decision: ApprovalDecision) {
 
   if (!updatedApproval) {
     const latestStatus = await refreshApprovalStatus(decision.approvalId);
-    return { success: true, resumed: latestStatus === 'APPROVED' };
+    return {
+      success: true,
+      resumed: latestStatus === 'APPROVED',
+      outcome: 'already_resolved' as const,
+      status: latestStatus ?? 'UNKNOWN',
+    };
   }
 
   if (decision.approved) {
@@ -103,7 +110,7 @@ export async function processApprovalDecision(decision: ApprovalDecision) {
       requeued: true,
     });
 
-    return { success: true, resumed: true };
+    return { success: true, resumed: true, outcome: 'approved' as const, status: newStatus };
   }
 
   await markApprovalStepRejected({
@@ -120,7 +127,7 @@ export async function processApprovalDecision(decision: ApprovalDecision) {
     reviewerNotes: decision.reviewerNotes,
   });
 
-  return { success: true, resumed: false };
+  return { success: true, resumed: false, outcome: 'rejected' as const, status: newStatus };
 }
 
 export function generateApprovalReason(stepType: string, stepData?: Record<string, unknown>): string {

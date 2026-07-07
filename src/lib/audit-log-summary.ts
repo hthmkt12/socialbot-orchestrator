@@ -34,8 +34,8 @@ export function buildAuditSummary(log: AuditLog, metadata: Record<string, unknow
       return 'Reviewer rejected the waiting step and the run was cancelled.';
     case 'devices.sync':
       return typeof count === 'number'
-        ? `Synced ${count} device${count === 1 ? '' : 's'} from the Laixi gateway.`
-        : 'Synced devices from the Laixi gateway.';
+        ? `Synced ${count} device${count === 1 ? '' : 's'} from the device gateway.`
+        : 'Synced devices from the device gateway.';
     case 'macro.create':
       return 'Created a new reusable macro definition.';
     case 'macro_version.create':

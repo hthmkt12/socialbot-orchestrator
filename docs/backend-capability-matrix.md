@@ -18,6 +18,13 @@ Three backends available, configured via `DEVICE_BACKEND` env var on the worker:
 
 Mobile MCP is the current pilot validation backend.
 
+## Security Defaults
+
+- The Mobile MCP bridge requires `MOBILE_MCP_BRIDGE_TOKEN` for protected endpoints.
+- `MOBILE_MCP_ALLOW_INSECURE_DEV=true` is an isolated local-development escape hatch only.
+- Android sessions are ADB-first by default. Set `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=true` only when Portal-dependent actions are required and USB install policy allows Portal setup.
+- Social account passwords require `VITE_ACCOUNT_PASSWORD_KEY` before browser-side pilot encryption can save credentials. Treat this as pilot-only; move encryption server-side before production credential storage.
+
 ## Capability Matrix
 
 | Capability | Mobile MCP (Android) | Mobile MCP (iOS) | Mobilerun (Android) | Mobilerun (iOS) | Laixi Gateway | Notes |
@@ -83,6 +90,8 @@ Use these checks before claiming pilot readiness:
 For Mobilerun backend: set `DEVICE_BACKEND=mobilerun` and verify `/health` shows `deviceBackend: "mobilerun"`.
 
 For Laixi compatibility checks, use `npm.cmd run dev:gateway`, then verify `GET /health` and `GET /sessions`. Do not claim Laixi pilot readiness unless `/sessions` shows a live device and the worker health confirms `deviceBackend: "laixi"` before a completed backend run.
+
+For Mobile MCP bridge auth checks, verify `/health` reports `authRequired: true` when `MOBILE_MCP_BRIDGE_TOKEN` is set, and verify protected endpoints reject missing/invalid `x-bridge-token`.
 
 ## Unresolved Questions
 

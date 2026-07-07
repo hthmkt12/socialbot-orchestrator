@@ -69,7 +69,7 @@ export default function SocialDashboardPage() {
           <EmptyState
             icon={<Users className="w-6 h-6" />}
             title="No accounts yet"
-            description="Add social media accounts in Account Setup to see your dashboard."
+            description="Add social media accounts in Accounts to see your dashboard."
           />
         ) : (
           <>
@@ -85,7 +85,7 @@ export default function SocialDashboardPage() {
             {blockedAccounts.length > 0 && (
               <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm">
                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                <span className="text-red-700">{blockedAccounts.length} account{blockedAccounts.length !== 1 ? 's' : ''} blocked. Check Account Setup for details.</span>
+                <span className="text-red-700">{blockedAccounts.length} account{blockedAccounts.length !== 1 ? 's' : ''} blocked. Check Accounts for details.</span>
               </div>
             )}
 

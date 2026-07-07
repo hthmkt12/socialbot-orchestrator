@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { Account } from './database.types';
 
 vi.mock('./account-service-helpers', () => ({
   updateAccount: vi.fn(),
@@ -14,6 +15,9 @@ import {
   resetAccountActionCount,
   runDailyActionReset,
 } from './account-action-reset';
+
+type ResetAccountFixture = Pick<Account, 'id' | 'platform' | 'warm_up_stage' | 'current_action_count' | 'daily_action_limit' | 'last_action_reset_at'>;
+type UpdateAccountResult = Awaited<ReturnType<typeof updateAccount>>;
 
 describe('shouldResetActionCount', () => {
   it('returns true when lastResetAt is null', () => {
@@ -71,24 +75,24 @@ describe('computeCorrectDailyLimit', () => {
 });
 
 describe('resetAccountActionCount', () => {
-  const baseAccount = {
+  const baseAccount: ResetAccountFixture = {
     id: 'acc-1',
     platform: 'instagram' as const,
     warm_up_stage: 3,
     current_action_count: 45,
     daily_action_limit: 100,
     last_action_reset_at: '2026-06-28T12:00:00Z',
-  } as any;
+  };
 
   beforeEach(() => {
     mockUpdateAccount.mockReset();
-    mockUpdateAccount.mockResolvedValue({ id: 'acc-1' } as any);
+    mockUpdateAccount.mockResolvedValue({ id: 'acc-1' } as UpdateAccountResult);
   });
 
   it('skips reset when already reset today', async () => {
     const now = new Date('2026-06-28T14:00:00Z');
     const result = await resetAccountActionCount(
-      { ...baseAccount, last_action_reset_at: '2026-06-28T12:00:00Z' } as any,
+      { ...baseAccount, last_action_reset_at: '2026-06-28T12:00:00Z' },
       now,
     );
     expect(result.wasReset).toBe(false);
@@ -109,7 +113,7 @@ describe('resetAccountActionCount', () => {
 
   it('updates daily_limit when recommended is higher', async () => {
     const now = new Date('2026-06-29T14:00:00Z');
-    const account = { ...baseAccount, daily_action_limit: 5 } as any;
+    const account = { ...baseAccount, daily_action_limit: 5 };
     const result = await resetAccountActionCount(account, now);
     expect(result.wasReset).toBe(true);
     expect(mockUpdateAccount).toHaveBeenCalledWith('acc-1', expect.objectContaining({
@@ -119,7 +123,7 @@ describe('resetAccountActionCount', () => {
 
   it('does not reduce daily_limit when current is higher than recommended', async () => {
     const now = new Date('2026-06-29T14:00:00Z');
-    const account = { ...baseAccount, daily_action_limit: 200 } as any;
+    const account = { ...baseAccount, daily_action_limit: 200 };
     const result = await resetAccountActionCount(account, now);
     expect(result.wasReset).toBe(true);
     expect(mockUpdateAccount).toHaveBeenCalledWith('acc-1', expect.not.objectContaining({
@@ -129,7 +133,7 @@ describe('resetAccountActionCount', () => {
 });
 
 describe('runDailyActionReset', () => {
-  const makeAccount = (id: string, overrides = {}): any => ({
+  const makeAccount = (id: string, overrides: Partial<ResetAccountFixture> = {}): ResetAccountFixture => ({
     id,
     platform: 'instagram' as const,
     warm_up_stage: 3,
@@ -141,7 +145,7 @@ describe('runDailyActionReset', () => {
 
   beforeEach(() => {
     mockUpdateAccount.mockReset();
-    mockUpdateAccount.mockResolvedValue({ id: 'mock' } as any);
+    mockUpdateAccount.mockResolvedValue({ id: 'mock' } as UpdateAccountResult);
   });
 
   it('resets all accounts on a new day', async () => {
@@ -174,9 +178,9 @@ describe('runDailyActionReset', () => {
   it('handles mixed results', async () => {
     const now = new Date('2026-06-29T12:00:00Z');
     mockUpdateAccount
-      .mockResolvedValueOnce({ id: 'a1' } as any)
+      .mockResolvedValueOnce({ id: 'a1' } as UpdateAccountResult)
       .mockRejectedValueOnce(new Error('DB error'))
-      .mockResolvedValueOnce({ id: 'a3' } as any);
+      .mockResolvedValueOnce({ id: 'a3' } as UpdateAccountResult);
     const accounts = [makeAccount('a1'), makeAccount('a2'), makeAccount('a3')];
     const result = await runDailyActionReset(accounts, now);
     expect(result.reset).toBe(2);

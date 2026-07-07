@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import type { ReactElement } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from './hooks/useAuth';
 import AppLayout from './components/layout/AppLayout';
@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ui/ErrorBoundary';
 import ToastContainer from './components/ui/Toast';
 import Spinner from './components/ui/Spinner';
 import LoginPage from './pages/LoginPage';
+import { isOutOfScopeRoute } from './lib/out-of-scope-guardrails';
 
 const DevicesPage = lazy(() => import('./pages/DevicesPage'));
 const DeviceGroupsPage = lazy(() => import('./pages/DeviceGroupsPage'));
@@ -22,7 +23,8 @@ const RunMonitorPage = lazy(() =>
 );
 const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'));
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'));
-const DemoPage = lazy(() => import('./pages/DemoPage'));
+const AdminExecutionProfilesPage = lazy(() => import('./pages/AdminExecutionProfilesPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const DeviceSetupPage = lazy(() => import('./pages/DeviceSetupPage'));
 const MobileMcpOrchestratorPage = lazy(() => import('./pages/mobile-mcp-orchestrator-page'));
 const AccountsPage = lazy(() => import('./pages/AccountsPage'));
@@ -31,12 +33,12 @@ const SocialDashboardPage = lazy(() => import('./pages/social-dashboard-page'));
 const FleetHealthPage = lazy(() => import('./pages/fleet-health-page'));
 const SystemMonitorPage = lazy(() => import('./pages/system-monitor-page'));
 const SchedulesPage = lazy(() => import('./pages/SchedulesPage'));
-const DocsPage = lazy(() => import('./pages/DocsPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
-const PricingPage = lazy(() => import('./pages/PricingPage'));
+const ReadinessReportsPage = lazy(() => import('./pages/ReadinessReportsPage'));
 
 function AuthGate() {
   const { session, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -47,7 +49,19 @@ function AuthGate() {
   }
 
   if (!session) {
+    if (location.pathname === '/register') {
+      return <LoginPage initialMode="signUp" />;
+    }
+
+    if (location.pathname !== '/login') {
+      return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    }
+
     return <LoginPage />;
+  }
+
+  if (isOutOfScopeRoute(location.pathname)) {
+    return <Navigate to="/social-dashboard" replace />;
   }
 
   return (
@@ -62,7 +76,8 @@ function AuthGate() {
         <Route path="/runs/:runId/monitor" element={withPageFallback(<RunMonitorPage />)} />
         <Route path="/approvals" element={withPageFallback(<ApprovalsPage />)} />
         <Route path="/audit-logs" element={withPageFallback(<AuditLogsPage />)} />
-        <Route path="/demo" element={withPageFallback(<DemoPage />)} />
+        <Route path="/admin/execution-profiles" element={withPageFallback(<AdminExecutionProfilesPage />)} />
+        <Route path="/admin/users" element={withPageFallback(<AdminUsersPage />)} />
         <Route path="/device-setup" element={withPageFallback(<DeviceSetupPage />)} />
         <Route
           path="/mobile-mcp-orchestrator"
@@ -75,8 +90,7 @@ function AuthGate() {
         <Route path="/system-monitor" element={withPageFallback(<SystemMonitorPage />)} />
         <Route path="/schedules" element={withPageFallback(<SchedulesPage />)} />
         <Route path="/analytics" element={withPageFallback(<AnalyticsPage />)} />
-        <Route path="/docs" element={withPageFallback(<DocsPage />)} />
-        <Route path="/pricing" element={withPageFallback(<PricingPage />)} />
+        <Route path="/readiness" element={withPageFallback(<ReadinessReportsPage />)} />
         <Route path="*" element={<Navigate to="/social-dashboard" replace />} />
       </Route>
       </Routes>

@@ -54,12 +54,19 @@ export default function ApprovalsPage() {
       return;
     }
     try {
-      await resolveApproval.mutateAsync({
+      const result = await resolveApproval.mutateAsync({
         approvalId: id,
         approved,
         reviewerId: session.user.id,
         reviewerNotes: notes,
       });
+      if (result.outcome === 'already_resolved') {
+        addToast(`Approval is no longer pending (${result.status})`, 'info');
+        setDetailApproval(null);
+        setShowRejectForm(false);
+        setRejectionNotes('');
+        return;
+      }
       addToast(`Approval ${approved ? 'approved' : 'rejected'}`, 'success');
       setDetailApproval(null);
       setShowRejectForm(false);

@@ -1,5 +1,5 @@
 import type { MacroDefinition } from '../contracts/macro';
-import type { TargetType, UserRole } from './database.types';
+import type { Account, TargetType, UserRole } from './database.types';
 
 export interface RunPreflightIssue {
   id: string;
@@ -32,4 +32,6 @@ export interface BuildRunPreflightSummaryArgs {
   expiredLockedTargetDevicesCount: number;
   inputValues: Record<string, string>;
   deviceLocksError?: string | null;
+  selectedAccount?: Pick<Account, 'id' | 'username' | 'is_blocked' | 'daily_action_limit' | 'current_action_count' | 'warm_up_stage'> | null;
+  requiresAccount?: boolean;
 }

@@ -28,6 +28,8 @@ interface ArtifactRecordInput {
   metadata_json: Record<string, unknown>;
 }
 
+export const MAX_INLINE_ARTIFACT_BYTES = 512_000;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -50,48 +52,31 @@ async function createArtifactRecord(
   supabase: SupabaseClient,
   artifact: ArtifactRecordInput
 ) {
-  // If the artifact size is > 512,000 bytes OR if we are explicitly instructed to use object storage,
-  // we will upload to Supabase Storage and set storage_mode = 'object' in metadata_json.
-  // For screenshots or logs, we extract base64/text from metadata_json, upload it, and remove it from metadata.
-  
-  if (artifact.metadata_json && typeof artifact.metadata_json === 'object') {
-    const meta = { ...artifact.metadata_json } as Record<string, unknown>;
-    
-    // Check threshold (512KB) or if it's a screenshot
-    const threshold = 512000;
-    const shouldUpload = artifact.size > threshold || artifact.type === 'SCREENSHOT';
-    
-    if (shouldUpload) {
-      let uploadBuffer: Buffer | null = null;
-      if (artifact.type === 'SCREENSHOT' && typeof meta.base64 === 'string') {
-        uploadBuffer = Buffer.from(meta.base64, 'base64');
-        delete meta.base64; // Don't store in DB inline anymore
-      } else if (artifact.type === 'LOG_BLOB' && typeof meta.text === 'string') {
-        uploadBuffer = Buffer.from(meta.text, 'utf-8');
-        delete meta.text; // Don't store in DB inline anymore
+  const prepared = prepareArtifactForStorage(artifact);
+  artifact.metadata_json = prepared.metadata_json;
+
+  if (prepared.uploadBuffer) {
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('artifacts')
+        .upload(artifact.storage_key, prepared.uploadBuffer, {
+          contentType: artifact.content_type,
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('[execution-worker] Artifact storage upload failed:', uploadError);
+        artifact.metadata_json.storage_status = 'upload_failed';
+        artifact.metadata_json.storage_error = uploadError.message ?? 'Artifact storage upload failed';
+      } else {
+        artifact.metadata_json.storage_mode = 'object';
+        artifact.metadata_json.storage_status = 'uploaded';
       }
-      
-      if (uploadBuffer) {
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from('artifacts')
-            .upload(artifact.storage_key, uploadBuffer, {
-              contentType: artifact.content_type,
-              upsert: true
-            });
-            
-          if (uploadError) {
-            console.error('[execution-worker] Artifact storage upload failed:', uploadError);
-          } else {
-            meta.storage_mode = 'object';
-          }
-        } catch (e) {
-          console.error('[execution-worker] Artifact storage upload exception:', e);
-        }
-      }
+    } catch (e) {
+      console.error('[execution-worker] Artifact storage upload exception:', e);
+      artifact.metadata_json.storage_status = 'upload_failed';
+      artifact.metadata_json.storage_error = e instanceof Error ? e.message : 'Artifact storage upload failed';
     }
-    
-    artifact.metadata_json = meta;
   }
 
   const { data, error } = await supabase
@@ -102,6 +87,38 @@ async function createArtifactRecord(
     
   if (error) throw new Error(error.message);
   return data?.id ?? null;
+}
+
+export function prepareArtifactForStorage(artifact: ArtifactRecordInput) {
+  const metadata = isRecord(artifact.metadata_json) ? { ...artifact.metadata_json } : {};
+  const shouldUpload = artifact.size > MAX_INLINE_ARTIFACT_BYTES || artifact.type === 'SCREENSHOT';
+  let uploadBuffer: Buffer | null = null;
+  let inlinePayloadOmitted = false;
+
+  if (shouldUpload && artifact.type === 'SCREENSHOT' && typeof metadata.base64 === 'string') {
+    uploadBuffer = Buffer.from(metadata.base64, 'base64');
+    delete metadata.base64;
+    inlinePayloadOmitted = true;
+  }
+
+  if (shouldUpload && artifact.type === 'LOG_BLOB' && typeof metadata.text === 'string') {
+    uploadBuffer = Buffer.from(metadata.text, 'utf-8');
+    delete metadata.text;
+    inlinePayloadOmitted = true;
+  }
+
+  if (shouldUpload && (Object.prototype.hasOwnProperty.call(metadata, 'json') || Object.prototype.hasOwnProperty.call(metadata, 'payload'))) {
+    delete metadata.json;
+    delete metadata.payload;
+    inlinePayloadOmitted = true;
+  }
+
+  if (inlinePayloadOmitted) {
+    metadata.inline_payload_omitted = true;
+    metadata.inline_payload_policy = `Artifacts larger than ${MAX_INLINE_ARTIFACT_BYTES} bytes and screenshots are not stored inline`;
+  }
+
+  return { metadata_json: metadata, uploadBuffer };
 }
 
 export async function loadSingleDeviceRunContext(

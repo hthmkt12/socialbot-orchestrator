@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   activateMacroVersionRequest,
+  archiveMacroVersionRequest,
   createMacroRequest,
   createMacroVersionRequest,
+  deleteMacroRequest,
 } from './macro-mutation-requests';
 import {
   fetchMacro,
@@ -64,6 +66,31 @@ export function useActivateMacroVersion() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['macro-versions', vars.macroId] });
       queryClient.invalidateQueries({ queryKey: ['macros'] });
+    },
+  });
+}
+
+export function useArchiveMacroVersion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: archiveMacroVersionRequest,
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['macro-versions', vars.macroId] });
+      queryClient.invalidateQueries({ queryKey: ['macros'] });
+    },
+  });
+}
+
+export function useDeleteMacro() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteMacroRequest,
+    onSuccess: (_, macroId) => {
+      queryClient.invalidateQueries({ queryKey: ['macros'] });
+      queryClient.invalidateQueries({ queryKey: ['macros', macroId] });
+      queryClient.invalidateQueries({ queryKey: ['macro-versions', macroId] });
     },
   });
 }

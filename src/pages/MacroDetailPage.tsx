@@ -10,10 +10,10 @@ import { MacroDetailStepsPanel } from '../components/macros/MacroDetailStepsPane
 import { MacroDetailVersionsPanel } from '../components/macros/MacroDetailVersionsPanel';
 import RoleAccessNotice from '../components/ui/RoleAccessNotice';
 import Spinner from '../components/ui/Spinner';
-import { useActivateMacroVersion, useCreateMacroVersion, useMacro, useMacroVersions } from '../hooks/useMacros';
+import { useActivateMacroVersion, useArchiveMacroVersion, useCreateMacroVersion, useDeleteMacro, useMacro, useMacroVersions } from '../hooks/useMacros';
 import { type MacroDefinition } from '../contracts/macro';
 import { createEmptyMacroDefinition } from '../lib/macro-builder';
-import { canManageMacros, getRoleLabel } from '../lib/role-access';
+import { canDeleteAdminResources, canManageMacros, getRoleLabel } from '../lib/role-access';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 
@@ -23,12 +23,15 @@ export default function MacroDetailPage() {
   const { data: macro, isLoading: macroLoading } = useMacro(id ?? '');
   const { data: versions, isLoading: versionsLoading } = useMacroVersions(id ?? '');
   const activateVersion = useActivateMacroVersion();
+  const archiveVersion = useArchiveMacroVersion();
   const createVersion = useCreateMacroVersion();
+  const deleteMacro = useDeleteMacro();
   const profile = useAuthStore((s) => s.profile);
   const addToast = useUIStore((s) => s.addToast);
   const [showCreate, setShowCreate] = useState(false);
-  const [viewJson, setViewJson] = useState<Record<string, unknown> | null>(null);
+  const [viewJson, setViewJson] = useState<MacroDefinition | null>(null);
   const canEditMacros = canManageMacros(profile?.role);
+  const canDeleteMacro = canDeleteAdminResources(profile?.role);
 
   if (macroLoading) {
     return <div className="flex items-center justify-center flex-1"><Spinner size="lg" /></div>;
@@ -51,6 +54,36 @@ export default function MacroDetailPage() {
     }
   };
 
+  const handleArchive = async (versionId: string) => {
+    if (!canEditMacros) {
+      addToast('Only operators and admins can archive macro versions', 'error');
+      return;
+    }
+    try {
+      await archiveVersion.mutateAsync({ versionId, macroId: macro.id });
+      addToast('Version archived', 'success');
+    } catch {
+      addToast('Failed to archive version', 'error');
+    }
+  };
+
+  const handleDeleteMacro = async () => {
+    if (!canDeleteMacro) {
+      addToast('Only admins can delete macros', 'error');
+      return;
+    }
+
+    if (!confirm(`Delete macro "${macro.name}"?`)) return;
+
+    try {
+      await deleteMacro.mutateAsync(macro.id);
+      addToast('Macro deleted', 'success');
+      navigate('/macros');
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : 'Failed to delete macro', 'error', 5000);
+    }
+  };
+
   const activeVersion = versions?.find((version) => version.status === 'ACTIVE');
   const activeDefinition = activeVersion?.definition_json as unknown as MacroDefinition | undefined;
   const activeTags = ((activeVersion?.tags_json as string[]) ?? []);
@@ -58,10 +91,13 @@ export default function MacroDetailPage() {
   return (
     <>
       <MacroDetailHeader
+        canDeleteMacro={canDeleteMacro}
         canEditMacros={canEditMacros}
+        deletePending={deleteMacro.isPending}
         macroKey={macro.key}
         macroName={macro.name}
         onBack={() => navigate('/macros')}
+        onDelete={() => void handleDeleteMacro()}
         onNewVersion={() => {
           if (!canEditMacros) return;
           setShowCreate(true);
@@ -82,10 +118,12 @@ export default function MacroDetailPage() {
           {activeDefinition?.steps && <MacroDetailStepsPanel steps={activeDefinition.steps} />}
           <MacroDetailVersionsPanel
             activatePending={activateVersion.isPending}
+            archivePending={archiveVersion.isPending}
             canEditMacros={canEditMacros}
             versions={versions}
             versionsLoading={versionsLoading}
             onActivate={handleActivate}
+            onArchive={handleArchive}
             onViewJson={setViewJson}
           />
         </div>

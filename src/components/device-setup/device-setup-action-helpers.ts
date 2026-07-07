@@ -4,6 +4,7 @@ import type { UserRole } from '../../lib/database.types';
 import type { DeviceSetupDeviceRow } from './device-setup-derived-state';
 import type { DeviceSetupTab } from './device-setup-shell';
 import {
+  deleteDeviceLockById,
   deleteExpiredDeviceLocks,
   runDeviceSetupProbe,
 } from './device-setup-verification-runtime';
@@ -132,6 +133,48 @@ export async function cleanupExpiredLocksFlow(args: {
     addToast(error instanceof Error ? error.message : 'Failed to clean expired locks', 'error', 5000);
   } finally {
     setCleanupExpiredLocksLoading(false);
+    void queryClient.invalidateQueries({ queryKey: ['device-locks'] });
+    void runVerification();
+  }
+}
+
+export async function forceClearDeviceLockFlow(args: {
+  addToast: (message: string, tone: 'success' | 'error' | 'info', durationMs?: number) => void;
+  canForceClearLocks: boolean;
+  lockId: string;
+  profileRole: UserRole | undefined;
+  queryClient: QueryClient;
+  runVerification: () => Promise<void>;
+  setForceClearLockId: (lockId: string | null) => void;
+}) {
+  const {
+    addToast,
+    canForceClearLocks,
+    lockId,
+    profileRole,
+    queryClient,
+    runVerification,
+    setForceClearLockId,
+  } = args;
+
+  if (!profileRole) {
+    addToast('You must be logged in to clear device locks', 'error');
+    return;
+  }
+
+  if (!canForceClearLocks) {
+    addToast('Only admins can force clear active device locks', 'error');
+    return;
+  }
+
+  setForceClearLockId(lockId);
+  try {
+    await deleteDeviceLockById(lockId);
+    addToast('Device lock cleared', 'success');
+  } catch (error) {
+    addToast(error instanceof Error ? error.message : 'Failed to clear device lock', 'error', 5000);
+  } finally {
+    setForceClearLockId(null);
     void queryClient.invalidateQueries({ queryKey: ['device-locks'] });
     void runVerification();
   }

@@ -117,6 +117,7 @@ VITE_SUPABASE_ANON_KEY=<your-anon-or-publishable-key>
 VITE_GATEWAY_BASE_URL=http://127.0.0.1:8080
 VITE_WORKER_BASE_URL=http://127.0.0.1:4310
 VITE_MOBILE_MCP_BRIDGE_URL=http://127.0.0.1:4321
+VITE_ACCOUNT_PASSWORD_KEY=<32-plus-character-pilot-encryption-key>
 VITE_RUN_CONTROL_MODE=auto
 ```
 
@@ -128,6 +129,9 @@ SUPABASE_SERVICE_ROLE_KEY=<your-service-role-or-secret-key>
 GATEWAY_BASE_URL=http://127.0.0.1:8080
 DEVICE_BACKEND=laixi
 MOBILE_MCP_BRIDGE_URL=http://127.0.0.1:4321
+MOBILE_MCP_BRIDGE_TOKEN=<shared-bridge-token>
+MOBILE_MCP_ALLOW_INSECURE_DEV=false
+MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=false
 DEVICE_COMMAND_TIMEOUT_MS=15000
 GATEWAY_PORT=8080
 WORKER_PORT=4310
@@ -135,7 +139,10 @@ WORKER_PORT=4310
 
 Notes:
 - Frontend should only use the low-privilege anon or publishable key.
+- `VITE_ACCOUNT_PASSWORD_KEY` is a pilot-only browser encryption key for account password storage. Use 32+ random characters; move credential encryption server-side before storing production social account credentials at scale.
 - Gateway, worker, and the `execute-run` Edge Function require the elevated backend key.
+- The Mobile MCP bridge requires `MOBILE_MCP_BRIDGE_TOKEN` for protected endpoints. For isolated local development only, set `MOBILE_MCP_ALLOW_INSECURE_DEV=true` to run without a token.
+- Android bridge sessions are ADB-first by default. Set `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=true` only when Portal-dependent actions are required and the device allows USB app installs.
 - Newer Supabase projects may expose an `sb_secret_...` key instead of relying on the legacy `service_role` JWT key. This repo still uses the env name `SUPABASE_SERVICE_ROLE_KEY` for that backend credential.
 - On Windows, run `npm run env:mobile-mcp:user` to store backend and UI-smoke secrets in the Windows User environment instead of repo files. The helper also sets the current helper process env; already-open external terminals still need restart.
 - Set `DEVICE_BACKEND=mobile-mcp` to execute Android steps through Mobile MCP. In this mode, `devices.laixi_device_id` is treated as the Android ADB serial.
@@ -149,7 +156,7 @@ Migrations are applied automatically through Supabase. The schema includes:
 1. **Foundation tables** -- profiles, devices, device groups, execution profiles
 2. **Workflow tables** -- macros, macro versions, workflow runs, run steps
 3. **Support tables** -- artifacts, approvals, audit logs, device locks
-4. **Seed data** -- 4 demo devices, 2 device groups, execution profiles, and a `seed_demo_macros()` function
+4. **Seed data** -- 4 sample devices, 2 device groups, execution profiles, and a compatibility `seed_demo_macros()` function
 
 ### 4. Start development
 
@@ -160,41 +167,12 @@ npm run dev
 ### 5. First login
 
 1. Register a new account on the login page
-2. Navigate to **Macros** and click **Load Samples** to seed the 3 demo macros
+2. Navigate to **Macros** and click **Load Samples** to seed the sample macros
 3. The seeded devices and groups will appear on the **Devices** and **Device Groups** pages
 
-## End-to-End Demo: `launch_app_and_capture`
+## Mobile MCP Local Runtime
 
-Navigate to the **E2E Demo** page in the sidebar. This provides an interactive walkthrough of the `launch_app_and_capture` workflow.
-
-### What the macro does
-
-1. **launch_app** -- Sends an `OpenApp` command to Laixi to launch the specified package
-2. **wait** -- Pauses for 3 seconds to let the app initialize
-3. **screenshot** -- Captures the device screen and stores it as an artifact
-4. **get_current_app** -- Queries the device for the currently running app package and activity
-
-### Running the demo
-
-**Simulated mode** (no Laixi required):
-1. Go to the **E2E Demo** page
-2. Keep mode set to "Simulated"
-3. Enter an app package name (default: `com.android.settings`)
-4. Click **Execute Run**
-5. Watch each step execute with realistic timing and output
-
-**Live mode** (requires Laixi + device):
-1. Ensure Laixi is running at `ws://127.0.0.1:22221/` with at least one connected device
-2. Go to the **E2E Demo** page
-3. Switch mode to "Live (Laixi)"
-4. Select a target device
-5. Click **Execute Run**
-6. The workflow creates a real `workflow_run` record and dispatches it to the backend control plane
-7. A running worker can now claim and execute `SINGLE_DEVICE`, `MULTI_DEVICE`, `DEVICE_GROUP`, and `ALL_DEVICES` runs from the backend
-8. Approval waits now persist in the backend and resume after approval through the worker claim loop
-9. Live device steps are now dispatched to the gateway, which owns device websocket sessions and returns `step_result` payloads back to the worker
-
-**Mobile MCP mode** (requires Android devices visible to `adb devices`):
+Requires Android devices visible to `adb devices`:
 1. Run `npm run setup:mobile-mcp:local` once to install the Mobile MCP bridge dependencies and configure Windows User env values
 2. Export `SUPABASE_SERVICE_ROLE_KEY` in the current shell or provide it when `setup:mobile-mcp:local` prompts; do not commit it to `.env`
 3. Open a new terminal, then run `npm run runtime:mobile-mcp` to start the Mobile MCP bridge, execution worker, Vite UI, and startup ADB device sync with Mobile MCP defaults
@@ -242,8 +220,6 @@ set UI_SMOKE_EMAIL=<operator-email>
 set UI_SMOKE_PASSWORD=<operator-password>
 npm run smoke:mobile-mcp:ui
 
-npm run record:social-macro -- --dry-run --app-package com.brave.browser --output-dir plans/social-macro-recordings/brave-draft
-
 npm run doctor:adb
 ```
 
@@ -255,7 +231,6 @@ npm run doctor:adb
 - Run control defaults to `auto`: it first calls the `execute-run` Edge Function, then falls back to the same shared queue/cancel control logic through authenticated Supabase RLS when the function is unavailable. Use `VITE_RUN_CONTROL_MODE=browser` to skip the Edge Function in local/new projects and avoid noisy CORS/function-missing console errors.
 - Mobile MCP mode supports Android `launch_app`, `input_text`, `tap`, `swipe`, `screenshot`, `get_current_app`, `adb`, and worker-local `wait`
 - Mobile MCP mode does not execute `run_autox` steps in V1; approval flow remains in the worker before backend dispatch
-- Social automation should use the Social Macro DSL as source of truth: Mobile MCP trains/debugs the flow, the platform compiles it to existing macro steps, and `exportSocialMacroToAutoJs()` emits a review-gated AutoJS runtime script
 - The **MCP Orchestrator** page can control multiple Android serials from one bridge: refresh fleet, select serials, launch an app, query foreground app, and collect screenshot grids
 - Approval checkpoints and approval-required steps now release ownership at `WAITING_APPROVAL` and resume from persisted `run_steps` after approval
 - Multi-target execution currently shares one worker claim and runs devices sequentially inside that claim
@@ -279,8 +254,6 @@ npm run doctor:adb
 - `npm run setup:mobile-mcp:local` installs Mobile MCP bridge dependencies and stores required local secret/config values in Windows User env through hidden prompts; pass `-- -EnsureOperatorAfter` to create/fix the UI smoke operator, `-- -SyncDevicesAfter` to sync DB devices in the same setup process, `-- -QuickVerifyAfter` for non-browser verification, or `-- -VerifyAfter` for full browser verification when runtime services are already healthy
 - `npm run runtime:mobile-mcp` is the local one-command runtime starter; it checks ADB, starts missing local services, waits for `MOBILE_MCP_EXPECTED_SERIALS` unless `-- --skip-device-wait` or `MOBILE_MCP_SKIP_DEVICE_WAIT=true` is set, supports `-- --recover-adb --doctor-on-fail` during that wait, runs startup ADB device sync, writes logs to `plans/reports/mobile-mcp-runtime/`, and requires `SUPABASE_SERVICE_ROLE_KEY` from the shell only when starting a new worker
 - `npm run doctor:adb` reports ADB transports plus Windows USB/PnP visibility and restarts the ADB server when no online transport is available
-- `npm run smoke:social-macro` verifies the Social Macro DSL compiles to platform macro JSON and review-gated AutoJS
-- `npm run record:social-macro -- --app-package <package> --serial <adb-serial>` records a Mobile MCP-assisted draft flow and writes Social DSL, platform macro JSON, AutoJS, and a recording report; publish taps stay blocked unless `--allow-publish` is explicitly passed
 - Screenshot and text-log artifacts are now persisted in artifact rows with inline metadata previews for the run-detail UI
 - A repeatable backend smoke suite now covers start, cancel, and approval-resume flows without browser-owned state
 - The gateway now owns device websocket sessions, heartbeat tracking, per-step dispatch outcomes, and device-health persistence (`last_seen_at`, `heartbeat_freshness`, `last_error_*`) when service-role env is configured
@@ -308,7 +281,7 @@ Current coverage:
   "meta": {
     "key": "launch_app_and_capture",
     "name": "Launch App And Capture",
-    "tags": ["demo", "capture"]
+    "tags": ["sample", "capture"]
   },
   "inputs": {
     "appName": {
@@ -355,6 +328,7 @@ Pass Supabase credentials as build args:
 docker build \
   --build-arg VITE_SUPABASE_URL=https://your-project.supabase.co \
   --build-arg VITE_SUPABASE_ANON_KEY=your-anon-key \
+  --build-arg VITE_ACCOUNT_PASSWORD_KEY=your-32-plus-character-pilot-key \
   -t laixi-orchestrator .
 ```
 
@@ -396,7 +370,6 @@ docker build \
 - For local browser access, gateway and worker now expose permissive CORS headers on their health endpoints, and the gateway also allows browser-origin `POST /dispatch-step` setup probes.
 | Approvals     | `/approvals`    | Pending/resolved approval requests            |
 | Audit Logs    | `/audit-logs`   | Searchable, filterable event log              |
-| E2E Demo      | `/demo`         | Interactive launch_app_and_capture walkthrough |
 
 ## Security
 

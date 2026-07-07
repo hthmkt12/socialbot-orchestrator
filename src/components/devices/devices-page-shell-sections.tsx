@@ -2,22 +2,24 @@ import { RefreshCw } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 
 interface DeviceSyncActionProps {
+  canSync: boolean;
   pending: boolean;
   onSync: () => void;
 }
 
 export function DevicesPageSyncAction({
+  canSync,
   pending,
   onSync,
 }: DeviceSyncActionProps) {
   return (
     <button
       onClick={onSync}
-      disabled={pending}
-      className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+      disabled={pending || !canSync}
+      className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
     >
       {pending ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
-      Sync from Laixi
+      Sync Devices
     </button>
   );
 }

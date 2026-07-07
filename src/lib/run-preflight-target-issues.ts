@@ -33,6 +33,45 @@ export function buildTargetPreflightIssues(
     issues.push(...validateInputField(inputKey, field, args.inputValues));
   }
 
+  if (args.requiresAccount && !args.selectedAccount) {
+    issues.push({
+      id: 'account-required',
+      severity: 'blocking',
+      title: 'Social account is required',
+      detail: 'Choose an active social account before dispatching this engagement workflow.',
+    });
+  }
+
+  if (args.selectedAccount) {
+    const account = args.selectedAccount;
+    if (account.is_blocked) {
+      issues.push({
+        id: 'selected-account-blocked',
+        severity: 'blocking',
+        title: 'Selected account is blocked',
+        detail: `${account.username} is blocked and cannot be used for new social engagement runs.`,
+      });
+    }
+
+    if (account.warm_up_stage <= 1) {
+      issues.push({
+        id: 'selected-account-warmup-not-started',
+        severity: 'blocking',
+        title: 'Selected account is not warmed up',
+        detail: `${account.username} is still in stage ${account.warm_up_stage}. Start warm-up before dispatching engagement actions.`,
+      });
+    }
+
+    if (account.current_action_count >= account.daily_action_limit) {
+      issues.push({
+        id: 'selected-account-daily-limit-exhausted',
+        severity: 'blocking',
+        title: 'Selected account reached its daily action limit',
+        detail: `${account.username} has used ${account.current_action_count}/${account.daily_action_limit} actions today.`,
+      });
+    }
+  }
+
   if (args.targetType === 'SINGLE_DEVICE' && args.selectedDeviceIds.length !== 1) {
     issues.push({
       id: 'single-device-selection',

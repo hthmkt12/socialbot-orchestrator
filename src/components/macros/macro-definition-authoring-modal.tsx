@@ -1,5 +1,4 @@
 import type { MacroDefinition } from '../../contracts/macro';
-import AiMacroPromptBox from './ai-macro-prompt-box';
 import MacroDefinitionBuilderPanel from './macro-definition-builder-panel';
 import {
   MacroDefinitionAuthoringActions,
@@ -36,7 +35,6 @@ export default function MacroDefinitionAuthoringModal({
     builderDefinition,
     currentCompatibility,
     errors,
-    handleAiGenerated,
     handleJsonChange,
     handleModeChange,
     handleSubmit,
@@ -62,11 +60,6 @@ export default function MacroDefinitionAuthoringModal({
           onApply={(template) => {
             handleTemplateApply(template.definition, template.key);
           }}
-        />
-
-        <AiMacroPromptBox
-          existingMacro={builderDefinition}
-          onGenerated={handleAiGenerated}
         />
 
         <MacroDefinitionAuthoringModeToggle mode={mode} onChange={handleModeChange} />

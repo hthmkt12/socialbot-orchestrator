@@ -1,6 +1,6 @@
-import { MobileMcpStepBackend, getDeviceSerial } from './mobile-mcp-step-backend';
-import type { StepExecutionResult } from './execute-device-step';
-import type { DeviceStepExecutionArgs } from './device-step-backend';
+import { MobileMcpStepBackend, getDeviceSerial } from './mobile-mcp-step-backend.js';
+import type { StepExecutionResult } from './execute-device-step.js';
+import type { DeviceStepExecutionArgs } from './device-step-backend.js';
 
 const AI_TASK_TIMEOUT_MS = 300_000; // 5 min default for LLM-driven tasks
 

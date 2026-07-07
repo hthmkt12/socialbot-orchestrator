@@ -1,23 +1,40 @@
 /**
  * Client-side AES-GCM encryption for social account passwords.
  *
- * Uses Web Crypto API with a static application-level key. Passwords are
- * encrypted before leaving the browser so they're never stored as plaintext
- * in the database.
- *
- * The encryption key is derived from a static passphrase using PBKDF2.
- * For production, replace ENCRYPTION_PASSPHRASE with a per-user secret
- * or an environment-injected key.
+ * Uses Web Crypto API with an environment-provided pilot key. Passwords are
+ * encrypted before leaving the browser so they're never stored as plaintext in
+ * the database. For production use, move this boundary server-side so the
+ * encryption key is never shipped to the browser.
  */
 
-const ENCRYPTION_PASSPHRASE = 'socialbot-account-key-v1';
+const ENCRYPTED_PASSWORD_PREFIX = 'v2';
 const PBKDF2_ITERATIONS = 100_000;
-const SALT = new TextEncoder().encode('socialbot-salt-v1');
+const SALT = new TextEncoder().encode('socialbot-account-password-salt-v2');
+
+export class AccountPasswordCryptoError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AccountPasswordCryptoError';
+  }
+}
+
+function getEncryptionPassphrase(): string {
+  const passphrase = import.meta.env.VITE_ACCOUNT_PASSWORD_KEY?.trim();
+  if (!passphrase) {
+    throw new AccountPasswordCryptoError(
+      'Account password encryption key is not configured. Set VITE_ACCOUNT_PASSWORD_KEY before saving social account credentials.'
+    );
+  }
+  if (passphrase.length < 32) {
+    throw new AccountPasswordCryptoError('VITE_ACCOUNT_PASSWORD_KEY must be at least 32 characters long.');
+  }
+  return passphrase;
+}
 
 async function deriveKey(): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(ENCRYPTION_PASSPHRASE),
+    new TextEncoder().encode(getEncryptionPassphrase()),
     'PBKDF2',
     false,
     ['deriveKey'],
@@ -40,7 +57,7 @@ function fromBase64(b64: string): Uint8Array {
   return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
-/** Encrypt a plaintext password. Returns `iv:ciphertext` in base64. */
+/** Encrypt a plaintext password. Returns `v2:iv:ciphertext` in base64. */
 export async function encryptPassword(plaintext: string): Promise<string> {
   const key = await deriveKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -50,13 +67,15 @@ export async function encryptPassword(plaintext: string): Promise<string> {
     new TextEncoder().encode(plaintext),
   );
 
-  return `${toBase64(iv)}:${toBase64(ciphertext)}`;
+  return `${ENCRYPTED_PASSWORD_PREFIX}:${toBase64(iv)}:${toBase64(ciphertext)}`;
 }
 
 /** Decrypt a previously encrypted password. */
 export async function decryptPassword(encrypted: string): Promise<string> {
-  const [ivB64, ctB64] = encrypted.split(':');
-  if (!ivB64 || !ctB64) throw new Error('Invalid encrypted password format');
+  const [version, ivB64, ctB64] = encrypted.split(':');
+  if (version !== ENCRYPTED_PASSWORD_PREFIX || !ivB64 || !ctB64) {
+    throw new AccountPasswordCryptoError('Unsupported encrypted password format. Re-save the account credential with the current encryption key.');
+  }
 
   const key = await deriveKey();
   const decrypted = await crypto.subtle.decrypt(

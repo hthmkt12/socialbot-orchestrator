@@ -22,11 +22,12 @@ function loadDotEnv(path) {
   );
 }
 
-const env = { ...loadDotEnv(join(rootDir, '.env')), ...process.env };
+const dotEnv = loadDotEnv(join(rootDir, '.env'));
+const env = { ...dotEnv, ...process.env };
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const uiUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
-const expectedSerials = parseCsv(env.MOBILE_MCP_EXPECTED_SERIALS);
+const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
 
 function parseCsv(value) {
   if (!value) return [];

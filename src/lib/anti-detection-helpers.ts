@@ -70,8 +70,14 @@ export const DEFAULT_ANTI_DETECTION: AntiDetectionConfig = {
  * Applies anti-detection config to step params.
  * Returns modified params with randomized delay and jittered coordinates.
  */
+export type AntiDetectionStepParams = Record<string, unknown> & {
+  x?: number;
+  y?: number;
+  ms?: number;
+};
+
 export function applyAntiDetection(
-  params: { x?: number; y?: number; ms?: number; [key: string]: any },
+  params: AntiDetectionStepParams,
   config: AntiDetectionConfig = DEFAULT_ANTI_DETECTION,
 ) {
   const result = { ...params };
