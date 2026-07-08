@@ -53,23 +53,27 @@ type EvidenceForm = {
   iosPortalProof: string;
 };
 
-const initialEvidence: EvidenceForm = {
-  pilot_level: 'level_1',
-  backend_mode: 'mobile_mcp',
-  runtimeStatus: '',
-  worker_health: '',
-  reportStatus: '',
-  deviceSerial: '',
-  sessionId: '',
-  runId: '',
-  smokeResult: '',
-  artifact_refs: '',
-  secret_scrub_status: '',
-  verified_at: '',
-  claim_summary: '',
-  laixiLiveSessionProof: '',
-  iosPortalProof: '',
-};
+function createInitialEvidence(backend: PilotReadinessBackend): EvidenceForm {
+  return {
+    pilot_level: 'level_1',
+    backend_mode: backend,
+    runtimeStatus: '',
+    worker_health: '',
+    reportStatus: '',
+    deviceSerial: '',
+    sessionId: '',
+    runId: '',
+    smokeResult: '',
+    artifact_refs: '',
+    secret_scrub_status: 'passed',
+    verified_at: new Date().toISOString(),
+    claim_summary: '',
+    laixiLiveSessionProof: '',
+    iosPortalProof: '',
+  };
+}
+
+const evidenceFieldKeys = Object.keys(createInitialEvidence('mobile_mcp')) as Array<keyof EvidenceForm>;
 
 function compactEvidence(evidence: EvidenceForm) {
   const compacted = Object.fromEntries(
@@ -124,7 +128,7 @@ export default function ReadinessReportsPage() {
   const reviewReport = useReviewReadinessReport();
   const [backend, setBackend] = useState<PilotReadinessBackend>('mobile_mcp');
   const [reportPath, setReportPath] = useState('');
-  const [evidence, setEvidence] = useState<EvidenceForm>(initialEvidence);
+  const [evidence, setEvidence] = useState<EvidenceForm>(() => createInitialEvidence('mobile_mcp'));
   const canCreate = canCreateReadinessReports(profile?.role);
   const canReview = canReviewReadinessReports(profile?.role);
 
@@ -144,7 +148,7 @@ export default function ReadinessReportsPage() {
         }),
       });
       setReportPath('');
-      setEvidence({ ...initialEvidence, backend_mode: backend });
+      setEvidence(createInitialEvidence(backend));
       addToast('Readiness report submitted', 'success');
     } catch (error) {
       addToast(error instanceof Error ? error.message : 'Failed to submit readiness report', 'error', 5000);
@@ -231,11 +235,11 @@ export default function ReadinessReportsPage() {
               </label>
 
               <div className="grid grid-cols-1 gap-3">
-                {Object.keys(initialEvidence).map((key) => (
+                {evidenceFieldKeys.map((key) => (
                   <label key={key} className="block text-sm font-medium text-gray-700">
                     {key}
                     <input
-                      value={evidence[key as keyof EvidenceForm]}
+                      value={evidence[key]}
                       onChange={(event) => setEvidence((current) => ({
                         ...current,
                         [key]: event.target.value,
