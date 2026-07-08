@@ -260,6 +260,25 @@ describe('readiness report service', () => {
     expect(getReadinessEvidenceFreshness({}, now)).toMatchObject({ status: 'missing' });
   });
 
+  it('accepts readiness timestamp aliases from verification scripts', () => {
+    const now = new Date('2026-07-08T00:00:00.000Z');
+
+    expect(getReadinessEvidenceFreshness({
+      checkedAt: '2026-07-07T00:00:00.000Z',
+    }, now)).toMatchObject({
+      status: 'fresh',
+      timestamp: '2026-07-07T00:00:00.000Z',
+    });
+    expect(validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({
+        verified_at: undefined,
+        finished_at: '2026-07-07T00:00:00.000Z',
+      }),
+    })).toMatchObject({ valid: true });
+  });
+
   it('allows operators to create submitted reports and writes an audit event', async () => {
     const reportTable = createReportTable();
     mockFrom.mockImplementation((table: string) => {
