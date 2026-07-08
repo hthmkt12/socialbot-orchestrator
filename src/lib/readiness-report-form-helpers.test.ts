@@ -3,6 +3,7 @@ import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
   getReadinessEvidenceFieldKeysForBackend,
+  getReadinessVerifyBlockerMessage,
   readinessEvidenceFieldMeta,
   readinessEvidenceFieldKeys,
 } from './readiness-report-form-helpers';
@@ -63,6 +64,24 @@ describe('readiness report form helpers', () => {
     expect(getReadinessEvidenceFieldKeysForBackend('ios_portal')).not.toEqual(expect.arrayContaining([
       'laixiLiveSessionProof',
     ]));
+  });
+
+  it('explains why readiness verification is blocked', () => {
+    expect(getReadinessVerifyBlockerMessage([], false)).toBe('Only admins can verify readiness reports');
+    expect(getReadinessVerifyBlockerMessage([{
+      key: 'verification.run_id',
+      type: 'verification_blocker',
+      status: 'failed',
+      message: 'Run id evidence is required',
+      recoveryHint: 'Attach run id evidence.',
+    }], true)).toBe('Resolve blocker: Run id evidence is required');
+    expect(getReadinessVerifyBlockerMessage([{
+      key: 'warning.analytics_insufficient_data',
+      type: 'warning',
+      status: 'failed',
+      message: 'Analytics evidence is not production-grade yet',
+      recoveryHint: 'Collect live analytics evidence.',
+    }], true)).toBeNull();
   });
 
   it('compacts evidence and converts comma-separated fields into arrays', () => {

@@ -1,4 +1,5 @@
 import type { PilotReadinessBackend } from './database.types';
+import { getBlockingGates, type ReadinessGateResult } from './readiness-gates';
 
 export type ReadinessEvidenceForm = {
   pilot_level: string;
@@ -69,6 +70,12 @@ export function getReadinessEvidenceFieldKeysForBackend(backend: PilotReadinessB
     if (key === 'iosPortalProof') return backend === 'ios_portal';
     return true;
   });
+}
+
+export function getReadinessVerifyBlockerMessage(gates: ReadinessGateResult[], canReview: boolean) {
+  if (!canReview) return 'Only admins can verify readiness reports';
+  const blockingGate = getBlockingGates(gates)[0];
+  return blockingGate ? `Resolve blocker: ${blockingGate.message}` : null;
 }
 
 export function compactReadinessEvidence(evidence: ReadinessEvidenceForm) {
