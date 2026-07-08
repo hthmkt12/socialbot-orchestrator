@@ -226,6 +226,8 @@ export default function ReadinessReportsPage() {
               ) : reports && reports.length > 0 ? (
                 reports.map((report) => {
                   const freshness = getReadinessEvidenceFreshness(report.evidence_json);
+                  const gates = getReadinessReportGates(report);
+                  const hasBlockingReadinessGate = gates.some((gate) => gate.type !== 'warning' && gate.status === 'failed');
                   return (
                   <div key={report.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -261,7 +263,7 @@ export default function ReadinessReportsPage() {
                     <div className="space-y-2">
                       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Readiness gates</p>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                        {getReadinessReportGates(report).map((gate) => (
+                        {gates.map((gate) => (
                           <div key={gate.key} className={`rounded-lg border px-3 py-2 ${gateStyle(gate.status, gate.type)}`}>
                             <div className="flex items-start gap-2">
                               {gate.status === 'passed' ? (
@@ -286,7 +288,7 @@ export default function ReadinessReportsPage() {
                       <button
                         type="button"
                         onClick={() => handleReview(report, 'pilot_verified')}
-                        disabled={!canReview || reviewReport.isPending}
+                        disabled={!canReview || reviewReport.isPending || hasBlockingReadinessGate}
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
                         <CheckCircle2 className="w-4 h-4" />
