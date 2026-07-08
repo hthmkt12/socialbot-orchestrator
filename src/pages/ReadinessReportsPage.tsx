@@ -227,7 +227,12 @@ export default function ReadinessReportsPage() {
                 reports.map((report) => {
                   const freshness = getReadinessEvidenceFreshness(report.evidence_json);
                   const gates = getReadinessReportGates(report);
-                  const hasBlockingReadinessGate = gates.some((gate) => gate.type !== 'warning' && gate.status === 'failed');
+                  const blockingReadinessGate = gates.find((gate) => gate.type !== 'warning' && gate.status === 'failed');
+                  const verifyDisabledReason = !canReview
+                    ? 'Only admins can verify readiness reports'
+                    : blockingReadinessGate
+                      ? `Resolve blocker: ${blockingReadinessGate.message}`
+                      : undefined;
                   return (
                   <div key={report.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -288,7 +293,9 @@ export default function ReadinessReportsPage() {
                       <button
                         type="button"
                         onClick={() => handleReview(report, 'pilot_verified')}
-                        disabled={!canReview || reviewReport.isPending || hasBlockingReadinessGate}
+                        disabled={!canReview || reviewReport.isPending || Boolean(blockingReadinessGate)}
+                        title={verifyDisabledReason}
+                        aria-label={verifyDisabledReason ?? 'Verify readiness report'}
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
                         <CheckCircle2 className="w-4 h-4" />
@@ -312,6 +319,11 @@ export default function ReadinessReportsPage() {
                         <CircleSlash className="w-4 h-4" />
                         Not verified
                       </button>
+                      {blockingReadinessGate && (
+                        <p className="w-full text-xs text-red-600">
+                          Verify blocked: {blockingReadinessGate.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                   );
