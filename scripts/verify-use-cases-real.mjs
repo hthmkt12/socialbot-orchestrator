@@ -69,6 +69,7 @@ function buildLevel1Evidence(evidence) {
     run_status: evidence.latestRunStatus,
     artifact_refs: evidence.artifactRefs ?? [],
     secret_scrub_status: containsSensitiveKey(evidence) ? 'blocked' : 'passed',
+    verified_at: report.checkedAt,
     claim_summary: 'Level 1 Mobile MCP Android readiness evidence snapshot from real use-case verifier.',
   };
 }
@@ -534,6 +535,7 @@ async function main() {
         reportStatus: 'temporary',
         runId: runPrefix,
         smokeResult: 'not-a-claim',
+        verified_at: report.checkedAt,
       },
     };
     const { data: inserted, error: insertError } = await serviceClient

@@ -58,7 +58,7 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Spec Kit feature `003-artifact-storage-thresholds` is completed and merged.
 - **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). Full `npm.cmd run verify:mobile-mcp` passed on 2026-07-08 with browser UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561`.
 - **First social pilot readiness**: Instagram open/capture proof run `a414e519-c1ac-44df-b287-e91e845f0084` completed with screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`; readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` is `pilot_verified`.
-- `scripts/verify-mobile-mcp-local.mjs` writes a `readinessEvidence` object containing pilot level, backend mode, bridge/worker/Supabase health, serials, run id/status, artifact refs, scrub status, and claim summary.
+- `scripts/verify-mobile-mcp-local.mjs` writes a `readinessEvidence` object containing pilot level, backend mode, bridge/worker/Supabase health, serials, run id/status, artifact refs, scrub status, `verified_at`, and claim summary.
 - Foreach loop execution integration in backend worker (`handleForeachLoop` in `single-device-step-runner.ts`) along with a critical bug fix resolving loop step repetition/skipping defects across all loop types.
 - Extended unit testing suite with 100% line coverage for `anti-detection-helpers.ts` and `account-service-helpers.ts`.
 

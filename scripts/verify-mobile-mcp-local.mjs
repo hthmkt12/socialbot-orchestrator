@@ -183,6 +183,7 @@ report.readinessEvidence = {
   run_status: uiEvidence?.status ?? (skipUi ? 'not_run_quick_verify' : null),
   artifact_refs: uiEvidence?.evidencePath ? [uiEvidence.evidencePath] : [],
   secret_scrub_status: 'passed',
+  verified_at: report.finishedAt,
   claim_summary: skipUi
     ? 'Level 1 quick Mobile MCP readiness check; UI smoke skipped.'
     : 'Level 1 Mobile MCP Android readiness proof with UI smoke evidence.',
