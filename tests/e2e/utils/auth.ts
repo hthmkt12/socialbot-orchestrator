@@ -100,7 +100,7 @@ export async function loginAsTestUser(page: Page, options: TestUserOptions = {})
   });
 
   // Navigate to app
-  await page.goto('/');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
 
   // Wait for React to mount and show either Dashboard or Login
   try {
