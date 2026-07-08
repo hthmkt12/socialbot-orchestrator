@@ -21,7 +21,8 @@ Scope: all use cases in `docs/use-cases.md`, including the new pilot readiness r
 | Viewer read-only access | ENFORCED | `canCreateReadinessReports('VIEWER') === false`; `canReviewReadinessReports('VIEWER') === false`; UI disables submit/review. |
 | Operator readiness submit | DONE | `createReadinessReport` allows operator/admin, persists `submitted`, scrubs secret-like evidence keys, and writes audit. |
 | Operator cannot verify readiness | ENFORCED | `reviewReadinessReport` requires `readiness_reports.review`, granted only to admin. |
-| Admin readiness review | DONE | Admin can mark `pilot_verified`, `not_verified`, or `needs_rerun`; `pilot_verified` requires evidence. |
+| Admin readiness review | DONE | Admin can mark `pilot_verified`, `not_verified`, or `needs_rerun`; `pilot_verified` requires complete Level 1 evidence with fresh `verified_at`. |
+| Readiness evidence freshness | DONE | Service validation blocks missing, invalid, or expired readiness timestamps; `/readiness` shows freshness labels; verification scripts emit `verified_at`. |
 | Analytics source labels | DONE | `classifyAnalyticsSource` labels empty rows as `Insufficient data`, impossible rows as `Unknown source`, and sane persisted rows as `Real persisted data`. |
 | Retry/backoff policy | DONE | Execution profiles configure retry limits/delays; worker uses bounded backoff and persists retry reason, attempt, next delay, and terminal failure reason. |
 | Target failure policy | DONE | Execution profiles configure `fail_fast` or `skip_failed_target`; multi-target worker records target failure decisions and skipped count without hiding original failures. |

@@ -248,8 +248,9 @@ Legend:
 | VIEW-CAN-007 | View health/analytics screens | DM analytics/health tables; PM read; RT insight routes. |
 | VIEW-CAN-008 | See read-only role notice | PM role helpers; VH UI notice. |
 | VIEW-CAN-009 | View pilot readiness report summaries | DM `pilot_readiness_reports`; PM read; RT `/readiness`. |
-| VIEW-CAN-010 | View analytics source label | VH `classifyAnalyticsSource`; RT `/analytics`. |
-| VIEW-CAN-011 | View retry/backoff timeline read-only | DM `run_steps.output_json/error_json`; RT run detail/monitor. |
+| VIEW-CAN-010 | View readiness freshness status | DM `pilot_readiness_reports.evidence_json.verified_at`; VH `getReadinessEvidenceFreshness`; RT `/readiness`. |
+| VIEW-CAN-011 | View analytics source label | VH `classifyAnalyticsSource`; RT `/analytics`. |
+| VIEW-CAN-012 | View retry/backoff timeline read-only | DM `run_steps.output_json/error_json`; RT run detail/monitor. |
 
 ### Operator
 
@@ -277,8 +278,9 @@ Legend:
 | OP-CAN-020 | View analytics/fleet health | DM analytics/devices; RT insights. |
 | OP-CAN-021 | Submit pilot readiness report | DM `pilot_readiness_reports`; PM operator create; RT `/readiness`; VH evidence scrub. |
 | OP-CAN-022 | View go/no-go readiness evidence | DM `pilot_readiness_reports`; RT `/readiness`. |
-| OP-CAN-023 | View retry reason/attempt/delay/terminal reason | DM `run_steps`; RT run monitor/detail. |
-| OP-CAN-024 | View target failure policy and decisions | DM `workflow_runs.summary_json`; RT run summary. |
+| OP-CAN-023 | View readiness evidence freshness before review request | DM `pilot_readiness_reports.evidence_json.verified_at`; VH `getReadinessEvidenceFreshness`; RT `/readiness`. |
+| OP-CAN-024 | View retry reason/attempt/delay/terminal reason | DM `run_steps`; RT run monitor/detail. |
+| OP-CAN-025 | View target failure policy and decisions | DM `workflow_runs.summary_json`; RT run summary. |
 
 ### Admin
 
@@ -295,8 +297,9 @@ Legend:
 | AD-CAN-009 | Review verification reports | Docs/plans artifacts. |
 | AD-CAN-010 | Decide insecure dev mode | Env/config policy. |
 | AD-CAN-011 | Review pilot readiness reports in app | DM `pilot_readiness_reports`; PM admin review; RT `/readiness`; VH evidence gate. |
-| AD-CAN-012 | Configure retry/backoff policy | DM `execution_profiles`; PM admin; RT `/admin/execution-profiles`; VH retry validation. |
-| AD-CAN-013 | Configure target failure policy | DM `execution_profiles.target_failure_policy`; PM admin; RT `/admin/execution-profiles`; VH enum validation. |
+| AD-CAN-012 | Verify readiness only with fresh evidence | DM `pilot_readiness_reports.evidence_json.verified_at`; VH `verification.evidence_fresh`; RT `/readiness`. |
+| AD-CAN-013 | Configure retry/backoff policy | DM `execution_profiles`; PM admin; RT `/admin/execution-profiles`; VH retry validation. |
+| AD-CAN-014 | Configure target failure policy | DM `execution_profiles.target_failure_policy`; PM admin; RT `/admin/execution-profiles`; VH enum validation. |
 
 ### System Worker
 
@@ -394,8 +397,9 @@ Legend:
 | AD-NO-006 | Admin cannot scale artifacts infinitely in DB rows. | Artifact threshold policy. |
 | AD-NO-007 | Admin cannot treat pricing/billing as an MVP runtime route. | Route guard and product guardrail. |
 | AD-NO-008 | Admin cannot mark readiness verified with missing proof. | `validateReadinessEvidence` gate. |
-| AD-NO-009 | Admin cannot configure infinite/invalid retry. | Execution profile validation + DB constraints. |
-| AD-NO-010 | Admin cannot configure unknown target failure behavior. | Execution profile validation + DB enum check. |
+| AD-NO-009 | Admin cannot mark readiness verified with missing, invalid, or expired evidence timestamp. | `verification.evidence_fresh` gate. |
+| AD-NO-010 | Admin cannot configure infinite/invalid retry. | Execution profile validation + DB constraints. |
+| AD-NO-011 | Admin cannot configure unknown target failure behavior. | Execution profile validation + DB enum check. |
 
 ### System Worker Rules
 
@@ -481,8 +485,9 @@ Legend:
 | AD-ERR-005 | Insecure dev mode outside local. | Config risk; docs require rollback. |
 | AD-ERR-006 | Artifact payload exceeds inline policy. | Omit inline preview or move to storage path. |
 | AD-ERR-007 | Readiness verification lacks required evidence. | Reject `pilot_verified` with missing evidence list. |
-| AD-ERR-008 | Retry/backoff profile is invalid. | Reject max retry/delay/max elapsed values before save. |
-| AD-ERR-009 | Target failure policy invalid. | Reject values outside `fail_fast`/`skip_failed_target`. |
+| AD-ERR-008 | Readiness verification evidence is expired. | Reject `pilot_verified` and require rerun before review. |
+| AD-ERR-009 | Retry/backoff profile is invalid. | Reject max retry/delay/max elapsed values before save. |
+| AD-ERR-010 | Target failure policy invalid. | Reject values outside `fail_fast`/`skip_failed_target`. |
 
 ### Worker Errors
 
@@ -545,10 +550,10 @@ Legend:
 | Existing tables only for MVP | VIS/VIEW/OP/AD/WORK/BR/SCH use cases. |
 | Suggested permission helpers | Anti-use-case rules for viewer/operator/admin boundaries. |
 | Existing frontend routes | Viewer/operator/admin use cases. |
-| `/readiness` route and `pilot_readiness_reports` table | VIEW-CAN-009, OP-CAN-021..022, AD-CAN-011, VIEW/OP/AD readiness anti-use cases. |
-| Analytics source classifier | VIEW-CAN-010 and VIEW-ERR-006. |
-| Retry/backoff fields, helper, and timeline UI | VIEW-CAN-011, OP-CAN-023, AD-CAN-012, WORK-CAN-013..014, OP/AD/WORK retry anti-use cases. |
-| Target failure policy field/helper and summary UI | OP-CAN-024, AD-CAN-013, WORK-CAN-015..016, target failure anti-use/error cases. |
+| `/readiness` route and `pilot_readiness_reports` table | VIEW-CAN-009..010, OP-CAN-021..023, AD-CAN-011..012, VIEW/OP/AD readiness anti-use cases. |
+| Analytics source classifier | VIEW-CAN-011 and VIEW-ERR-006. |
+| Retry/backoff fields, helper, and timeline UI | VIEW-CAN-012, OP-CAN-024, AD-CAN-013, WORK-CAN-013..014, OP/AD/WORK retry anti-use cases. |
+| Target failure policy field/helper and summary UI | OP-CAN-025, AD-CAN-014, WORK-CAN-015..016, target failure anti-use/error cases. |
 | Mobile MCP bridge endpoints | Bridge and operator device orchestration use cases. |
 | Edge/function/browser run control | Operator run launch/cancel use cases. |
 | Artifact threshold policy | Admin no infinite DB artifacts + OOS-012. |

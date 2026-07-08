@@ -19,11 +19,11 @@ Status legend:
 | `VIS-CAN-001..004` | covered | `src/App.tsx`, `src/pages/LoginPage.tsx`, `src/stores/auth.ts`, `tests/e2e/visitor-auth.spec.ts`, `src/stores/auth.test.ts` |
 | `VIS-NO-001..004` | covered | Auth redirect, no internal routes without session, profile role managed behind app/DB boundaries |
 | `VIS-ERR-001..004` | covered | Auth store fail-closed handling and visible auth errors |
-| `VIEW-CAN-001..011` | covered | Viewer read-only pages and notices across accounts/devices/macros/runs/approvals/schedules/audit nav; readiness report list; analytics source labels; retry timeline read-only |
+| `VIEW-CAN-001..012` | covered | Viewer read-only pages and notices across accounts/devices/macros/runs/approvals/schedules/audit nav; readiness report list/freshness label; analytics source labels; retry timeline read-only |
 | `VIEW-NO-001..009` | covered | `src/lib/role-access.ts`, page action disables, readiness report submit/review disabled, `tests/e2e/viewer-readonly.spec.ts` |
 | `VIEW-ERR-001..006` | covered | Run preflight blocks, read-only notices, safe empty/error states, artifact preview fallback, analytics insufficient-data source label |
 | `OP-CAN-001..005` | covered | Account/social dashboard flows, CSV import/create affordances, account history |
-| `OP-CAN-006..024` | covered | Device, macro, run, approval, Mobile MCP, schedule, analytics, pilot readiness report submit/view, retry timeline, and target-failure summary surfaces |
+| `OP-CAN-006..025` | covered | Device, macro, run, approval, Mobile MCP, schedule, analytics, pilot readiness report submit/view/freshness label, retry timeline, and target-failure summary surfaces |
 | `OP-NO-001..012` | covered | Admin governance service, approval gates, preflight, bridge auth, Mobile MCP `run_autox` block, admin-only readiness review, execution-profile retry limits, dispatchable-target policy |
 | `OP-ERR-001..014` | covered | CSV/account validation, preflight, bridge error mapping, approval resolved handling, terminal cancel no-op, readiness evidence secret scrubbing |
 | `SCH-CAN-001..004` | covered | `src/lib/schedule-service.ts`, `services/execution-worker/src/workflow-schedule-trigger.ts` |
@@ -36,11 +36,11 @@ Status legend:
 | `AD-CAN-008` | covered | Deployment/env secret configuration is documented in `.env.example`, `README.md`, and `docs/deployment-guide.md`; secrets stay outside app runtime |
 | `AD-CAN-009` | covered | `scripts/verify-mobile-mcp-local.mjs` writes timestamped verification reports under `plans/reports/` and includes Level 1 `readinessEvidence` fields for pilot readiness review |
 | `AD-CAN-010` | covered | Bridge health exposes `authRequired`/`insecureDevMode`; `bridge_auth_status` test covers explicit local insecure-mode decisions |
-| `AD-CAN-011` | covered | `src/pages/ReadinessReportsPage.tsx`, `src/lib/readiness-report-service.ts`, and tests cover admin pilot readiness review decisions with required Level 1 evidence checklist |
-| `AD-CAN-012` | covered | Admin execution profile UI/service/migration cover retry/backoff policy configuration |
-| `AD-CAN-013` | covered | Admin execution profile UI/service/migration cover target failure policy configuration |
-| `AD-NO-001..010` | covered | Auth/RLS boundary, no plaintext credential UI, product guardrails, artifact policy, no pricing/billing runtime route, readiness verification evidence gate, no infinite retry config, valid target failure policy enum |
-| `AD-ERR-001..009` | covered | Role validation, dependency delete guard, bridge 401, artifact threshold policy, env-risk docs, readiness verification missing-evidence rejection, retry/backoff validation, target failure policy validation |
+| `AD-CAN-011..012` | covered | `src/pages/ReadinessReportsPage.tsx`, `src/lib/readiness-report-service.ts`, and tests cover admin pilot readiness review decisions with required Level 1 evidence checklist and 14-day freshness gate |
+| `AD-CAN-013` | covered | Admin execution profile UI/service/migration cover retry/backoff policy configuration |
+| `AD-CAN-014` | covered | Admin execution profile UI/service/migration cover target failure policy configuration |
+| `AD-NO-001..011` | covered | Auth/RLS boundary, no plaintext credential UI, product guardrails, artifact policy, no pricing/billing runtime route, readiness verification evidence/freshness gates, no infinite retry config, valid target failure policy enum |
+| `AD-ERR-001..010` | covered | Role validation, dependency delete guard, bridge 401, artifact threshold policy, env-risk docs, readiness verification missing/expired-evidence rejection, retry/backoff validation, target failure policy validation |
 | `WORK-CAN-001..008` | covered | Claim coordinator, lease/heartbeat, target context, backend execution, approval pause, cancellation |
 | `WORK-CAN-009..011` | covered | Worker-level tests cover action budget enforcement, account action history recording, and block-signature account marking |
 | `WORK-CAN-012` | covered | Run result aggregation and finalize helpers |
