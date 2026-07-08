@@ -114,4 +114,19 @@ describe('readiness report form helpers', () => {
       verified_at: '2026-07-08T07:00:00.000Z',
     });
   });
+
+  it('trims comma-separated evidence and drops empty entries', () => {
+    const evidence = {
+      ...createInitialReadinessEvidence('mobile_mcp', new Date('2026-07-08T07:00:00.000Z')),
+      deviceSerial: ' device-1, , device-2 ,, ',
+      sessionId: ' , observed-1, ',
+      artifact_refs: ' artifact-1 ,, artifact-2, ',
+    };
+
+    expect(compactReadinessEvidence(evidence)).toMatchObject({
+      expected_serials: ['device-1', 'device-2'],
+      observed_serials: ['observed-1'],
+      artifact_refs: ['artifact-1', 'artifact-2'],
+    });
+  });
 });
