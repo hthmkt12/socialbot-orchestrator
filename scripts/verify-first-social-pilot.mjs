@@ -67,6 +67,18 @@ function required(name, value) {
   return value;
 }
 
+function redactEvidence(value) {
+  if (Array.isArray(value)) return value.map(redactEvidence);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nestedValue]) => [
+      key,
+      /claimToken/i.test(key) ? '[redacted]' : redactEvidence(nestedValue),
+    ])
+  );
+}
+
 async function getOperatorProfile(supabase) {
   const email = env.UI_SMOKE_EMAIL;
   let query = supabase.from('profiles').select('id,user_id,email,role').in('role', ['OPERATOR', 'ADMIN']).limit(1);
@@ -306,7 +318,7 @@ async function main() {
     account: { action: account.action, ...account.account },
     historySchemaProbe: schemaProbe,
     device,
-    run: terminalRun,
+    run: redactEvidence(terminalRun),
     evidence: {
       stepCount: evidence.steps.length,
       terminalSteps: evidence.steps.map((step) => ({ id: step.step_id, type: step.step_type, status: step.status })),

@@ -54,6 +54,18 @@ function required(name, fallbackName) {
   return value;
 }
 
+function redactEvidence(value) {
+  if (Array.isArray(value)) return value.map(redactEvidence);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, nestedValue]) => [
+      key,
+      /claimToken/i.test(key) ? '[redacted]' : redactEvidence(nestedValue),
+    ])
+  );
+}
+
 async function clickVisible(locator, timeout = 15000) {
   await locator.waitFor({ state: 'visible', timeout });
   await locator.click();
@@ -172,9 +184,10 @@ async function verifyDb(email, password, runId) {
   const currentAppSteps = steps
     .filter((step) => step.step_type === 'get_current_app')
     .map((step) => ({ deviceSerial: deviceById.get(step.device_id)?.laixi_device_id, status: step.status, output: step.output_json }));
+  const safeSummaryJson = redactEvidence(run.summary_json);
   const evidence = {
     checkedAt: new Date().toISOString(),
-    run: { id: run.id, status: run.status, target_type: run.target_type, summary_json: run.summary_json },
+    run: { id: run.id, status: run.status, target_type: run.target_type, summary_json: safeSummaryJson },
     devices,
     stepCount: steps.length,
     successStepCount: steps.filter((step) => step.status === 'SUCCESS').length,
