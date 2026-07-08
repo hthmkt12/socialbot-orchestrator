@@ -14,8 +14,10 @@ vi.mock('./audit', () => ({
 import { logAudit } from './audit';
 import {
   createReadinessReport,
+  getReadinessEvidenceFreshness,
   getReadinessReportGates,
   getLevel1ReadinessEvidenceChecklist,
+  READINESS_EVIDENCE_MAX_AGE_DAYS,
   reviewReadinessReport,
   sanitizeReadinessEvidence,
   validateReadinessEvidence,
@@ -24,6 +26,25 @@ import { supabase } from './supabase';
 
 const mockFrom = vi.mocked(supabase.from) as Mock;
 const mockLogAudit = vi.mocked(logAudit) as Mock;
+
+function completeLevel1Evidence(overrides: Record<string, unknown> = {}) {
+  return {
+    pilot_level: 'level_1',
+    backend_mode: 'mobile_mcp',
+    bridge_health: 'ok',
+    worker_health: 'ok',
+    supabase_health: 'ok',
+    expected_serials: ['device-1'],
+    observed_serials: ['device-1'],
+    run_id: 'run-1',
+    run_status: 'COMPLETED',
+    artifact_refs: ['artifact-1'],
+    secret_scrub_status: 'passed',
+    claim_summary: 'Level 1 Mobile MCP Android proof only',
+    verified_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 function profileTable(role: string, userId = 'user-1') {
   return {
@@ -64,20 +85,7 @@ function reviewReportTable() {
     backend: 'mobile_mcp',
     status: 'submitted',
     report_path: 'docs/pilot.md',
-    evidence_json: {
-      pilot_level: 'level_1',
-      backend_mode: 'mobile_mcp',
-      bridge_health: 'ok',
-      worker_health: 'ok',
-      supabase_health: 'ok',
-      expected_serials: ['device-1'],
-      observed_serials: ['device-1'],
-      run_id: 'run-1',
-      run_status: 'COMPLETED',
-      artifact_refs: ['artifact-1'],
-      secret_scrub_status: 'passed',
-      claim_summary: 'Level 1 Mobile MCP Android proof only',
-    },
+    evidence_json: completeLevel1Evidence(),
     created_by_user_id: 'operator-1',
     reviewed_by_user_id: null,
     reviewed_at: null,
@@ -168,41 +176,20 @@ describe('readiness report service', () => {
     expect(validateReadinessEvidence({
       backend: 'laixi',
       decision: 'pilot_verified',
-      evidence: {
-        pilot_level: 'level_1',
+      evidence: completeLevel1Evidence({
         backend_mode: 'laixi',
-        bridge_health: 'ok',
-        worker_health: 'ok',
-        supabase_health: 'ok',
-        expected_serials: ['device-1'],
-        observed_serials: ['device-1'],
-        run_id: 'run-1',
-        run_status: 'COMPLETED',
-        artifact_refs: ['artifact-1'],
-        secret_scrub_status: 'passed',
         claim_summary: 'Laixi proof',
-      },
+      }),
     })).toMatchObject({ valid: false });
   });
 
   it('returns warning gates without making them verification blockers', () => {
     const gates = getReadinessReportGates({
       backend: 'mobile_mcp',
-      evidence_json: {
-        pilot_level: 'level_1',
-        backend_mode: 'mobile_mcp',
-        bridge_health: 'ok',
-        worker_health: 'ok',
-        supabase_health: 'ok',
-        expected_serials: ['device-1'],
-        observed_serials: ['device-1'],
-        run_id: 'run-1',
-        run_status: 'COMPLETED',
-        artifact_refs: ['artifact-1'],
-        secret_scrub_status: 'passed',
+      evidence_json: completeLevel1Evidence({
         claim_summary: 'Level 1 proof',
         analytics_source: 'insufficient data',
-      },
+      }),
     });
 
     expect(gates).toEqual(expect.arrayContaining([
@@ -215,27 +202,45 @@ describe('readiness report service', () => {
     const result = validateReadinessEvidence({
       backend: 'mobile_mcp',
       decision: 'pilot_verified',
-      evidence: {
-        pilot_level: 'level_1',
-        backend_mode: 'mobile_mcp',
-        bridge_health: 'ok',
-        worker_health: 'ok',
-        supabase_health: 'ok',
-        expected_serials: ['device-1'],
-        observed_serials: ['device-1'],
-        run_id: 'run-1',
-        run_status: 'COMPLETED',
-        artifact_refs: ['artifact-1'],
-        secret_scrub_status: 'passed',
+      evidence: completeLevel1Evidence({
         claim_summary: 'Level 1 proof',
         artifact_metadata: { redaction_status: 'blocked' },
-      },
+      }),
     });
 
     expect(result.valid).toBe(false);
     expect(result.gates).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'verification.redaction_passed', status: 'failed' }),
     ]));
+  });
+
+  it('blocks pilot verification when evidence is past the rerun window', () => {
+    const staleDate = new Date(Date.now() - (READINESS_EVIDENCE_MAX_AGE_DAYS + 1) * 24 * 60 * 60 * 1000);
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({ verified_at: staleDate.toISOString() }),
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      `Evidence expired after ${READINESS_EVIDENCE_MAX_AGE_DAYS} days`,
+    ]));
+    expect(result.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.evidence_fresh', status: 'failed' }),
+    ]));
+  });
+
+  it('reports readiness evidence freshness metadata', () => {
+    const now = new Date('2026-07-08T00:00:00.000Z');
+    expect(getReadinessEvidenceFreshness({
+      verified_at: '2026-07-01T00:00:00.000Z',
+    }, now)).toMatchObject({
+      status: 'fresh',
+      maxAgeDays: READINESS_EVIDENCE_MAX_AGE_DAYS,
+      expiresAt: '2026-07-15T00:00:00.000Z',
+    });
+    expect(getReadinessEvidenceFreshness({}, now)).toMatchObject({ status: 'missing' });
   });
 
   it('allows operators to create submitted reports and writes an audit event', async () => {

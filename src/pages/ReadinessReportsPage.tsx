@@ -5,7 +5,11 @@ import Spinner from '../components/ui/Spinner';
 import { useCreateReadinessReport, useReadinessReports, useReviewReadinessReport } from '../hooks/use-readiness-reports';
 import { canCreateReadinessReports, canReviewReadinessReports, getRoleLabel } from '../lib/role-access';
 import type { PilotReadinessBackend, PilotReadinessReport, PilotReadinessStatus } from '../lib/database.types';
-import { getReadinessReportGates, type ReadinessReviewDecision } from '../lib/readiness-report-service';
+import {
+  getReadinessEvidenceFreshness,
+  getReadinessReportGates,
+  type ReadinessReviewDecision,
+} from '../lib/readiness-report-service';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 
@@ -22,6 +26,13 @@ const statusStyles: Record<PilotReadinessStatus, string> = {
   pilot_verified: 'bg-emerald-100 text-emerald-700',
   not_verified: 'bg-red-100 text-red-700',
   needs_rerun: 'bg-amber-100 text-amber-700',
+};
+
+const freshnessStyles = {
+  fresh: 'bg-emerald-100 text-emerald-700',
+  expired: 'bg-red-100 text-red-700',
+  missing: 'bg-amber-100 text-amber-700',
+  invalid: 'bg-red-100 text-red-700',
 };
 
 type EvidenceForm = {
@@ -72,6 +83,17 @@ function gateStyle(status: string, type: string) {
   if (status === 'passed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
   if (type === 'warning') return 'border-amber-200 bg-amber-50 text-amber-800';
   return 'border-red-200 bg-red-50 text-red-800';
+}
+
+function formatFreshnessDetail(report: PilotReadinessReport) {
+  const freshness = getReadinessEvidenceFreshness(report.evidence_json);
+  if (freshness.status === 'fresh' && freshness.expiresAt) {
+    return `Fresh evidence; expires ${new Date(freshness.expiresAt).toLocaleDateString()}`;
+  }
+  if (freshness.status === 'expired' && freshness.ageDays !== null) {
+    return `Expired evidence; age ${Math.floor(freshness.ageDays)} days`;
+  }
+  return freshness.label;
 }
 
 export default function ReadinessReportsPage() {
@@ -215,7 +237,9 @@ export default function ReadinessReportsPage() {
                   <Spinner size="md" />
                 </div>
               ) : reports && reports.length > 0 ? (
-                reports.map((report) => (
+                reports.map((report) => {
+                  const freshness = getReadinessEvidenceFreshness(report.evidence_json);
+                  return (
                   <div key={report.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 space-y-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -224,8 +248,12 @@ export default function ReadinessReportsPage() {
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusStyles[report.status]}`}>
                             {formatStatus(report.status)}
                           </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${freshnessStyles[freshness.status]}`}>
+                            {freshness.status}
+                          </span>
                         </div>
                         <p className="mt-1 text-sm text-gray-500">{report.report_path || 'No report path provided'}</p>
+                        <p className="mt-1 text-xs text-gray-400">{formatFreshnessDetail(report)}</p>
                       </div>
                       <p className="text-xs text-gray-400">{new Date(report.created_at).toLocaleString()}</p>
                     </div>
@@ -297,7 +325,8 @@ export default function ReadinessReportsPage() {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 text-center">
                   <FileCheck2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />

@@ -10,6 +10,8 @@ Product: SocialBot Orchestrator, an internal Android device automation and socia
 
 Current strongest proof: Mobile MCP Android local runtime verified on real device `97249fb5` / model `25053RT47C`, with first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084` completing 4 steps, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
 
+Readiness evidence is valid for 14 days from `verified_at`; rerun verification when it expires or when the pilot device, backend runtime, bridge auth mode, Supabase project, or proof workflow changes.
+
 Primary constraint: production-grade social account credential handling, Laixi live proof, iOS Portal proof, and large-scale social bot claims are not in current verified scope.
 
 ## Roles
@@ -58,6 +60,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La viewer, toi co the xem fleet health, system monitor, analytics, va cac man hinh van hanh read-only.
 - La viewer, toi co the xem thong bao role read-only khi vao khu vuc co hanh dong operator.
 - La viewer, toi co the xem pilot readiness reports de biet backend nao da duoc submit/verify.
+- La viewer, toi co the xem readiness evidence con fresh hay da expired/missing de biet report co can rerun khong.
 - La viewer, toi co the xem analytics data source label de biet chart dang dung real persisted data, insufficient data, hay unknown source.
 - La viewer, toi co the xem retry/backoff timeline read-only trong run detail/monitor khi step duoc retry.
 
@@ -108,6 +111,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La operator, toi co the xem analytics va fleet health de ra quyet dinh van hanh.
 - La operator, toi co the submit pilot readiness report kem evidence da scrub secret de admin review.
 - La operator, toi co the xem go/no-go readiness evidence va status review cua cac backend pilot.
+- La operator, toi co the xem nhan freshness cua readiness evidence de biet khi nao can rerun truoc khi xin verify.
 - La operator, toi co the xem retry reason, retry attempt, next retry delay, va terminal failure reason trong run monitor/detail.
 - La operator, toi co the xem target failure policy va quyet dinh skip/fail-fast cua multi-target run trong run summary.
 
@@ -158,6 +162,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La admin, toi co the review verification reports de quyet dinh pilot readiness.
 - La admin, toi co the quyet dinh khi nao bat `MOBILE_MCP_ALLOW_INSECURE_DEV=true` cho isolated local development.
 - La admin, toi co the review pilot readiness report trong app va set status `pilot_verified`, `not_verified`, hoac `needs_rerun`.
+- La admin, toi co the chi mark `pilot_verified` khi evidence co `verified_at` con trong cua so 14 ngay.
 - La admin, toi co the cau hinh retry/backoff policy cho execution profile gom max retries, base delay, max delay, va max elapsed.
 - La admin, toi co the cau hinh target failure policy cho execution profile: `fail_fast` hoac `skip_failed_target`.
 
@@ -171,6 +176,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La admin, toi KHONG THE scale artifact storage vo han bang inline DB rows - object storage can khi vuot nguong.
 - La admin, toi KHONG THE coi pricing route la billing system - pricing/billing khong nam trong MVP runtime.
 - La admin, toi KHONG THE mark `pilot_verified` neu report thieu backend proof, device/session evidence, hoac completed run/smoke evidence.
+- La admin, toi KHONG THE mark `pilot_verified` neu readiness evidence thieu timestamp, timestamp khong hop le, hoac da qua 14 ngay.
 - La admin, toi KHONG THE cau hinh retry vo han hoac retry/backoff delay khong hop le.
 - La admin, toi KHONG THE cau hinh target failure policy ngoai `fail_fast` hoac `skip_failed_target`.
 
@@ -183,6 +189,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La admin, khi bat insecure dev mode ngoai local, thi day la misconfiguration risk va phai rollback.
 - La admin, khi storage/artifact payload vuot inline preview limit, thi he thong khong nen chen payload lon vao UI preview.
 - La admin, khi verify readiness ma evidence thieu, thi service tu choi voi danh sach evidence can bo sung.
+- La admin, khi verify readiness ma evidence expired, thi service tu choi va yeu cau rerun verification truoc khi pilot verified.
 - La admin, khi retry/backoff profile co max retry am/qua cao, delay khong hop le, hoac max elapsed qua nguong, thi validation tu choi truoc khi luu.
 - La admin, khi target failure policy khong hop le, thi validation tu choi truoc khi luu.
 

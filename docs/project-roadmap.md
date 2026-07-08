@@ -36,6 +36,7 @@ Date: 2026-07-08
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
 - Preserve the current Mobile MCP local readiness baseline: expected serial `97249fb5`, full verify report `plans/reports/mobile-mcp-verify-2026-07-08T06-50-50-734Z.json`, UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
 - Keep generated readiness evidence free of secrets and claim tokens; smoke and pilot verification scripts now redact claim tokens before writing/printing evidence.
+- Treat Level 1 readiness evidence as fresh for 14 days from `verified_at`; rerun verification before admin `pilot_verified` if the evidence expires or the pilot device, runtime backend, bridge token/auth mode, Supabase project, or workflow proof changes.
 
 ## Next
 
@@ -169,7 +170,6 @@ Status: Removed from MVP runtime scope during use-case cleanup.
 ## Unresolved Questions
 
 - When will Laixi VIP/API access be available for clean-path proof?
-- Should readiness reports expire or require periodic rerun after device/runtime changes?
 - Should `97249fb5` remain the pinned pilot device for this workstation?
 - Instagram/TikTok API vs UI automation for initial accounts?
 - What is the required credential boundary before production social credentials are allowed?

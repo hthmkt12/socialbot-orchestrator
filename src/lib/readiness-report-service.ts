@@ -25,6 +25,17 @@ export type EvidenceValidation = {
   gates: ReadinessGateResult[];
 };
 
+export type ReadinessEvidenceFreshnessStatus = 'fresh' | 'expired' | 'missing' | 'invalid';
+
+export type ReadinessEvidenceFreshness = {
+  status: ReadinessEvidenceFreshnessStatus;
+  timestamp: string | null;
+  expiresAt: string | null;
+  ageDays: number | null;
+  maxAgeDays: number;
+  label: string;
+};
+
 type CurrentProfile = Pick<Profile, 'user_id' | 'role'>;
 type EvidenceKeyGroup = {
   key: string;
@@ -44,6 +55,21 @@ const ALLOWED_SECRET_STATUS_KEYS = new Set(['secret_scrub_status', 'secretScrubS
 
 const VALID_BACKENDS = new Set<PilotReadinessBackend>(['mobile_mcp', 'laixi', 'ios_portal', 'unknown']);
 const REVIEW_DECISIONS = new Set<ReadinessReviewDecision>(['pilot_verified', 'not_verified', 'needs_rerun']);
+export const READINESS_EVIDENCE_MAX_AGE_DAYS = 14;
+const READINESS_EVIDENCE_MAX_AGE_MS = READINESS_EVIDENCE_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+const READINESS_EVIDENCE_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const READINESS_EVIDENCE_TIMESTAMP_KEYS = [
+  'verified_at',
+  'verifiedAt',
+  'checked_at',
+  'checkedAt',
+  'finished_at',
+  'finishedAt',
+  'generated_at',
+  'generatedAt',
+  'created_at',
+  'createdAt',
+];
 const LEVEL_1_EVIDENCE: EvidenceKeyGroup[] = [
   { key: 'pilot_level', label: 'Pilot level', aliases: ['pilotLevel'] },
   { key: 'backend_mode', label: 'Backend mode', aliases: ['backendMode', 'deviceBackend'] },
@@ -92,6 +118,74 @@ function getEvidenceValueByKey(evidence: Record<string, unknown>, key: string) {
   const group = LEVEL_1_EVIDENCE.find((item) => item.key === key);
   if (group) return getEvidenceValue(evidence, group);
   return evidence[key];
+}
+
+function getReadinessEvidenceTimestamp(evidence: Record<string, unknown>) {
+  for (const key of READINESS_EVIDENCE_TIMESTAMP_KEYS) {
+    const value = evidence[key];
+    if (typeof value === 'string' && value.trim().length > 0) return value.trim();
+  }
+  return null;
+}
+
+export function getReadinessEvidenceFreshness(
+  evidence: Record<string, unknown> = {},
+  now = new Date()
+): ReadinessEvidenceFreshness {
+  const timestamp = getReadinessEvidenceTimestamp(evidence);
+  if (!timestamp) {
+    return {
+      status: 'missing',
+      timestamp: null,
+      expiresAt: null,
+      ageDays: null,
+      maxAgeDays: READINESS_EVIDENCE_MAX_AGE_DAYS,
+      label: 'Evidence timestamp missing',
+    };
+  }
+
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime()) || parsed.getTime() > now.getTime() + READINESS_EVIDENCE_CLOCK_SKEW_MS) {
+    return {
+      status: 'invalid',
+      timestamp,
+      expiresAt: null,
+      ageDays: null,
+      maxAgeDays: READINESS_EVIDENCE_MAX_AGE_DAYS,
+      label: 'Evidence timestamp invalid',
+    };
+  }
+
+  const ageMs = Math.max(0, now.getTime() - parsed.getTime());
+  const ageDays = ageMs / (24 * 60 * 60 * 1000);
+  const expiresAt = new Date(parsed.getTime() + READINESS_EVIDENCE_MAX_AGE_MS).toISOString();
+  const expired = ageMs > READINESS_EVIDENCE_MAX_AGE_MS;
+
+  return {
+    status: expired ? 'expired' : 'fresh',
+    timestamp,
+    expiresAt,
+    ageDays,
+    maxAgeDays: READINESS_EVIDENCE_MAX_AGE_DAYS,
+    label: expired
+      ? `Evidence expired after ${READINESS_EVIDENCE_MAX_AGE_DAYS} days`
+      : `Evidence fresh for ${READINESS_EVIDENCE_MAX_AGE_DAYS} days`,
+  };
+}
+
+function buildEvidenceFreshnessGate(evidence: Record<string, unknown>) {
+  const freshness = getReadinessEvidenceFreshness(evidence);
+  const passed = freshness.status === 'fresh';
+
+  return createReadinessGate({
+    key: 'verification.evidence_fresh',
+    type: 'verification_blocker',
+    status: passed ? 'passed' : 'failed',
+    message: passed
+      ? `Readiness evidence is fresh; expires ${new Date(freshness.expiresAt ?? '').toLocaleDateString()}`
+      : freshness.label,
+    recoveryHint: `Rerun Mobile MCP verification and submit evidence with verified_at within ${READINESS_EVIDENCE_MAX_AGE_DAYS} days.`,
+  });
 }
 
 export function getLevel1ReadinessEvidenceChecklist(evidence: Record<string, unknown> = {}) {
@@ -158,6 +252,7 @@ export function validateReadinessEvidence(args: {
         : 'Evidence redaction passed',
       recoveryHint: 'Remove secret-like evidence fields and only attach artifacts with redaction_status not_needed or scrubbed.',
     }),
+    buildEvidenceFreshnessGate(evidence),
     ...buildReadinessWarningGates(evidence),
   ];
   const issues = getBlockingGates(gates).map((gate) => gate.message);
