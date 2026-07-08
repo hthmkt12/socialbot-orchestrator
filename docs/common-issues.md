@@ -170,6 +170,40 @@ Verification:
 - Use `ck.cmd init --yes` in non-interactive shells.
 - After `ck init`, ensure `CLAUDE.md` and `AGENTS.md` both exist.
 
+## Vitest Mock Hoisting Errors
+
+Symptoms:
+- Uninitialized variable or reference errors during Vitest runtime execution.
+
+Root Cause:
+- Vitest hoists `vi.mock()` calls above local variable declarations and normal imports, causing variables used inside mock factories or imported symbols to be uninitialized when referenced during initial setup.
+
+Common Triggers:
+- Declaring mock functions or referencing imports before defining `vi.mock()` statements.
+
+Solutions:
+- Group all `vi.mock()` statements at the absolute top of the test files (immediately after `import { ... } from 'vitest'`) and group all `import` statements immediately following the mocks.
+
+Verification:
+- Run `npm.cmd run test` to confirm tests pass cleanly.
+
+## Flaky Coordinate Jitter Test in Anti-Detection Helpers
+
+Symptoms:
+- Occasional test assertion failures in `anti-detection-helpers.test.ts` for coordinate jitter tests.
+
+Root Cause:
+- Low `Math.random` return values cause the computed jitter distance to round to 0, resulting in the jittered coordinates matching the original coordinates exactly and failing the `.not.toBe()` checks.
+
+Common Triggers:
+- Not mocking `Math.random` or mocking with too small a value (under 0.2).
+
+Solutions:
+- Mock `Math.random` to return a high value (like 0.9) and assert the precise, predictable rounded coordinates.
+
+Verification:
+- Run `npx.cmd vitest run src/lib/anti-detection-helpers.test.ts` to ensure 100% pass rate.
+
 ## Unresolved Questions
 
 - Should Laixi gateway proof still be required for pilot, or is Mobile MCP enough?

@@ -1,12 +1,16 @@
 # Codebase Summary
 
-Date: 2026-07-07 (updated)
+Date: 2026-06-29
 
 ## Product
 SocialBot Orchestrator orchestrates Android/iOS device automation workflows through Supabase, a backend worker, and device bridges (Mobile MCP with Mobilerun AndroidDriver/IOSDriver). Purpose-built for **social media automation teams** running 5-50 devices with anti-detection, account lifecycle tracking, and multi-app workflows (Instagram, TikTok, Facebook).
 
 ### Strategic Direction
 Social media automation pivot — per `plans/brainstorm-report-social-first-roadmap.md`. Phase 0 (Foundation) and Phase 1 MVP are completed. See `docs/project-roadmap.md` → Social Pivot for full 6-phase plan.
+- **Phase 0 Foundation Details**:
+  - Repositioned from generic device orchestration to social-first automation.
+  - Implemented core database schemas: `accounts` (credential storage, warm-up stage, daily action limit, blocked status) and `account_action_history` (tracking executed automated actions per device/account).
+  - Established Mobile MCP pilot backend proof to run workflows across connected Android/iOS devices.
 
 ## Main Areas
 - `src/`: React/Vite SPA.

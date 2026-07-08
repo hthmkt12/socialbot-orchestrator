@@ -9,6 +9,7 @@ import {
   DEFAULT_ANTI_DETECTION,
   sleepRandom,
 } from './anti-detection-helpers';
+import type { AntiDetectionConfig } from './anti-detection-helpers';
 
 describe('randomInt', () => {
   it('returns a value within the given range', () => {
@@ -148,10 +149,10 @@ describe('DEFAULT_ANTI_DETECTION', () => {
 
 describe('applyAntiDetection', () => {
   it('jitters coordinates when x and y are present', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.8);
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
     const result = applyAntiDetection({ x: 100, y: 200 }, DEFAULT_ANTI_DETECTION);
-    expect(result.x).not.toBe(100);
-    expect(result.y).not.toBe(200);
+    expect(result.x).toBe(104);
+    expect(result.y).toBe(197);
     vi.restoreAllMocks();
   });
 
@@ -167,10 +168,10 @@ describe('applyAntiDetection', () => {
   });
 
   it('uses default config when none provided', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.8);
+    vi.spyOn(Math, 'random').mockReturnValue(0.9);
     const result = applyAntiDetection({ x: 50, y: 75 });
-    expect(result.x).not.toBe(50);
-    expect(result.y).not.toBe(75);
+    expect(result.x).toBe(54);
+    expect(result.y).toBe(72);
     vi.restoreAllMocks();
   });
 
@@ -179,5 +180,15 @@ describe('applyAntiDetection', () => {
     const result = applyAntiDetection({ x: 100 });
     expect(result.x).toBe(100);
     expect(result.y).toBeUndefined();
+  });
+
+  it('falls back to default delay range when config lacks randomDelayMs', () => {
+    const configWithoutDelay = {
+      scrollVariance: true,
+      tapJitterPx: 5,
+    } as Partial<AntiDetectionConfig> as AntiDetectionConfig;
+    const result = applyAntiDetection({ ms: 5000 }, configWithoutDelay);
+    expect(result.ms).toBeGreaterThanOrEqual(3000);
+    expect(result.ms).toBeLessThanOrEqual(8000);
   });
 });

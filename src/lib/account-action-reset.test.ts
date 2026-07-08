@@ -1,20 +1,19 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Account } from './database.types';
 
 vi.mock('./account-service-helpers', () => ({
   updateAccount: vi.fn(),
 }));
 
+import type { Account } from './database.types';
 import { updateAccount } from './account-service-helpers';
-const mockUpdateAccount = vi.mocked(updateAccount);
-
-// Import after mocks are hoisted
 import {
   shouldResetActionCount,
   computeCorrectDailyLimit,
   resetAccountActionCount,
   runDailyActionReset,
 } from './account-action-reset';
+
+const mockUpdateAccount = vi.mocked(updateAccount);
 
 type ResetAccountFixture = Pick<Account, 'id' | 'platform' | 'warm_up_stage' | 'current_action_count' | 'daily_action_limit' | 'last_action_reset_at'>;
 type UpdateAccountResult = Awaited<ReturnType<typeof updateAccount>>;

@@ -1,13 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
-
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockMaybeSingle = vi.fn();
-const ENCRYPTED_PASSWORD = 'v2:iv:ciphertext';
+import type { AccountPlatform } from './database.types';
 
 vi.mock('./supabase', () => ({
   supabase: {
@@ -16,24 +9,32 @@ vi.mock('./supabase', () => ({
   },
 }));
 
-import { supabase } from './supabase';
-const mockFrom = vi.mocked(supabase.from) as Mock;
-const mockGetSession = vi.mocked(supabase.auth.getSession) as Mock;
-
 vi.mock('./audit', () => ({
   logAudit: vi.fn(),
 }));
 
-// Import after mocks are hoisted by vitest
+import { supabase } from './supabase';
 import {
   fetchAccounts,
   fetchAccount,
   createAccount,
+  createAccountsBatch,
   updateAccount,
   deleteAccount,
   fetchAccountHistory,
   recordAccountAction,
 } from './account-service-helpers';
+
+const mockFrom = vi.mocked(supabase.from) as Mock;
+const mockGetSession = vi.mocked(supabase.auth.getSession) as Mock;
+
+const mockSelect = vi.fn();
+const mockEq = vi.fn();
+const mockOrder = vi.fn();
+const mockInsert = vi.fn();
+const mockUpdate = vi.fn();
+const mockMaybeSingle = vi.fn();
+const ENCRYPTED_PASSWORD = 'v2:iv:ciphertext';
 
 function createThenable<T>(resolvedValue: T, methods: object = {}) {
   return {
@@ -473,6 +474,138 @@ describe('account-service-helpers', () => {
         account_id: 'acc-1',
         action_type: 'like',
       })).rejects.toThrow('Failed to record action: Insert constraint error');
+    });
+  });
+
+  describe('createAccountsBatch', () => {
+    it('returns early when input rows are empty', async () => {
+      const result = await createAccountsBatch([]);
+      expect(result).toEqual({ success: 0, failed: 0 });
+    });
+
+    it('creates batch of accounts successfully', async () => {
+      mockGetSession.mockResolvedValue({
+        data: { session: { user: { id: 'user-1' } } },
+        error: null,
+      });
+
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
+        }
+        return { select: mockSelect, insert: mockInsert };
+      });
+
+      const batchData = [
+        { id: 'b-1', username: 'u1', platform: 'instagram' },
+        { id: 'b-2', username: 'u2', platform: 'instagram' }
+      ];
+      const selectFn = vi.fn().mockResolvedValue({ data: batchData, error: null });
+      mockInsert.mockReturnValue({ select: selectFn });
+
+      const result = await createAccountsBatch([
+        { username: 'u1', encrypted_password: ENCRYPTED_PASSWORD, platform: 'instagram' },
+        { username: 'u2', encrypted_password: ENCRYPTED_PASSWORD, platform: 'instagram' },
+      ]);
+
+      expect(mockInsert).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ username: 'u1' }),
+        expect.objectContaining({ username: 'u2' }),
+      ]));
+      expect(result).toEqual({ success: 2, failed: 0 });
+    });
+
+    it('throws when batch insert query fails', async () => {
+      mockGetSession.mockResolvedValue({
+        data: { session: { user: { id: 'user-1' } } },
+        error: null,
+      });
+
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'profiles') {
+          return { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) };
+        }
+        return { select: mockSelect, insert: mockInsert };
+      });
+
+      const selectFn = vi.fn().mockResolvedValue({ data: null, error: { message: 'Unique constraint violation' } });
+      mockInsert.mockReturnValue({ select: selectFn });
+
+      await expect(createAccountsBatch([
+        { username: 'u1', encrypted_password: ENCRYPTED_PASSWORD, platform: 'instagram' },
+      ])).rejects.toThrow('Batch insert failed: Unique constraint violation');
+    });
+  });
+
+  describe('validateAccountCreateInput exceptions', () => {
+    it('throws on empty username', async () => {
+      await expect(createAccount({
+        username: '  ',
+        encrypted_password: ENCRYPTED_PASSWORD,
+        platform: 'instagram',
+      })).rejects.toThrow('Username is required');
+    });
+
+    it('throws on invalid platform', async () => {
+      await expect(createAccount({
+        username: 'valid',
+        encrypted_password: ENCRYPTED_PASSWORD,
+        platform: 'unsupported' as unknown as AccountPlatform,
+      })).rejects.toThrow('Invalid account platform');
+    });
+
+    it('throws on invalid daily_action_limit', async () => {
+      await expect(createAccount({
+        username: 'valid',
+        encrypted_password: ENCRYPTED_PASSWORD,
+        platform: 'instagram',
+        daily_action_limit: -10,
+      })).rejects.toThrow('Daily action limit must be a positive integer');
+
+      await expect(createAccount({
+        username: 'valid',
+        encrypted_password: ENCRYPTED_PASSWORD,
+        platform: 'instagram',
+        daily_action_limit: 5.5,
+      })).rejects.toThrow('Daily action limit must be a positive integer');
+    });
+  });
+
+  describe('supabase missing schema errors', () => {
+    it('fetchAccounts returns empty array when schema is missing', async () => {
+      const selectChain = vi.fn();
+      const orderChain = vi.fn();
+      const errorObj = createThenable({ data: null, error: { message: 'Could not find the table accounts', code: 'PGRST104' } });
+      orderChain.mockReturnValue(errorObj);
+      selectChain.mockReturnValue({ order: orderChain });
+      mockFrom.mockReturnValue({ select: selectChain });
+
+      const result = await fetchAccounts();
+      expect(result).toEqual([]);
+    });
+
+    it('fetchAccount throws Account not found when schema is missing', async () => {
+      const selectChain = vi.fn();
+      const eqChain = vi.fn();
+      const maybeSingleChain = vi.fn().mockResolvedValue({ data: null, error: { message: 'Could not find the table accounts', code: 'PGRST104' } });
+      eqChain.mockReturnValue({ maybeSingle: maybeSingleChain });
+      selectChain.mockReturnValue({ eq: eqChain });
+      mockFrom.mockReturnValue({ select: selectChain });
+
+      await expect(fetchAccount('1')).rejects.toThrow('Account not found');
+    });
+
+    it('fetchAccountHistory returns empty array when schema is missing', async () => {
+      const limitFn = vi.fn().mockResolvedValue({ data: null, error: { message: 'Could not find the table accounts', code: 'PGRST104' } });
+      mockFrom.mockReturnValue({ select: mockSelect, eq: mockEq, order: mockOrder, limit: limitFn });
+      mockSelect.mockReturnValue({ eq: mockEq });
+      mockEq.mockReturnValue({ order: mockOrder });
+      mockOrder.mockReturnValue({ limit: limitFn });
+
+      const result = await fetchAccountHistory('acc-1');
+      expect(result).toEqual([]);
     });
   });
 });

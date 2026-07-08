@@ -118,6 +118,51 @@ describe('computeRecommendedStage (controlled)', () => {
     const account = { platform: 'facebook' as const, warm_up_started_at: twentyOneDaysAgo };
     expect(computeRecommendedStage(account)).toBe(5);
   });
+
+  it('correctly maps all instagram stages by elapsed days', () => {
+    const checkInstagram = (days: number) => {
+      const started = new Date(Date.now() - days * 24 * 60 * 60 * 1000 - 1000).toISOString();
+      return computeRecommendedStage({ platform: 'instagram', warm_up_started_at: started });
+    };
+    expect(checkInstagram(0)).toBe(2);
+    expect(checkInstagram(3)).toBe(2);
+    expect(checkInstagram(4)).toBe(3);
+    expect(checkInstagram(7)).toBe(3);
+    expect(checkInstagram(8)).toBe(4);
+    expect(checkInstagram(14)).toBe(4);
+    expect(checkInstagram(15)).toBe(5);
+    expect(checkInstagram(30)).toBe(5);
+  });
+
+  it('correctly maps all tiktok stages by elapsed days', () => {
+    const checkTikTok = (days: number) => {
+      const started = new Date(Date.now() - days * 24 * 60 * 60 * 1000 - 1000).toISOString();
+      return computeRecommendedStage({ platform: 'tiktok', warm_up_started_at: started });
+    };
+    expect(checkTikTok(0)).toBe(2);
+    expect(checkTikTok(3)).toBe(2);
+    expect(checkTikTok(4)).toBe(3);
+    expect(checkTikTok(7)).toBe(3);
+    expect(checkTikTok(8)).toBe(4);
+    expect(checkTikTok(13)).toBe(4);
+    expect(checkTikTok(14)).toBe(5);
+    expect(checkTikTok(30)).toBe(5);
+  });
+
+  it('correctly maps all facebook stages by elapsed days', () => {
+    const checkFacebook = (days: number) => {
+      const started = new Date(Date.now() - days * 24 * 60 * 60 * 1000 - 1000).toISOString();
+      return computeRecommendedStage({ platform: 'facebook', warm_up_started_at: started });
+    };
+    expect(checkFacebook(0)).toBe(2);
+    expect(checkFacebook(5)).toBe(2);
+    expect(checkFacebook(6)).toBe(3);
+    expect(checkFacebook(12)).toBe(3);
+    expect(checkFacebook(13)).toBe(4);
+    expect(checkFacebook(20)).toBe(4);
+    expect(checkFacebook(21)).toBe(5);
+    expect(checkFacebook(30)).toBe(5);
+  });
 });
 
 describe('recommendedDailyLimit', () => {
