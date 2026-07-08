@@ -14,6 +14,7 @@ vi.mock('./audit', () => ({
 import { logAudit } from './audit';
 import {
   createReadinessReport,
+  fetchReadinessReports,
   getReadinessEvidenceFreshness,
   getReadinessReportGates,
   getLevel1ReadinessEvidenceChecklist,
@@ -77,6 +78,14 @@ function createReportTable() {
   const select = vi.fn().mockReturnValue({ maybeSingle });
   const insert = vi.fn().mockReturnValue({ select });
   return { insert };
+}
+
+function fetchReportTable(error: { code?: string; message?: string } | null = null, data: unknown[] = []) {
+  return {
+    select: vi.fn().mockReturnValue({
+      order: vi.fn().mockResolvedValue({ data, error }),
+    }),
+  };
 }
 
 function reviewReportTable() {
@@ -308,6 +317,20 @@ describe('readiness report service', () => {
         finished_at: '2026-07-07T00:00:00.000Z',
       }),
     })).toMatchObject({ valid: true });
+  });
+
+  it('returns an empty list when the readiness table is missing from schema cache', async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'pilot_readiness_reports') {
+        return fetchReportTable({
+          code: 'PGRST205',
+          message: "Could not find the table 'public.pilot_readiness_reports' in the schema cache",
+        });
+      }
+      return {};
+    });
+
+    await expect(fetchReadinessReports()).resolves.toEqual([]);
   });
 
   it('allows operators to create submitted reports and writes an audit event', async () => {
