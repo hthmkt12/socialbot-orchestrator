@@ -9,6 +9,7 @@
 - **Pilot readiness verified in DB**: Created readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` with `backend=mobile_mcp`, `status=pilot_verified`, report path `db://workflow_runs/a414e519-c1ac-44df-b287-e91e845f0084`, and secret/claim-token evidence redaction confirmed.
 - **Evidence redaction tightened**: Updated Mobile MCP UI smoke and first-social-pilot verification scripts so claim tokens are redacted from generated evidence/output before they are written or printed.
 - **Readiness rerun policy enforced**: Level 1 readiness evidence now requires a valid `verified_at` timestamp and expires after 14 days; the Readiness UI shows freshness status and admin `pilot_verified` review is blocked for missing, invalid, or expired evidence.
+- **Readiness review UX hardened**: The `/readiness` form now collects the full Level 1 evidence contract with fresh defaults, readable labels, backend-specific proof fields, tested form helpers, and a disabled `Verify` action that explains the first active blocker before admin review.
 - **Current verification baseline captured**: Full `npm.cmd run verify:mobile-mcp` passed with report `plans/reports/mobile-mcp-verify-2026-07-08T06-50-50-734Z.json`; UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561` completed with 4 steps.
 - **CI moved to Node 24 actions**: Updated GitHub Actions workflow to `actions/checkout@v6`, `actions/setup-node@v6`, `actions/setup-python@v6`, and `node-version: 24`; latest CI on `master` passed without the previous Node 20 deprecation warnings.
 
