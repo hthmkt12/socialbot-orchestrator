@@ -95,15 +95,30 @@ export function RunWizardPreflightPanel({
   if (hasBlockingIssues || activeGates.length > 0) {
     return (
       <div className="space-y-3">
-        {activeGates.map((gate) => (
-          <RunPreflightIssueCard
-            key={gate.key}
-            tone={gate.type === 'warning' ? 'amber' : 'red'}
-            title={gate.message}
-            detail={gate.recoveryHint}
-            meta={`${gate.key} · ${gate.type.replace(/_/g, ' ')} · ${gate.status}`}
-          />
-        ))}
+        {activeGates.map((gate) => {
+          let link: { label: string; path: string } | undefined;
+          const key = gate.key;
+          if (key.includes('account') || key.includes('weak-key') || key.includes('missing-key')) {
+            link = { label: 'Configure social profiles in Accounts', path: '/accounts' };
+          } else if (key.includes('device') || key.includes('group') || key.includes('target')) {
+            link = { label: 'Verify status in Devices', path: '/devices' };
+          } else if (key.includes('readiness') || key.startsWith('verification.')) {
+            link = { label: 'Submit or verify evidence in Readiness', path: '/readiness' };
+          } else if (key.includes('definition')) {
+            link = { label: 'Manage workflows in Macros', path: '/macros' };
+          }
+
+          return (
+            <RunPreflightIssueCard
+              key={gate.key}
+              tone={gate.type === 'warning' ? 'amber' : 'red'}
+              title={gate.message}
+              detail={gate.recoveryHint}
+              meta={`${gate.key} · ${gate.type.replace(/_/g, ' ')} · ${gate.status}`}
+              link={link}
+            />
+          );
+        })}
       </div>
     );
   }

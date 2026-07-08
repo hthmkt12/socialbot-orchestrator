@@ -134,6 +134,7 @@ describe('readiness report service', () => {
         },
       ],
       token: 'do-not-store',
+      accountPasswordKey: 'do-not-store',
     })).toEqual({
       runtimeStatus: 'ok',
       nested: {

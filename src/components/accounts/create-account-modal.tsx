@@ -81,6 +81,11 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
             ? 'border-red-200 bg-red-50 text-red-700'
             : 'border-amber-200 bg-amber-50 text-amber-800'
         }`}>
+          <div className="font-semibold mb-0.5">
+            {credentialPolicy.status === 'pilot_client_encrypted'
+              ? 'Pilot-Only Client-Side Encryption'
+              : 'Credential Boundary Required'}
+          </div>
           {credentialPolicy.message}
         </div>
 

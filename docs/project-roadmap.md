@@ -24,7 +24,7 @@ Date: 2026-07-08
 - `003-artifact-storage-thresholds`. Status: Implemented as policy; object storage is intentionally deferred.
 - Mobilerun AndroidDriver bridge swap, `DEVICE_BACKEND=mobilerun`, `ai_task`, and iOS driver support. Status: Implemented; verify per backend before claiming pilot readiness.
 - Foreach loop execution worker integration and loop repetition fix. Status: Unit/smoke verified.
-- Testing baseline. Status: `npm.cmd test` currently covers 263 tests; CI runs on Node 24 actions.
+- Testing baseline. Status: `npm.cmd test` currently covers 279 tests; CI runs on Node 24 actions.
 
 ## Now
 
@@ -42,7 +42,8 @@ Date: 2026-07-08
 
 - Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
 - Keep authenticated route lazy-loading in place; main Vite chunk is below the warning threshold.
-- Tighten account credential handling by moving encryption/decryption server-side before production social credentials are stored at scale.
+- Tighten account credential handling by supporting a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). Implemented in Phase 2: if no server-side vault is configured, block saving/importing under `server_boundary_required` status when `VITE_ACCOUNT_PASSWORD_KEY` is missing/weak. Stored credentials remain `v2:` client-encrypted. Browser-side encryption is pilot-only and a server boundary is required for production. Secret keys are automatically scrubbed from readiness reports and evidence.
+- Phase 3 operator journey cleanup implemented: sidebar regrouped to match primary operator flow (Readiness -> Accounts -> Runs -> Devices -> Analytics), Social Dashboard Go/No-Go box, Readiness stale evidence warning, Run Wizard preflight blockers linked to recovery pages, Analytics badge colored by data source state.
 - Finish navigation cleanup so operators can reach runs, approvals, devices, setup, schedules, fleet health, and other in-scope operational screens from the primary sidebar.
 
 ## Social Pivot

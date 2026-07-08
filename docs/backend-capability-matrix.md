@@ -25,7 +25,8 @@ Level 1 readiness evidence must include a valid `verified_at` timestamp and rema
 - The Mobile MCP bridge requires `MOBILE_MCP_BRIDGE_TOKEN` for protected endpoints.
 - `MOBILE_MCP_ALLOW_INSECURE_DEV=true` is an isolated local-development escape hatch only.
 - Android sessions are ADB-first by default. Set `MOBILE_MCP_ENSURE_PORTAL_ON_SESSION=true` only when Portal-dependent actions are required and USB install policy allows Portal setup.
-- Social account passwords require `VITE_ACCOUNT_PASSWORD_KEY` before browser-side pilot encryption can save credentials. Treat this as pilot-only; move encryption server-side before production credential storage.
+- Social account passwords support a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). If no server-side vault is configured, saving and importing is blocked under `server_boundary_required` status unless `VITE_ACCOUNT_PASSWORD_KEY` is set to a strong 32+ character passphrase to produce `v2:` client-encrypted values. Treat this client-side key as pilot-only; browser-side encryption is pilot-only and a server boundary is required for production. Secret keys are automatically scrubbed from readiness reports and evidence.
+- Sidebar navigation is regrouped to surface the primary operator path (Readiness -> Accounts -> Runs -> Devices -> Analytics) with diagnostics subordinate.
 
 ## Capability Matrix
 

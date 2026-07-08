@@ -67,7 +67,7 @@ Required environment variables in `.env`:
 
 ## Credential Boundary
 
-Social account credential storage is pilot-only. `VITE_ACCOUNT_PASSWORD_KEY` must be configured with at least 32 characters before account save/import flows are enabled, and stored account payloads must remain `v2:` encrypted values. Do not treat this browser-side key as production credential management; production social credentials require a later server-side encryption/key-management boundary before scale.
+Social account credential storage supports a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). If no server-side vault is configured, the system operates in transitional `server_boundary_required` status where saving and importing are blocked unless `VITE_ACCOUNT_PASSWORD_KEY` is configured with at least 32 characters, producing `v2:` encrypted values. This client-side key is pilot-only; browser-side encryption is pilot-only and a server boundary is required for production. All secret keys are automatically scrubbed from readiness reports and evidence.
 
 GitHub Actions workflow at `.github/workflows/ci.yml`:
 - Runs on push/PR to `master`

@@ -134,12 +134,27 @@ export default function ReadinessReportsPage() {
     }
   }
 
+  const latestReport = reports?.find((r) => r.backend === backend);
+  const showWarning = !isLoading && (!latestReport || getReadinessEvidenceFreshness(latestReport.evidence_json).status !== 'fresh');
+
   return (
     <>
       <Header title="Readiness" subtitle="Review pilot evidence before safe scale" />
 
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-6xl mx-auto space-y-6">
+          {showWarning && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-850 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+              <AlertTriangle className="mt-0.5 w-5 h-5 text-amber-600 shrink-0" />
+              <div>
+                <h3 className="font-semibold text-sm">Next Action: Refresh Pilot Verification</h3>
+                <p className="text-xs text-amber-700 mt-1">
+                  Rerun verification and submit new evidence to verify readiness.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>

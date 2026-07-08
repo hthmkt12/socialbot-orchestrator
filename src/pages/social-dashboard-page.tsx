@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { BarChart3, Users, Activity, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
+import { BarChart3, Users, Activity, AlertTriangle, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAccounts, useUpdateAccount } from '../hooks/use-accounts';
+import { useReadinessReports } from '../hooks/use-readiness-reports';
+import { getReadinessEvidenceFreshness } from '../lib/readiness-report-service';
 import { useUIStore } from '../stores/ui';
 import { useWarmUpAdvancementState, useAdvanceAccounts } from '../hooks/use-warmup-auto-advance';
 import Header from '../components/layout/Header';
@@ -13,9 +16,12 @@ import { AccountHealthCard } from '../components/social-dashboard/AccountHealthC
 import type { AdvancementResult } from '../lib/account-warmup-auto-advance';
 
 export default function SocialDashboardPage() {
-  const { data: accounts, isLoading } = useAccounts();
+  const { data: accounts, isLoading: accountsLoading } = useAccounts();
+  const { data: reports, isLoading: reportsLoading } = useReadinessReports();
   const updateAccount = useUpdateAccount();
   const addToast = useUIStore((s) => s.addToast);
+
+  const isLoading = accountsLoading || reportsLoading;
 
   const { readyAccounts, estimates, warmingUpCount, fullSpeedCount } =
     useWarmUpAdvancementState(accounts ?? []);
@@ -53,6 +59,17 @@ export default function SocialDashboardPage() {
   const blockedAccounts = (accounts ?? []).filter((a) => a.is_blocked);
   const totalActions = (accounts ?? []).reduce((sum, a) => sum + a.current_action_count, 0);
 
+  const hasFreshReadiness = reports?.some(
+    (r) =>
+      r.backend === 'mobile_mcp' &&
+      r.status === 'pilot_verified' &&
+      getReadinessEvidenceFreshness(r.evidence_json).status === 'fresh'
+  );
+
+  const totalAccounts = accounts?.length ?? 0;
+  const blockedCount = blockedAccounts.length;
+  const isGo = hasFreshReadiness && blockedCount === 0 && totalAccounts > 0;
+
   return (
     <>
       <Header
@@ -65,68 +82,115 @@ export default function SocialDashboardPage() {
           <div className="flex items-center justify-center py-16">
             <Spinner size="lg" />
           </div>
-        ) : !accounts?.length ? (
-          <EmptyState
-            icon={<Users className="w-6 h-6" />}
-            title="No accounts yet"
-            description="Add social media accounts in Accounts to see your dashboard."
-          />
         ) : (
           <>
-            {/* Stats cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <StatCard icon={Users} label="Total Accounts" value={accounts.length} color="bg-sky-500" />
-              <StatCard icon={Activity} label="Active Accounts" value={activeAccounts.length} color="bg-emerald-500" />
-              <StatCard icon={BarChart3} label="Actions Today" value={totalActions} color="bg-indigo-500" />
-              <StatCard icon={TrendingUp} label="Full Speed" value={fullSpeedCount} color="bg-violet-500" />
-            </div>
-
-            {/* Blocked warning */}
-            {blockedAccounts.length > 0 && (
-              <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm">
-                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                <span className="text-red-700">{blockedAccounts.length} account{blockedAccounts.length !== 1 ? 's' : ''} blocked. Check Accounts for details.</span>
-              </div>
-            )}
-
-            {/* Warm-up auto-advancement */}
-            {(readyAccounts.length > 0 || (warmingUpCount > 0 && estimates.length > 0)) && (
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  <h2 className="text-sm font-semibold text-gray-900">Warm-Up Progression</h2>
+            {/* Go/No-Go box */}
+            {isGo ? (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-800">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-sm">Go: System is ready for pilot execution.</h3>
                 </div>
-                <WarmUpAdvancementPanel
-                  readyAccounts={readyAccounts}
-                  estimates={estimates}
-                  onAdvance={handleAdvanceWarmUp}
-                  isAdvancing={advanceAccounts.isPending}
-                />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 space-y-2">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert className="w-5 h-5 text-red-600 shrink-0" />
+                  <h3 className="font-semibold text-sm">No-Go: Action Required</h3>
+                </div>
+                <ul className="list-disc pl-8 text-xs space-y-1">
+                  {!hasFreshReadiness && (
+                    <li>
+                      Mobile MCP readiness is not verified or has expired evidence.{' '}
+                      <Link to="/readiness" className="font-semibold underline hover:text-red-950">
+                        Verify readiness in Readiness page
+                      </Link>
+                    </li>
+                  )}
+                  {blockedCount > 0 && (
+                    <li>
+                      {blockedCount} blocked account{blockedCount !== 1 ? 's' : ''} detected.{' '}
+                      <Link to="/accounts" className="font-semibold underline hover:text-red-950">
+                        Resolve blocked accounts in Accounts page
+                      </Link>
+                    </li>
+                  )}
+                  {totalAccounts === 0 && (
+                    <li>
+                      No social accounts registered.{' '}
+                      <Link to="/accounts" className="font-semibold underline hover:text-red-955">
+                        Register at least one social account
+                      </Link>
+                    </li>
+                  )}
+                </ul>
               </div>
             )}
 
-            {/* Account health cards */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900 mb-3">Account Health</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {accounts.map((account) => (
-                  <AccountHealthCard
-                    key={account.id}
-                    account={account}
-                    onStartWarmUp={handleStartWarmUp}
-                    onShowHistory={setHistoryAccountId}
-                  />
-                ))}
-              </div>
-            </div>
+            {!accounts?.length ? (
+              <EmptyState
+                icon={<Users className="w-6 h-6" />}
+                title="No accounts yet"
+                description="Add social media accounts in Accounts to see your dashboard."
+              />
+            ) : (
+              <>
+                {/* Stats cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <StatCard icon={Users} label="Total Accounts" value={accounts.length} color="bg-sky-500" />
+                  <StatCard icon={Activity} label="Active Accounts" value={activeAccounts.length} color="bg-emerald-500" />
+                  <StatCard icon={BarChart3} label="Actions Today" value={totalActions} color="bg-indigo-500" />
+                  <StatCard icon={TrendingUp} label="Full Speed" value={fullSpeedCount} color="bg-violet-500" />
+                </div>
 
-            {/* Action history modal */}
-            <AccountActionHistoryPanel
-              accountId={historyAccountId ?? ''}
-              accountLabel={historyAccount ? `${historyAccount.username} (${historyAccount.platform})` : ''}
-              open={!!historyAccountId}
-              onClose={() => setHistoryAccountId(null)}
-            />
+                {/* Blocked warning */}
+                {blockedAccounts.length > 0 && (
+                  <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm">
+                    <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                    <span className="text-red-700">{blockedAccounts.length} account{blockedAccounts.length !== 1 ? 's' : ''} blocked. Check Accounts for details.</span>
+                  </div>
+                )}
+
+                {/* Warm-up auto-advancement */}
+                {(readyAccounts.length > 0 || (warmingUpCount > 0 && estimates.length > 0)) && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <h2 className="text-sm font-semibold text-gray-900">Warm-Up Progression</h2>
+                    </div>
+                    <WarmUpAdvancementPanel
+                      readyAccounts={readyAccounts}
+                      estimates={estimates}
+                      onAdvance={handleAdvanceWarmUp}
+                      isAdvancing={advanceAccounts.isPending}
+                    />
+                  </div>
+                )}
+
+                {/* Account health cards */}
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900 mb-3">Account Health</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {accounts.map((account) => (
+                      <AccountHealthCard
+                        key={account.id}
+                        account={account}
+                        onStartWarmUp={handleStartWarmUp}
+                        onShowHistory={setHistoryAccountId}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action history modal */}
+                <AccountActionHistoryPanel
+                  accountId={historyAccountId ?? ''}
+                  accountLabel={historyAccount ? `${historyAccount.username} (${historyAccount.platform})` : ''}
+                  open={!!historyAccountId}
+                  onClose={() => setHistoryAccountId(null)}
+                />
+              </>
+            )}
           </>
         )}
       </div>

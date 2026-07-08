@@ -28,12 +28,15 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - `docs/`: project summary, roadmap, changelog, standards, and operational notes.
 
 ## Current Verification Baseline
-- `npm.cmd run test`: 32 files, 263 tests pass on 2026-07-08.
+- `npm.cmd run test`: 33 files, 279 tests pass on 2026-07-08.
 - `npm.cmd run typecheck`: pass on 2026-07-08.
-- `npm.cmd run lint`: pass on 2026-07-08.
-- `npm.cmd run build`: pass on 2026-07-08.
-- `npm.cmd run build:worker`: pass on 2026-07-08.
-- `npm.cmd run build:gateway`: pass on 2026-07-08.
+- `npm.cmd run lint`: pass on 2026-07-08 (0 errors).
+- `npm.cmd run build`: pass on 2026-07-08 (main chunk 360KB, all page chunks lazy-loaded, no oversized warning).
+- `npm.cmd run build:worker`: pass on 2026-07-08 (457KB).
+- `npm.cmd run build:gateway`: pass on 2026-07-08 (20KB).
+- `python -m unittest discover -s services\mobile-mcp-bridge\tests -p "test_*.py"`: pass on 2026-07-08 (6 tests OK).
+- `npm.cmd run test:e2e -- tests/e2e/navigation.spec.ts`: pass on 2026-07-08 (3 tests passed).
+- Runtime-only gates (`preflight:mobile-mcp`, `verify:mobile-mcp`): not run on 2026-07-08 due to device/env unavailability.
 - `npm.cmd audit`: 0 vulnerabilities in root app, execution worker, and Laixi gateway workspaces on 2026-07-08.
 - `npm.cmd run smoke:backend`: last documented pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.
@@ -43,6 +46,8 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 ## Current Product State
 - Backend-owned run execution exists.
 - Worker claim/lease path exists.
+- **Phase 2: Production Credential Boundary implemented**: 3-tier credential boundary status model (`pilot_client_encrypted`, `server_boundary_required`, `server_managed`). Policy/migration boundary only, no server-side vault yet. Missing/weak key blocks save/import. `v2:` payload compatibility preserved. Secret-scrub in readiness evidence enforced. Decision note at `docs/decisions/20260708-credential-boundary.md`.
+- **Phase 3: Operator Journey Cleanup implemented**: Sidebar regrouped to match primary operator flow (Operations/Automation/Diagnostics & Insights/Admin). Social Dashboard has a Go/No-Go box. Readiness page shows a stale evidence warning. Run Wizard preflight blockers link to Accounts/Devices/Readiness/Macros. Analytics badge colored by data source state.
 - **Phase 8: Parallel Execution** — Worker-per-device topology via Node.js `worker_threads`. Race condition fix (`accounts.current_action_count` → PostgreSQL RPC). Concurrent device execution with `MAX_CONCURRENT_DEVICES = 10`. Smoke test passes.
 - **Phase 9: Laixi Clean-path Proof** — `LaixiGatewayClient` with `AbortController` timeout, 502/504 error handling. Mock Gateway Server (port 8080) for E2E smoke testing.
 - **Phase 10: User Documentation** — Removed from runtime scope during use-case cleanup; operational guidance now lives in focused in-app setup panels and repo docs.
@@ -64,7 +69,7 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Extended unit testing suite with 100% line coverage for `anti-detection-helpers.ts` and `account-service-helpers.ts`.
 
 ## Known Risks
-- All source files are below 200 lines after the complete file-size refactor.
+- `single-device-step-runner.ts` was refactored during Phase 1 but several source files still exceed 200 lines (e.g. `single-device-step-runner.ts` at 704 lines, `SchedulesPage.tsx` at 346 lines, `ReadinessReportsPage.tsx` at 329 lines, `worker-run-store.ts` at 331 lines, `gateway-session-manager.ts` at 308 lines). The earlier claim "All source files are below 200 lines" is no longer accurate; continued file-size refactoring is tracked in `docs/file-size-refactor-plan.md`.
 - Main Vite chunk remains below the 500 kB warning threshold.
 - Mobile MCP V1 does not execute `run_autox`.
 - Full Mobile MCP verify / UI smoke passed on the connected Android device; keep `MOBILE_MCP_EXPECTED_SERIALS` aligned with the attached serial before rerunning.

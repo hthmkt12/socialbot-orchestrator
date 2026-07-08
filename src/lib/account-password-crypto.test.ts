@@ -17,7 +17,7 @@ describe('account-password-crypto', () => {
     vi.stubEnv('VITE_ACCOUNT_PASSWORD_KEY', '');
 
     expect(getCredentialPolicyStatus()).toMatchObject({
-      status: 'missing_key',
+      status: 'server_boundary_required',
       canSavePilotCredential: false,
     });
     await expect(encryptPassword('secret')).rejects.toThrow(AccountPasswordCryptoError);
@@ -27,7 +27,7 @@ describe('account-password-crypto', () => {
     vi.stubEnv('VITE_ACCOUNT_PASSWORD_KEY', 'short');
 
     expect(getCredentialPolicyStatus()).toMatchObject({
-      status: 'weak_key',
+      status: 'server_boundary_required',
       canSavePilotCredential: false,
     });
     await expect(encryptPassword('secret')).rejects.toThrow('at least 32 characters');

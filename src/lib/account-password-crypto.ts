@@ -13,10 +13,9 @@ const SALT = new TextEncoder().encode('socialbot-account-password-salt-v2');
 const MIN_PASSPHRASE_LENGTH = 32;
 
 export type CredentialPolicyStatus =
-  | 'missing_key'
-  | 'weak_key'
   | 'pilot_client_encrypted'
-  | 'server_managed_required';
+  | 'server_boundary_required'
+  | 'server_managed';
 
 export interface CredentialPolicyState {
   status: CredentialPolicyStatus;
@@ -49,19 +48,19 @@ export function getCredentialPolicyStatus(): CredentialPolicyState {
   const passphrase = import.meta.env.VITE_ACCOUNT_PASSWORD_KEY?.trim();
   if (!passphrase) {
     return {
-      status: 'missing_key',
+      status: 'server_boundary_required',
       canSavePilotCredential: false,
       severity: 'blocking',
-      message: 'Account credential encryption key is missing. Set VITE_ACCOUNT_PASSWORD_KEY before saving or importing pilot credentials.',
+      message: 'Account credential encryption key is missing. Set VITE_ACCOUNT_PASSWORD_KEY before saving or importing pilot credentials, or implement a server-side boundary.',
     };
   }
 
   if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
     return {
-      status: 'weak_key',
+      status: 'server_boundary_required',
       canSavePilotCredential: false,
       severity: 'blocking',
-      message: `VITE_ACCOUNT_PASSWORD_KEY must be at least ${MIN_PASSPHRASE_LENGTH} characters before saving or importing pilot credentials.`,
+      message: 'VITE_ACCOUNT_PASSWORD_KEY must be at least 32 characters before saving or importing pilot credentials.',
     };
   }
 

@@ -43,28 +43,28 @@ const navSections: NavSection[] = [
     label: 'Operations',
     items: [
       { icon: Home, label: 'Social Dashboard', path: '/social-dashboard', id: 'social-dashboard' },
+      { icon: ShieldCheck, label: 'Readiness', path: '/readiness', id: 'readiness' },
+      { icon: Users, label: 'Accounts', path: '/accounts', id: 'accounts' },
       { icon: ClipboardList, label: 'Runs', path: '/runs', id: 'runs' },
       { icon: ShieldCheck, label: 'Approvals', path: '/approvals', id: 'approvals' },
       { icon: Smartphone, label: 'Devices', path: '/devices', id: 'devices' },
-      { icon: FolderKanban, label: 'Device Groups', path: '/device-groups', id: 'device-groups' },
       { icon: Wrench, label: 'Device Setup', path: '/device-setup', id: 'device-setup' },
-      { icon: Terminal, label: 'Mobile MCP', path: '/mobile-mcp-orchestrator', id: 'mobile-mcp-orchestrator' },
     ],
   },
   {
     label: 'Automation',
     items: [
       { icon: PlaySquare, label: 'Macros', path: '/macros', id: 'macros' },
+      { icon: FolderKanban, label: 'Device Groups', path: '/device-groups', id: 'device-groups' },
       { icon: CalendarClock, label: 'Schedules', path: '/schedules', id: 'schedules' },
-      { icon: Users, label: 'Accounts', path: '/accounts', id: 'accounts' },
     ],
   },
   {
-    label: 'Insights',
+    label: 'Diagnostics & Insights',
     items: [
       { icon: BarChart3, label: 'Analytics', path: '/analytics', id: 'analytics' },
-      { icon: ShieldCheck, label: 'Readiness', path: '/readiness', id: 'readiness' },
       { icon: HeartPulse, label: 'Fleet Health', path: '/fleet-health', id: 'fleet-health' },
+      { icon: Terminal, label: 'Mobile MCP', path: '/mobile-mcp-orchestrator', id: 'mobile-mcp-orchestrator' },
       { icon: Activity, label: 'System Monitor', path: '/system-monitor', id: 'system-monitor' },
       { icon: FileText, label: 'Audit Logs', path: '/audit-logs', id: 'audit-logs', requiresAuditAccess: true },
     ],

@@ -2,6 +2,9 @@
 
 ## 2026-07-08
 
+- **Phase 2: Production Credential Boundary implemented**: 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, `server_managed`). Missing/weak key blocks save/import. `v2:` payloads preserved. Secret-scrub in readiness evidence enforced. Decision note created. Docs updated.
+- **Phase 3: Operator Journey Cleanup implemented**: Sidebar regrouped to match primary operator flow. Social Dashboard Go/No-Go box. Readiness stale evidence warning. Run Wizard preflight blockers linked to recovery pages. Analytics data source badge dynamically colored. E2E operator journey test added. Build passes with no new chunk warnings.
+- **Phase 4 verification completed**: Full non-device gate suite passed (typecheck, lint, 279 tests, build, build:worker, build:gateway, Python bridge tests, navigation E2E). Runtime-only gates deferred due to device/env unavailability.
 - **Dependency and audit hardening completed**: Upgraded the root Vite/Vitest/tooling stack and worker/gateway build tooling, added the required `react-is` dependency for Recharts under the current bundler, and verified `npm audit` reports `0 vulnerabilities` in the root app, execution worker, and Laixi gateway workspaces.
 - **Mobile MCP bridge auth locked down**: Local runtime now requires `MOBILE_MCP_BRIDGE_TOKEN` for protected bridge endpoints by default, with insecure local mode available only through explicit `MOBILE_MCP_ALLOW_INSECURE_DEV=true`. Runtime checks verified anonymous protected requests return `401 BRIDGE_UNAUTHORIZED` while token-authenticated requests pass.
 - **Role accounts established for smoke and governance checks**: Confirmed operator profiles, created verified Admin and Viewer Supabase accounts, and stabilized Playwright RBAC coverage for Viewer read-only and Operator account-management behavior.

@@ -5,10 +5,7 @@ import { evaluateCondition, resolveParams, resolveTemplate } from '../../../src/
 import { ExecutionContext } from './engine/execution-context.js';
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout.js';
 import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers.js';
-import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer.js';
-import type { BudgetedAccountActionType } from '../../../src/lib/action-budget-types.js';
 import { handlePotentialBlock } from '../../../src/lib/account-block-detector.js';
-import type { Account, AccountActionHistory } from '../../../src/lib/database.types';
 import type { DeviceStepBackend } from './device-step-backend.js';
 import {
   getRetryDelayMs,
@@ -19,16 +16,14 @@ import {
 import {
   createLogArtifact,
   createApprovalRequest,
-  createScreenshotArtifact,
   isRunCancelled,
   loadLatestApprovalForStep,
   markOwnedRunStatus,
 } from './worker-run-store.js';
 import { loadPersistedRunSteps, persistRunStep, type StoredRunStepRecord } from './worker-step-store.js';
-
-type StepExecutionStatus = 'SUCCESS' | 'SKIPPED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
-type TraversalStatus = 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
-type ApprovalGateStatus = 'APPROVED' | 'WAITING_APPROVAL' | 'CANCELLED';
+import { budgetCheckForStep, recordStepAction } from './account-action-policy.js';
+import { persistStepArtifacts } from './step-artifact-policy.js';
+import { isRecord } from './step-dispatch-results.js';
 
 export interface RunnerParams {
   supabase: SupabaseClient;
@@ -42,17 +37,9 @@ export interface RunnerParams {
   inputVariables: Record<string, unknown>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function extractInlineLogText(output: Record<string, unknown>) {
-  const candidates = [output.result, output.output, output.message];
-  for (const value of candidates) {
-    if (typeof value === 'string' && value.trim().length > 0) return value;
-  }
-  return null;
-}
+type StepExecutionStatus = 'SUCCESS' | 'SKIPPED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
+type TraversalStatus = 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
+type ApprovalGateStatus = 'APPROVED' | 'WAITING_APPROVAL' | 'CANCELLED';
 
 export class SingleDeviceStepRunner {
   private readonly stepOutputs = new Map<string, Record<string, unknown>>();
@@ -551,7 +538,7 @@ export class SingleDeviceStepRunner {
   private async executeDeviceStepWithRetry(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
     /* Action budget check: before executing a budget-consuming step, verify the
        account has remaining capacity for this action type today. */
-    const budgetCheck = await this.budgetCheckForStep(step);
+    const budgetCheck = await budgetCheckForStep(this.params.supabase, step, this.params.inputVariables);
     if (budgetCheck && !budgetCheck.allowed) {
       await this.saveStep({
         runId: this.params.runId,
@@ -611,16 +598,14 @@ export class SingleDeviceStepRunner {
         );
 
         if (result.success) {
-          const screenshotArtifactId = result.screenshotBase64
-            ? await createScreenshotArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, result.screenshotBase64)
-            : null;
-          const inlineLog = extractInlineLogText(result.output);
-          if (inlineLog && (step.type === 'adb' || step.type === 'run_autox')) {
-            await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, inlineLog, {
-              stepType: step.type,
-              source: 'step-output',
-            });
-          }
+          const screenshotArtifactId = await persistStepArtifacts(
+            this.params.supabase,
+            this.params.runId,
+            this.params.device.id,
+            step.id,
+            step.type,
+            result
+          );
 
           await this.saveStep({
             runId: this.params.runId,
@@ -632,7 +617,7 @@ export class SingleDeviceStepRunner {
             output: result.output,
             screenshotArtifactId,
           });
-          await this.recordStepAction(step, true);
+          await recordStepAction(this.params.supabase, step, this.params.runId, this.params.inputVariables, true);
           return { status: 'SUCCESS' as const };
         }
 
@@ -751,86 +736,6 @@ export class SingleDeviceStepRunner {
     }
 
     return { status: 'FAILED' as const };
-  }
-
-  /* ── Action budget helpers ── */
-
-  private static readonly BUDGETED_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share']);
-  private static readonly HISTORY_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share', 'instagram_pilot_open']);
-
-  /** Check action budget for a step that declares `params.actionBudgetType`.
-   *  Returns null when the step is not budget-gated. */
-  private async budgetCheckForStep(step: MacroStep): Promise<BudgetCheckResult | null> {
-    const actionType = step.params?.actionBudgetType;
-    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.BUDGETED_ACTION_TYPES.has(actionType)) return null;
-
-    const accountId = this.params.inputVariables?.accountId;
-    if (typeof accountId !== 'string') return null;
-
-    const { data: account } = await this.params.supabase
-      .from('accounts')
-      .select('*')
-      .eq('id', accountId)
-      .maybeSingle();
-
-    if (!account) return null; // account missing → don't block execution
-
-    if ((account as Account).is_blocked) {
-      return {
-        allowed: false,
-        dailyRemaining: 0,
-        dailyBudget: 0,
-        hourlyRemaining: 0,
-        hourlyBudget: 0,
-        reason: `Account blocked: ${(account as Account).detected_block_reason ?? 'unknown'}`,
-      };
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const { data: history } = await this.params.supabase
-      .from('account_action_history')
-      .select('*')
-      .eq('account_id', accountId)
-      .gte('created_at', today.toISOString());
-
-    const todayCounts = getTodayActionCounts((history ?? []) as AccountActionHistory[], accountId);
-    return checkActionBudget(account as Account, actionType as BudgetedAccountActionType, todayCounts);
-  }
-
-  /** Record a completed action in account_action_history and increment current_action_count. */
-  private async recordStepAction(step: MacroStep, success: boolean): Promise<void> {
-    const actionType = step.params?.actionHistoryType ?? step.params?.actionBudgetType;
-    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.HISTORY_ACTION_TYPES.has(actionType)) return;
-
-    const accountId = this.params.inputVariables?.accountId;
-    if (typeof accountId !== 'string') return;
-
-    try {
-      await this.params.supabase.from('account_action_history').insert({
-        account_id: accountId,
-        action_type: actionType,
-        step_id: null,
-        source_run_id: this.params.runId,
-        source_step_id: step.id,
-        success,
-      });
-
-      if (success && SingleDeviceStepRunner.BUDGETED_ACTION_TYPES.has(actionType)) {
-        const { error: rpcError } = await this.params.supabase.rpc('increment_account_action_count', {
-          p_account_id: accountId,
-        });
-
-        if (rpcError) {
-          console.warn(
-            `[execution-worker] run ${this.params.runId} step ${step.id} failed to increment action count:`,
-            rpcError
-          );
-        }
-      }
-    } catch {
-      /* Best-effort recording — don't fail the step if tracking fails. */
-    }
   }
 
   private async saveStep(

@@ -12,6 +12,16 @@ interface EngagementAnalyticsProps {
   accountId: string;
 }
 
+const badgeStyles: Record<string, string> = {
+  real_persisted: 'text-emerald-700 bg-emerald-50',
+  insufficient_data: 'text-amber-700 bg-amber-50 border border-amber-200',
+  unknown: 'text-red-700 bg-red-50 border border-red-200',
+};
+
+function getBadgeStyle(state: string) {
+  return badgeStyles[state] || 'text-gray-700 bg-gray-50 border border-gray-200';
+}
+
 export default function EngagementAnalytics({ accountId }: EngagementAnalyticsProps) {
   const [days, setDays] = useState(30);
   const { data: analytics, isLoading: isLoadingAnalytics } = useAccountAnalytics(accountId, days);
@@ -28,7 +38,7 @@ export default function EngagementAnalytics({ accountId }: EngagementAnalyticsPr
       <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
         <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h3 className="text-gray-900 font-medium mb-2">No analytics data yet</h3>
-        <p className="text-xs font-medium text-amber-700 bg-amber-50 rounded-full px-3 py-1 inline-flex mb-3">
+        <p className={`text-xs font-medium rounded-full px-3 py-1 inline-flex mb-3 ${getBadgeStyle(source.state)}`}>
           Data source: {source.label}
         </p>
         <p className="text-gray-500 text-sm mb-6">
@@ -43,7 +53,7 @@ export default function EngagementAnalytics({ accountId }: EngagementAnalyticsPr
       <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
         <Activity className="w-12 h-12 text-amber-300 mx-auto mb-4" />
         <h3 className="text-gray-900 font-medium mb-2">Analytics source needs review</h3>
-        <p className="text-xs font-medium text-amber-700 bg-amber-50 rounded-full px-3 py-1 inline-flex mb-3">
+        <p className={`text-xs font-medium rounded-full px-3 py-1 inline-flex mb-3 ${getBadgeStyle(source.state)}`}>
           Data source: {source.label}
         </p>
         <p className="text-gray-500 text-sm mb-6">
@@ -68,7 +78,7 @@ export default function EngagementAnalytics({ accountId }: EngagementAnalyticsPr
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Engagement Overview</h2>
-          <p className="mt-1 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full px-3 py-1 inline-flex">
+          <p className={`mt-1 text-xs font-medium rounded-full px-3 py-1 inline-flex ${getBadgeStyle(source.state)}`}>
             Data source: {source.label}
           </p>
         </div>
