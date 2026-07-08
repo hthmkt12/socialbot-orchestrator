@@ -67,6 +67,26 @@ describe('readiness gates', () => {
     expect(getBlockingGates(gates)).toHaveLength(0);
   });
 
+  it('requires backend-specific proof for LAIXI and iOS Portal verification', () => {
+    const laixiGates = buildVerificationGateResults({
+      backend: 'laixi',
+      checklist: [{ key: 'run_id', label: 'Run id', present: true }],
+      getEvidenceValue: (key) => key === 'secret_scrub_status' ? 'passed' : undefined,
+    });
+    const iosGates = buildVerificationGateResults({
+      backend: 'ios_portal',
+      checklist: [{ key: 'run_id', label: 'Run id', present: true }],
+      getEvidenceValue: (key) => key === 'secret_scrub_status' ? 'passed' : undefined,
+    });
+
+    expect(laixiGates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.laixi_live_proof', status: 'failed' }),
+    ]));
+    expect(iosGates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.ios_portal_proof', status: 'failed' }),
+    ]));
+  });
+
   it('surfaces failed warnings without blocking verification or launch', () => {
     const gates = buildReadinessWarningGates({
       analytics_source: 'insufficient data',
