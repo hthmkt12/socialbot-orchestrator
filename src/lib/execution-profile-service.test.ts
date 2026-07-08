@@ -40,6 +40,7 @@ const validInput: ExecutionProfileInput = {
   retry_max_delay_ms: 30000,
   retry_max_elapsed_ms: 120000,
   target_failure_policy: 'skip_failed_target',
+  max_pilot_target_count: 5,
   require_approval_for_adb: true,
   require_approval_for_autox: true,
 };
@@ -56,6 +57,7 @@ function profileRow(overrides: Record<string, unknown> = {}) {
     retry_max_delay_ms: 30000,
     retry_max_elapsed_ms: 120000,
     target_failure_policy: 'skip_failed_target',
+    max_pilot_target_count: 5,
     require_approval_for_adb: true,
     require_approval_for_autox: true,
     created_at: '2026-07-07T00:00:00.000Z',
@@ -108,6 +110,7 @@ describe('execution profile service', () => {
       retry_max_delay_ms: 30000,
       retry_max_elapsed_ms: 120000,
       target_failure_policy: 'skip_failed_target',
+      max_pilot_target_count: 5,
     }));
     expect(mockLogAudit).toHaveBeenCalledWith(
       'execution_profile.create',
@@ -165,6 +168,8 @@ describe('execution profile service', () => {
     await expect(createExecutionProfile({ ...validInput, retry_max_elapsed_ms: -1 })).rejects.toThrow('Retry max elapsed must be 0 or greater');
     await expect(createExecutionProfile({ ...validInput, retry_max_elapsed_ms: 3_600_001 })).rejects.toThrow('Retry max elapsed must be 3600000ms or less');
     await expect(createExecutionProfile({ ...validInput, target_failure_policy: 'rotate_backup' as never })).rejects.toThrow('Target failure policy must be fail_fast or skip_failed_target');
+    await expect(createExecutionProfile({ ...validInput, max_pilot_target_count: 0 })).rejects.toThrow('Max pilot target count must be at least 1');
+    await expect(createExecutionProfile({ ...validInput, max_pilot_target_count: 11 })).rejects.toThrow('Max pilot target count must be 10 or less');
     expect(mockFrom).not.toHaveBeenCalled();
   });
 });

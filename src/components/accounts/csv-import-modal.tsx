@@ -9,9 +9,14 @@ interface Props {
   onClose: () => void;
   onImport: (rows: CsvAccountRow[]) => void;
   isImporting: boolean;
+  credentialPolicy: {
+    canSavePilotCredential: boolean;
+    severity: 'blocking' | 'warning';
+    message: string;
+  };
 }
 
-export function CsvImportModal({ open, onClose, onImport, isImporting }: Props) {
+export function CsvImportModal({ open, onClose, onImport, isImporting, credentialPolicy }: Props) {
   const [parseResult, setParseResult] = useState<CsvParseResult | null>(null);
   const [fileName, setFileName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -42,7 +47,7 @@ export function CsvImportModal({ open, onClose, onImport, isImporting }: Props) 
   };
 
   const handleImport = () => {
-    if (parseResult?.valid.length) {
+    if (credentialPolicy.canSavePilotCredential && parseResult?.valid.length) {
       onImport(parseResult.valid);
     }
   };
@@ -61,6 +66,14 @@ export function CsvImportModal({ open, onClose, onImport, isImporting }: Props) 
         <div className="text-sm text-gray-600">
           <p>CSV columns: <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">username, password, platform, daily_limit</code></p>
           <p className="mt-1 text-xs text-gray-500">Platform must be: instagram, tiktok, or facebook. Daily limit is optional (default: 100).</p>
+        </div>
+
+        <div className={`rounded-lg border px-3 py-2 text-xs ${
+          credentialPolicy.severity === 'blocking'
+            ? 'border-red-200 bg-red-50 text-red-700'
+            : 'border-amber-200 bg-amber-50 text-amber-800'
+        }`}>
+          {credentialPolicy.message}
         </div>
 
         {/* File picker + sample download */}
@@ -153,7 +166,7 @@ export function CsvImportModal({ open, onClose, onImport, isImporting }: Props) 
           <button
             type="button"
             onClick={handleImport}
-            disabled={!parseResult?.valid.length || isImporting}
+            disabled={!parseResult?.valid.length || isImporting || !credentialPolicy.canSavePilotCredential}
             className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isImporting ? 'Importing…' : `Import ${parseResult?.valid.length ?? 0} Account${(parseResult?.valid.length ?? 0) !== 1 ? 's' : ''}`}

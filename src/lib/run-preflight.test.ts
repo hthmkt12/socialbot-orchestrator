@@ -37,6 +37,7 @@ function buildSummary(overrides: Partial<Parameters<typeof buildRunPreflightSumm
 const activeAccount = {
   id: 'account-1',
   username: 'operator_account',
+  platform: 'instagram' as const,
   is_blocked: false,
   daily_action_limit: 100,
   current_action_count: 10,
@@ -70,6 +71,9 @@ describe('run preflight', () => {
     expect(summary.blockingIssues.map((issue) => issue.id)).toEqual(
       expect.arrayContaining(['viewer-role-block', 'input-required-appName', 'target-mode-mismatch'])
     );
+    expect(summary.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'launch.viewer-role-block', type: 'launch_blocker', status: 'failed' }),
+    ]));
   });
 
   it('blocks social engagement runs when account selection is missing or unhealthy', () => {
@@ -93,6 +97,29 @@ describe('run preflight', () => {
       selectedAccount: { ...activeAccount, current_action_count: 100, daily_action_limit: 100 },
     });
     expect(exhausted.blockingIssues.map((issue) => issue.id)).toContain('selected-account-daily-limit-exhausted');
+  });
+
+  it('blocks an Instagram pilot workflow if it contains disallowed social actions or a non-Instagram account', () => {
+    const unsafePilot: MacroDefinition = {
+      ...baseDefinition,
+      meta: { key: 'instagram_pilot_open_capture', name: 'Instagram Pilot Open Capture' },
+      inputs: {},
+      steps: [
+        { id: 'launch', type: 'launch_app', params: { appName: 'com.instagram.android' } },
+        { id: 'tap_like', type: 'tap', params: { x: 0.5, y: 0.5, actionBudgetType: 'like' } },
+      ],
+    };
+
+    const summary = buildSummary({
+      definition: unsafePilot,
+      inputValues: {},
+      requiresAccount: true,
+      selectedAccount: { ...activeAccount, platform: 'tiktok' },
+    });
+
+    expect(summary.blockingIssues.map((issue) => issue.id)).toEqual(
+      expect.arrayContaining(['instagram-pilot-disallowed-action', 'instagram-pilot-account-platform'])
+    );
   });
 
   it('blocks unresolved input refs and step refs that point forward', () => {
@@ -163,5 +190,28 @@ describe('run preflight', () => {
         'expired-lock-history',
       ])
     );
+    expect(summary.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'warning.device-lock-visibility-degraded', type: 'warning', status: 'failed' }),
+    ]));
+  });
+
+  it('blocks Level 3 fleet pilots above the bounded target count', () => {
+    const summary = buildSummary({
+      targetType: 'MULTI_DEVICE',
+      definition: {
+        ...baseDefinition,
+        target: { mode: 'multi_device' },
+      },
+      selectedDeviceIds: ['d1', 'd2', 'd3', 'd4', 'd5', 'd6'],
+      targetDevicesCount: 6,
+      runnableDeviceCount: 6,
+      dispatchableDeviceCount: 6,
+      maxPilotTargetCount: 5,
+    });
+
+    expect(summary.blockingIssues.map((issue) => issue.id)).toContain('max-pilot-target-count-exceeded');
+    expect(summary.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'launch.max-pilot-target-count-exceeded', status: 'failed' }),
+    ]));
   });
 });

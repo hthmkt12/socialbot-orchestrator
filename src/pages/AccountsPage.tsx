@@ -8,7 +8,7 @@ import EmptyState from '../components/ui/EmptyState';
 import RoleAccessNotice from '../components/ui/RoleAccessNotice';
 import Spinner from '../components/ui/Spinner';
 import { useAccounts, useCreateAccount, useBatchCreateAccounts, useDeleteAccount, useUpdateAccount } from '../hooks/use-accounts';
-import { encryptPassword } from '../lib/account-password-crypto';
+import { encryptPassword, getCredentialPolicyStatus } from '../lib/account-password-crypto';
 import { canManageAccounts, getRoleLabel } from '../lib/role-access';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
@@ -26,6 +26,7 @@ export default function AccountsPage() {
   const updateAccount = useUpdateAccount();
   const addToast = useUIStore((s) => s.addToast);
   const canEditAccounts = canManageAccounts(profile?.role);
+  const credentialPolicy = getCredentialPolicyStatus();
 
   const handleCreate = async (data: {
     username: string;
@@ -79,6 +80,10 @@ export default function AccountsPage() {
   const handleCsvImport = async (rows: CsvAccountRow[]) => {
     if (!canEditAccounts) {
       addToast('Only operators and admins can import social accounts', 'error');
+      return;
+    }
+    if (!credentialPolicy.canSavePilotCredential) {
+      addToast(credentialPolicy.message, 'error');
       return;
     }
     try {
@@ -146,6 +151,13 @@ export default function AccountsPage() {
           <RoleAccessNotice
             title={`${getRoleLabel(profile?.role)} role can inspect accounts but not change them`}
             detail="You can view account status, warm-up stage, block flags, limits, and history. Only operators and admins can add, import, delete, or advance accounts."
+          />
+        )}
+
+        {canEditAccounts && (
+          <RoleAccessNotice
+            title="Pilot-only credential boundary"
+            detail={credentialPolicy.message}
           />
         )}
 
@@ -250,6 +262,7 @@ export default function AccountsPage() {
         onClose={() => setShowCsvImport(false)}
         onImport={handleCsvImport}
         isImporting={batchCreate.isPending}
+        credentialPolicy={credentialPolicy}
       />
     </>
   );

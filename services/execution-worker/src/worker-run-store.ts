@@ -28,7 +28,7 @@ interface ArtifactRecordInput {
   metadata_json: Record<string, unknown>;
 }
 
-export const MAX_INLINE_ARTIFACT_BYTES = 512_000;
+export const MAX_INLINE_ARTIFACT_BYTES = 64 * 1024;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -66,14 +66,16 @@ async function createArtifactRecord(
 
       if (uploadError) {
         console.error('[execution-worker] Artifact storage upload failed:', uploadError);
+        artifact.metadata_json.storage_mode = 'omitted';
         artifact.metadata_json.storage_status = 'upload_failed';
         artifact.metadata_json.storage_error = uploadError.message ?? 'Artifact storage upload failed';
       } else {
-        artifact.metadata_json.storage_mode = 'object';
+        artifact.metadata_json.storage_mode = 'object_storage';
         artifact.metadata_json.storage_status = 'uploaded';
       }
     } catch (e) {
       console.error('[execution-worker] Artifact storage upload exception:', e);
+      artifact.metadata_json.storage_mode = 'omitted';
       artifact.metadata_json.storage_status = 'upload_failed';
       artifact.metadata_json.storage_error = e instanceof Error ? e.message : 'Artifact storage upload failed';
     }
@@ -118,7 +120,32 @@ export function prepareArtifactForStorage(artifact: ArtifactRecordInput) {
     metadata.inline_payload_policy = `Artifacts larger than ${MAX_INLINE_ARTIFACT_BYTES} bytes and screenshots are not stored inline`;
   }
 
+  metadata.artifact_kind = metadata.artifact_kind ?? mapArtifactKind(artifact.type);
+  metadata.content_type = metadata.content_type ?? artifact.content_type;
+  metadata.byte_size = metadata.byte_size ?? artifact.size;
+  metadata.redaction_status = metadata.redaction_status ?? 'not_needed';
+  metadata.retention_expires_at = metadata.retention_expires_at ?? buildRetentionExpiry(artifact.type);
+  metadata.storage_mode = metadata.storage_mode ?? (
+    uploadBuffer
+      ? 'object_storage'
+      : inlinePayloadOmitted
+        ? 'omitted'
+        : 'inline'
+  );
+
   return { metadata_json: metadata, uploadBuffer };
+}
+
+function mapArtifactKind(type: ArtifactRecordInput['type']) {
+  if (type === 'SCREENSHOT') return 'screenshot';
+  if (type === 'LOG_BLOB') return 'log';
+  if (type === 'JSON_RESULT') return 'json';
+  return 'binary';
+}
+
+function buildRetentionExpiry(type: ArtifactRecordInput['type']) {
+  const retentionDays = type === 'SCREENSHOT' || type === 'JSON_RESULT' ? 30 : 14;
+  return new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000).toISOString();
 }
 
 export async function loadSingleDeviceRunContext(

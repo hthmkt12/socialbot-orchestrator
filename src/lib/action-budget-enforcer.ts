@@ -1,5 +1,5 @@
 import type { Account, AccountActionType, AccountActionHistory } from './database.types';
-import { computeDefaultBudgets, DEFAULT_BUDGET_PERCENTAGES, type ActionBudgetMap } from './action-budget-types';
+import { computeDefaultBudgets, DEFAULT_BUDGET_PERCENTAGES, type ActionBudgetMap, type BudgetedAccountActionType } from './action-budget-types';
 
 export interface BudgetCheckResult {
   allowed: boolean;
@@ -11,7 +11,7 @@ export interface BudgetCheckResult {
 }
 
 export interface AccountBudgetUsage {
-  actionType: AccountActionType;
+  actionType: BudgetedAccountActionType;
   dailyBudget: number;
   dailyUsed: number;
   dailyRemaining: number;
@@ -29,7 +29,7 @@ export function getAccountBudgets(account: Account): ActionBudgetMap {
 export function getTodayActionCounts(
   history: AccountActionHistory[],
   accountId: string,
-): Record<AccountActionType, number> {
+): Record<BudgetedAccountActionType, number> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayMs = today.getTime();
@@ -43,17 +43,17 @@ export function getTodayActionCounts(
   }
 
   return Object.fromEntries(
-    (Object.keys(DEFAULT_BUDGET_PERCENTAGES) as AccountActionType[]).map(
+    (Object.keys(DEFAULT_BUDGET_PERCENTAGES) as BudgetedAccountActionType[]).map(
       (t) => [t, counts[t] ?? 0],
     ),
-  ) as Record<AccountActionType, number>;
+  ) as Record<BudgetedAccountActionType, number>;
 }
 
 /** Check whether the account has remaining budget for the given action type. */
 export function checkActionBudget(
   account: Account,
-  actionType: AccountActionType,
-  todayCounts: Record<AccountActionType, number>,
+  actionType: BudgetedAccountActionType,
+  todayCounts: Record<BudgetedAccountActionType, number>,
   budgets?: ActionBudgetMap,
 ): BudgetCheckResult {
   const b = budgets ?? getAccountBudgets(account);
@@ -85,11 +85,11 @@ export function checkActionBudget(
 /** Compute per-type budget usage for dashboard display. */
 export function getBudgetUsages(
   account: Account,
-  todayCounts: Record<AccountActionType, number>,
+  todayCounts: Record<BudgetedAccountActionType, number>,
   budgets?: ActionBudgetMap,
 ): AccountBudgetUsage[] {
   const b = budgets ?? getAccountBudgets(account);
-  const types = Object.keys(DEFAULT_BUDGET_PERCENTAGES) as AccountActionType[];
+  const types = Object.keys(DEFAULT_BUDGET_PERCENTAGES) as BudgetedAccountActionType[];
 
   return types.map((actionType) => {
     const budget = b[actionType];
@@ -105,4 +105,3 @@ export function getBudgetUsages(
     };
   });
 }
-

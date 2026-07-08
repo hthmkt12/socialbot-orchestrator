@@ -1,5 +1,7 @@
 import type { AccountActionType } from './database.types';
 
+export type BudgetedAccountActionType = Exclude<AccountActionType, 'instagram_pilot_open'>;
+
 /** Per-action-type budget definition for daily and hourly limits. */
 export interface ActionBudget {
   /** Maximum actions per day. 0 = unlimited. */
@@ -8,10 +10,10 @@ export interface ActionBudget {
   hourly: number;
 }
 
-export type ActionBudgetMap = Record<AccountActionType, ActionBudget>;
+export type ActionBudgetMap = Record<BudgetedAccountActionType, ActionBudget>;
 
 /** Default share of total daily_action_limit per action type, summing to 1.0. */
-export const DEFAULT_BUDGET_PERCENTAGES: Record<AccountActionType, number> = {
+export const DEFAULT_BUDGET_PERCENTAGES: Record<BudgetedAccountActionType, number> = {
   like: 0.40,
   follow: 0.25,
   comment: 0.15,
@@ -26,12 +28,13 @@ export const ACTION_TYPE_LABELS: Record<AccountActionType, string> = {
   comment: 'Comments',
   post: 'Posts',
   share: 'Shares',
+  instagram_pilot_open: 'Instagram pilot opens',
 };
 
 /** Compute default ActionBudgetMap from a total daily limit. */
 export function computeDefaultBudgets(dailyLimit: number): ActionBudgetMap {
   return Object.fromEntries(
-    (Object.entries(DEFAULT_BUDGET_PERCENTAGES) as [AccountActionType, number][]).map(
+    (Object.entries(DEFAULT_BUDGET_PERCENTAGES) as [BudgetedAccountActionType, number][]).map(
       ([type, pct]) => [
         type,
         {

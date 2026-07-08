@@ -90,14 +90,19 @@ export function RunWizardPreflightPanel({
   hasBlockingIssues: boolean;
   preflightSummary: RunPreflightSummary;
 }) {
-  if (hasBlockingIssues || preflightSummary.warnings.length > 0) {
+  const activeGates = preflightSummary.gates.filter((gate) => gate.status === 'failed');
+
+  if (hasBlockingIssues || activeGates.length > 0) {
     return (
       <div className="space-y-3">
-        {preflightSummary.blockingIssues.map((issue) => (
-          <RunPreflightIssueCard key={issue.id} tone="red" title={issue.title} detail={issue.detail} />
-        ))}
-        {preflightSummary.warnings.map((issue) => (
-          <RunPreflightIssueCard key={issue.id} tone="amber" title={issue.title} detail={issue.detail} />
+        {activeGates.map((gate) => (
+          <RunPreflightIssueCard
+            key={gate.key}
+            tone={gate.type === 'warning' ? 'amber' : 'red'}
+            title={gate.message}
+            detail={gate.recoveryHint}
+            meta={`${gate.key} · ${gate.type.replace(/_/g, ' ')} · ${gate.status}`}
+          />
         ))}
       </div>
     );

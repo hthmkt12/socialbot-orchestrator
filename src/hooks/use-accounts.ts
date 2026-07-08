@@ -9,7 +9,7 @@ import {
   fetchAccountHistory,
   recordAccountAction,
 } from '../lib/account-service-helpers';
-import type { AccountPlatform } from '../lib/database.types';
+import type { AccountActionType, AccountPlatform } from '../lib/database.types';
 
 export function useAccounts() {
   return useQuery({
@@ -107,8 +107,10 @@ export function useRecordAccountAction() {
   return useMutation({
     mutationFn: (input: {
       account_id: string;
-      action_type: 'like' | 'follow' | 'comment' | 'post' | 'share';
-      step_id?: string;
+      action_type: AccountActionType;
+      step_id?: string | null;
+      source_run_id?: string | null;
+      source_step_id?: string | null;
       success?: boolean;
       error_message?: string;
     }) => recordAccountAction(input),

@@ -169,6 +169,7 @@ export interface ExecutionProfile {
   retry_max_delay_ms: number;
   retry_max_elapsed_ms: number;
   target_failure_policy: TargetFailurePolicy;
+  max_pilot_target_count: number;
   require_approval_for_adb: boolean;
   require_approval_for_autox: boolean;
   created_at: string;
@@ -190,7 +191,7 @@ export interface PilotReadinessReport {
 }
 
 export type AccountPlatform = 'instagram' | 'tiktok' | 'facebook';
-export type AccountActionType = 'like' | 'follow' | 'comment' | 'post' | 'share';
+export type AccountActionType = 'like' | 'follow' | 'comment' | 'post' | 'share' | 'instagram_pilot_open';
 
 export interface Account {
   id: string;
@@ -226,6 +227,8 @@ export interface AccountActionHistory {
   account_id: string;
   action_type: AccountActionType;
   step_id: string | null;
+  source_run_id: string | null;
+  source_step_id: string | null;
   success: boolean | null;
   error_message: string | null;
   created_at: string;

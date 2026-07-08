@@ -29,6 +29,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build worker
+        run: npm run build:worker
+
+      - name: Build gateway
+        run: npm run build:gateway
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -44,3 +50,18 @@ jobs:
 
       - name: Unit Tests
         run: npm test
+
+  python-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Bridge unit tests
+        run: python -m unittest discover -s services/mobile-mcp-bridge/tests -p "test_*.py"
+
+      - name: Bridge compile check
+        run: python -m py_compile services/mobile-mcp-bridge/src/android_session_manager.py services/mobile-mcp-bridge/src/bridge_server.py services/mobile-mcp-bridge/src/json_response.py

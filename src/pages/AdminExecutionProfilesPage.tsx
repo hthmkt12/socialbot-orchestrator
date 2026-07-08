@@ -26,6 +26,7 @@ const DEFAULT_FORM: ExecutionProfileInput = {
   retry_max_delay_ms: 30000,
   retry_max_elapsed_ms: 120000,
   target_failure_policy: 'skip_failed_target',
+  max_pilot_target_count: 5,
   require_approval_for_adb: true,
   require_approval_for_autox: true,
 };
@@ -55,6 +56,7 @@ export default function AdminExecutionProfilesPage() {
       retry_max_delay_ms: executionProfile.retry_max_delay_ms,
       retry_max_elapsed_ms: executionProfile.retry_max_elapsed_ms,
       target_failure_policy: executionProfile.target_failure_policy,
+      max_pilot_target_count: executionProfile.max_pilot_target_count ?? 5,
       require_approval_for_adb: executionProfile.require_approval_for_adb,
       require_approval_for_autox: executionProfile.require_approval_for_autox,
     });
@@ -168,6 +170,9 @@ export default function AdminExecutionProfilesPage() {
                       <option value="fail_fast">Fail fast</option>
                     </select>
                   </Field>
+                  <Field label="Max pilot targets">
+                    <input type="number" min={1} max={10} value={form.max_pilot_target_count} onChange={(event) => setForm({ ...form, max_pilot_target_count: Number(event.target.value) })} className={INPUT_CLASS} />
+                  </Field>
                 </div>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -221,6 +226,9 @@ export default function AdminExecutionProfilesPage() {
                     <div className="mt-3 text-xs">
                       <span className="px-2 py-1 rounded-full bg-amber-50 text-amber-700">
                         Target failure: {executionProfile.target_failure_policy.replace(/_/g, ' ')}
+                      </span>
+                      <span className="ml-2 px-2 py-1 rounded-full bg-sky-50 text-sky-700">
+                        Max pilot targets: {executionProfile.max_pilot_target_count ?? 5}
                       </span>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2 text-xs">

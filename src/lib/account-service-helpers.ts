@@ -178,7 +178,9 @@ export async function fetchAccountHistory(accountId: string, limit = 50) {
 export async function recordAccountAction(input: {
   account_id: string;
   action_type: AccountActionType;
-  step_id?: string;
+  step_id?: string | null;
+  source_run_id?: string | null;
+  source_step_id?: string | null;
   success?: boolean;
   error_message?: string;
 }) {
@@ -188,6 +190,8 @@ export async function recordAccountAction(input: {
       account_id: input.account_id,
       action_type: input.action_type,
       step_id: input.step_id ?? null,
+      source_run_id: input.source_run_id ?? null,
+      source_step_id: input.source_step_id ?? null,
       success: input.success ?? null,
       error_message: input.error_message ?? null,
     })

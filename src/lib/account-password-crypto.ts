@@ -10,6 +10,20 @@
 const ENCRYPTED_PASSWORD_PREFIX = 'v2';
 const PBKDF2_ITERATIONS = 100_000;
 const SALT = new TextEncoder().encode('socialbot-account-password-salt-v2');
+const MIN_PASSPHRASE_LENGTH = 32;
+
+export type CredentialPolicyStatus =
+  | 'missing_key'
+  | 'weak_key'
+  | 'pilot_client_encrypted'
+  | 'server_managed_required';
+
+export interface CredentialPolicyState {
+  status: CredentialPolicyStatus;
+  canSavePilotCredential: boolean;
+  severity: 'blocking' | 'warning';
+  message: string;
+}
 
 export class AccountPasswordCryptoError extends Error {
   constructor(message: string) {
@@ -25,10 +39,45 @@ function getEncryptionPassphrase(): string {
       'Account password encryption key is not configured. Set VITE_ACCOUNT_PASSWORD_KEY before saving social account credentials.'
     );
   }
-  if (passphrase.length < 32) {
-    throw new AccountPasswordCryptoError('VITE_ACCOUNT_PASSWORD_KEY must be at least 32 characters long.');
+  if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
+    throw new AccountPasswordCryptoError(`VITE_ACCOUNT_PASSWORD_KEY must be at least ${MIN_PASSPHRASE_LENGTH} characters long.`);
   }
   return passphrase;
+}
+
+export function getCredentialPolicyStatus(): CredentialPolicyState {
+  const passphrase = import.meta.env.VITE_ACCOUNT_PASSWORD_KEY?.trim();
+  if (!passphrase) {
+    return {
+      status: 'missing_key',
+      canSavePilotCredential: false,
+      severity: 'blocking',
+      message: 'Account credential encryption key is missing. Set VITE_ACCOUNT_PASSWORD_KEY before saving or importing pilot credentials.',
+    };
+  }
+
+  if (passphrase.length < MIN_PASSPHRASE_LENGTH) {
+    return {
+      status: 'weak_key',
+      canSavePilotCredential: false,
+      severity: 'blocking',
+      message: `VITE_ACCOUNT_PASSWORD_KEY must be at least ${MIN_PASSPHRASE_LENGTH} characters before saving or importing pilot credentials.`,
+    };
+  }
+
+  return {
+    status: 'pilot_client_encrypted',
+    canSavePilotCredential: true,
+    severity: 'warning',
+    message: 'Pilot-only browser encryption is active. This is not a production credential vault.',
+  };
+}
+
+export function assertCredentialPolicyReady(): void {
+  const policy = getCredentialPolicyStatus();
+  if (!policy.canSavePilotCredential) {
+    throw new AccountPasswordCryptoError(policy.message);
+  }
 }
 
 async function deriveKey(): Promise<CryptoKey> {
@@ -59,6 +108,7 @@ function fromBase64(b64: string): Uint8Array {
 
 /** Encrypt a plaintext password. Returns `v2:iv:ciphertext` in base64. */
 export async function encryptPassword(plaintext: string): Promise<string> {
+  assertCredentialPolicyReady();
   const key = await deriveKey();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(

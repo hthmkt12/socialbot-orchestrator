@@ -45,7 +45,7 @@ export function buildRunWizardPreflight(args: {
   profileRole: UserRole | undefined;
   requiresAccount?: boolean;
   runnableDeviceCount: number;
-  selectedAccount?: Pick<Account, 'id' | 'username' | 'is_blocked' | 'daily_action_limit' | 'current_action_count' | 'warm_up_stage'> | null;
+  selectedAccount?: Pick<Account, 'id' | 'username' | 'platform' | 'is_blocked' | 'daily_action_limit' | 'current_action_count' | 'warm_up_stage'> | null;
   selectedDeviceIds: string[];
   selectedGroupId: string;
   staleDeviceCount: number;

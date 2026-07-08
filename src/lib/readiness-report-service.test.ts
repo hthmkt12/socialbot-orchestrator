@@ -14,6 +14,8 @@ vi.mock('./audit', () => ({
 import { logAudit } from './audit';
 import {
   createReadinessReport,
+  getReadinessReportGates,
+  getLevel1ReadinessEvidenceChecklist,
   reviewReadinessReport,
   sanitizeReadinessEvidence,
   validateReadinessEvidence,
@@ -63,11 +65,18 @@ function reviewReportTable() {
     status: 'submitted',
     report_path: 'docs/pilot.md',
     evidence_json: {
-      runtimeStatus: 'ok',
-      reportStatus: 'pass',
-      deviceSerial: 'device-1',
-      runId: 'run-1',
-      smokeResult: 'pass',
+      pilot_level: 'level_1',
+      backend_mode: 'mobile_mcp',
+      bridge_health: 'ok',
+      worker_health: 'ok',
+      supabase_health: 'ok',
+      expected_serials: ['device-1'],
+      observed_serials: ['device-1'],
+      run_id: 'run-1',
+      run_status: 'COMPLETED',
+      artifact_refs: ['artifact-1'],
+      secret_scrub_status: 'passed',
+      claim_summary: 'Level 1 Mobile MCP Android proof only',
     },
     created_by_user_id: 'operator-1',
     reviewed_by_user_id: null,
@@ -100,24 +109,59 @@ describe('readiness report service', () => {
         apiKey: 'do-not-store',
         safe: 'keep',
       },
+      checks: [
+        {
+          serviceRoleKey: 'do-not-store',
+          password: 'do-not-store',
+          result: 'ok',
+        },
+      ],
       token: 'do-not-store',
     })).toEqual({
       runtimeStatus: 'ok',
       nested: {
         safe: 'keep',
       },
+      checks: [
+        {
+          result: 'ok',
+        },
+      ],
     });
   });
 
   it('rejects pilot verification when required evidence is missing', () => {
-    expect(validateReadinessEvidence({
+    const result = validateReadinessEvidence({
       backend: 'mobile_mcp',
       decision: 'pilot_verified',
       evidence: { runtimeStatus: 'ok' },
-    })).toEqual({
-      valid: false,
-      issues: ['Device serial or session id evidence is required', 'Completed run id or smoke result evidence is required'],
     });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      'Pilot level evidence is required',
+      'Backend mode evidence is required',
+      'Worker health evidence is required',
+      'Artifact refs evidence is required',
+      'Secret scrub status must be passed before pilot verification',
+    ]));
+    expect(result.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.level1.worker_health', type: 'verification_blocker', status: 'failed' }),
+      expect.objectContaining({ key: 'verification.secret_scrub_passed', type: 'verification_blocker', status: 'failed' }),
+    ]));
+  });
+
+  it('reports the level 1 readiness evidence checklist', () => {
+    expect(getLevel1ReadinessEvidenceChecklist({
+      pilot_level: 'level_1',
+      backend_mode: 'mobile_mcp',
+      bridge_health: 'ok',
+    })).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'pilot_level', present: true }),
+      expect.objectContaining({ key: 'backend_mode', present: true }),
+      expect.objectContaining({ key: 'bridge_health', present: true }),
+      expect.objectContaining({ key: 'worker_health', present: false }),
+    ]));
   });
 
   it('requires backend-specific proof for LAIXI pilot verification', () => {
@@ -125,12 +169,73 @@ describe('readiness report service', () => {
       backend: 'laixi',
       decision: 'pilot_verified',
       evidence: {
-        runtimeStatus: 'ok',
-        reportStatus: 'pass',
-        deviceSerial: 'device-1',
-        runId: 'run-1',
+        pilot_level: 'level_1',
+        backend_mode: 'laixi',
+        bridge_health: 'ok',
+        worker_health: 'ok',
+        supabase_health: 'ok',
+        expected_serials: ['device-1'],
+        observed_serials: ['device-1'],
+        run_id: 'run-1',
+        run_status: 'COMPLETED',
+        artifact_refs: ['artifact-1'],
+        secret_scrub_status: 'passed',
+        claim_summary: 'Laixi proof',
       },
     })).toMatchObject({ valid: false });
+  });
+
+  it('returns warning gates without making them verification blockers', () => {
+    const gates = getReadinessReportGates({
+      backend: 'mobile_mcp',
+      evidence_json: {
+        pilot_level: 'level_1',
+        backend_mode: 'mobile_mcp',
+        bridge_health: 'ok',
+        worker_health: 'ok',
+        supabase_health: 'ok',
+        expected_serials: ['device-1'],
+        observed_serials: ['device-1'],
+        run_id: 'run-1',
+        run_status: 'COMPLETED',
+        artifact_refs: ['artifact-1'],
+        secret_scrub_status: 'passed',
+        claim_summary: 'Level 1 proof',
+        analytics_source: 'insufficient data',
+      },
+    });
+
+    expect(gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'warning.analytics_insufficient_data', type: 'warning', status: 'failed' }),
+    ]));
+    expect(gates.filter((gate) => gate.type !== 'warning' && gate.status === 'failed')).toHaveLength(0);
+  });
+
+  it('blocks pilot verification when evidence redaction is blocked', () => {
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: {
+        pilot_level: 'level_1',
+        backend_mode: 'mobile_mcp',
+        bridge_health: 'ok',
+        worker_health: 'ok',
+        supabase_health: 'ok',
+        expected_serials: ['device-1'],
+        observed_serials: ['device-1'],
+        run_id: 'run-1',
+        run_status: 'COMPLETED',
+        artifact_refs: ['artifact-1'],
+        secret_scrub_status: 'passed',
+        claim_summary: 'Level 1 proof',
+        artifact_metadata: { redaction_status: 'blocked' },
+      },
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.redaction_passed', status: 'failed' }),
+    ]));
   });
 
   it('allows operators to create submitted reports and writes an audit event', async () => {

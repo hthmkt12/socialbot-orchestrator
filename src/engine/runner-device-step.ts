@@ -178,7 +178,7 @@ async function recordSelectedAccountActionIfPresent(
   success: boolean
 ) {
   const accountId = ctx.inputVariables.accountId;
-  const actionType = resolvedParams.actionBudgetType ?? step.params.actionBudgetType;
+  const actionType = resolvedParams.actionHistoryType ?? step.params.actionHistoryType ?? resolvedParams.actionBudgetType ?? step.params.actionBudgetType;
   if (typeof accountId !== 'string' || accountId.length === 0) return;
   if (!isAccountActionType(actionType)) return;
 
@@ -186,16 +186,22 @@ async function recordSelectedAccountActionIfPresent(
     await recordAccountAction({
       account_id: accountId,
       action_type: actionType,
-      step_id: step.id,
+      step_id: null,
+      source_run_id: ctx.runId,
+      source_step_id: step.id,
       success,
     });
-    if (success) await incrementSelectedAccountActionCount(accountId);
+    if (success && isBudgetedAccountActionType(actionType)) await incrementSelectedAccountActionCount(accountId);
   } catch {
     // Best effort: action history should never change execution outcome.
   }
 }
 
 function isAccountActionType(value: unknown): value is AccountActionType {
+  return isBudgetedAccountActionType(value) || value === 'instagram_pilot_open';
+}
+
+function isBudgetedAccountActionType(value: unknown): value is Exclude<AccountActionType, 'instagram_pilot_open'> {
   return value === 'like' || value === 'follow' || value === 'comment' || value === 'post' || value === 'share';
 }
 

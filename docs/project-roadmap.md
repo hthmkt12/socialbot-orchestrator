@@ -29,11 +29,12 @@ Date: 2026-07-07
 ## Now
 
 - Keep Mobile MCP as the pilot-default backend.
+- Use `specs/004-pilot-success-criteria/spec.md` as the Level 1 pilot evidence contract before claiming current readiness.
 - Require `MOBILE_MCP_BRIDGE_TOKEN` for protected bridge endpoints unless `MOBILE_MCP_ALLOW_INSECURE_DEV=true` is explicitly set for isolated local development.
 - Require `VITE_ACCOUNT_PASSWORD_KEY` before saving social account credentials; treat the browser key as pilot-only until credential encryption moves server-side.
 - Use `docs/backend-capability-matrix.md` as the backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
-- Restore current Mobile MCP local readiness by making expected Android serial `QC4DKJUO6PW4FMQW` visible to ADB/Windows, then rerun preflight, verification, and fresh UI smoke.
+- Restore current Mobile MCP local readiness by making the expected Android serial visible to ADB/Windows, then rerun preflight, verification, and fresh UI smoke. A readiness claim needs Level 1 evidence fields: backend mode, bridge/worker/Supabase health, expected/observed serials, run id/status, artifact refs, scrub status, and claim summary.
 - Run manual Run Detail smoke for an authenticated artifact-bearing completed run when UI/auth/Supabase are available.
 
 ## Next

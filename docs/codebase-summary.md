@@ -33,6 +33,7 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - `npm.cmd run smoke:backend`: last documented pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.
 - Docker: full-stack compose (frontend + worker + gateway) with Dockerfiles.
+- Level 1 pilot readiness now requires explicit evidence fields from `specs/004-pilot-success-criteria/spec.md`; implementation status alone is not enough for a current readiness claim.
 
 ## Current Product State
 - Backend-owned run execution exists.
@@ -51,6 +52,7 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
 - Spec Kit feature `003-artifact-storage-thresholds` is completed and merged.
 - **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). Full `npm.cmd run verify:mobile-mcp` passed on 2026-07-07 with browser UI smoke run `ec7f6fab-81fc-4dfd-8ceb-8a98e1835fff`.
+- `scripts/verify-mobile-mcp-local.mjs` writes a `readinessEvidence` object containing pilot level, backend mode, bridge/worker/Supabase health, serials, run id/status, artifact refs, scrub status, and claim summary.
 - Foreach loop execution integration in backend worker (`handleForeachLoop` in `single-device-step-runner.ts`) along with a critical bug fix resolving loop step repetition/skipping defects across all loop types.
 - Extended unit testing suite with 100% line coverage for `anti-detection-helpers.ts` and `account-service-helpers.ts`.
 

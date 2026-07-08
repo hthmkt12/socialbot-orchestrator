@@ -60,5 +60,13 @@ Verification:
 - `002-laixi-gateway-live-proof`
 - `003-artifact-storage-thresholds`
 
+## Draft Feature Specs
+- `004-pilot-success-criteria`
+- `005-first-real-social-workflow`
+- `006-credential-storage-boundary`
+- `007-readiness-gate-rules`
+- `008-fleet-scale-failure-policy`
+- `009-artifact-retention-object-storage`
+
 ## Unresolved Questions
 **Decision:** Future *feature specifications* should live under `specs/`, but day-to-day implementation plans and brainstorms should stay in `plans/`.

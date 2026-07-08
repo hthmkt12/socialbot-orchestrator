@@ -19,7 +19,14 @@ function loadDotEnv(path) {
         .filter((line) => line && !line.startsWith('#') && line.includes('='))
         .map((line) => {
           const index = line.indexOf('=');
-          return [line.slice(0, index), line.slice(index + 1)];
+          let value = line.slice(index + 1);
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
+            value = value.slice(1, -1);
+          }
+          return [line.slice(0, index), value];
         })
     );
   } catch {
@@ -31,7 +38,12 @@ const env = { ...loadDotEnv(join(rootDir, '.env')), ...process.env };
 const baseUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
 const macroName = env.UI_SMOKE_MACRO_NAME ?? 'Mobile MCP DB Multi Smoke';
 const appName = env.UI_SMOKE_APP_NAME ?? 'com.android.settings';
-const deviceMatches = (env.UI_SMOKE_DEVICE_MATCHES ?? '23106RN0DA,SM-A515F')
+const expectedSerials = (loadDotEnv(join(rootDir, '.env')).MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS ?? '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+const defaultDeviceMatches = expectedSerials.length ? expectedSerials.join(',') : '23106RN0DA,SM-A515F';
+let deviceMatches = defaultDeviceMatches
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
@@ -71,6 +83,8 @@ async function runUiFlow(email, password) {
     await page.getByPlaceholder('you@company.com').fill(email);
     await page.getByPlaceholder('Enter password').fill(password);
     await page.locator('button[type=submit]').click({ force: true });
+    await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 20000 });
+    await page.goto(`${baseUrl}/runs`, { waitUntil: 'domcontentloaded' });
     await page.getByText('Workflow Runs').waitFor({ timeout: 20000 });
   }
 
@@ -102,6 +116,26 @@ async function runUiFlow(email, password) {
   const runId = url.match(/\/runs\/([0-9a-f-]+)/i)?.[1] ?? null;
   await browser.close();
   return { runId, url, badResponses, consoleMessages };
+}
+
+async function resolveDeviceMatches(email, password) {
+  if (!expectedSerials.length) return deviceMatches;
+  const supabase = createClient(
+    required('VITE_SUPABASE_URL'),
+    required('VITE_SUPABASE_ANON_KEY')
+  );
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) throw signInError;
+  const { data, error } = await supabase
+    .from('devices')
+    .select('laixi_device_id,name,model')
+    .in('laixi_device_id', expectedSerials);
+  if (error) throw error;
+  const resolved = expectedSerials.map((serial) => {
+    const device = (data ?? []).find((row) => row.laixi_device_id === serial);
+    return device?.name || device?.model || serial;
+  });
+  return resolved.length ? resolved : deviceMatches;
 }
 
 async function verifyDb(email, password, runId) {
@@ -159,6 +193,7 @@ async function main() {
   mkdirSync(reportDir, { recursive: true });
   const email = required('UI_SMOKE_EMAIL');
   const password = required('UI_SMOKE_PASSWORD');
+  deviceMatches = await resolveDeviceMatches(email, password);
   const uiResult = await runUiFlow(email, password);
   writeFileSync(resultPath, JSON.stringify(uiResult, null, 2));
   if (!uiResult.runId) throw new Error('Run id not found after UI submit');

@@ -12,6 +12,7 @@ const actionTypeLabels: Record<AccountActionType, string> = {
   comment: 'Comment',
   post: 'Post',
   share: 'Share',
+  instagram_pilot_open: 'Pilot Open',
 };
 
 const actionTypeColors: Record<AccountActionType, 'green' | 'blue' | 'orange' | 'teal' | 'gray'> = {
@@ -20,6 +21,7 @@ const actionTypeColors: Record<AccountActionType, 'green' | 'blue' | 'orange' | 
   comment: 'orange',
   post: 'teal',
   share: 'gray',
+  instagram_pilot_open: 'gray',
 };
 
 function formatTimestamp(iso: string): string {

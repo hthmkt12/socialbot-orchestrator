@@ -34,9 +34,9 @@ Status legend:
 | `AD-CAN-006` | covered | Admin-only delete guard covers devices, device groups, macros, and execution profiles with dependency checks and audit logging |
 | `AD-CAN-007` | covered | Device Setup lock cleanup flow covers operator expired-lock cleanup and admin-only force clear for active locks |
 | `AD-CAN-008` | covered | Deployment/env secret configuration is documented in `.env.example`, `README.md`, and `docs/deployment-guide.md`; secrets stay outside app runtime |
-| `AD-CAN-009` | covered | `scripts/verify-mobile-mcp-local.mjs` writes timestamped verification reports under `plans/reports/` for pilot readiness review |
+| `AD-CAN-009` | covered | `scripts/verify-mobile-mcp-local.mjs` writes timestamped verification reports under `plans/reports/` and includes Level 1 `readinessEvidence` fields for pilot readiness review |
 | `AD-CAN-010` | covered | Bridge health exposes `authRequired`/`insecureDevMode`; `bridge_auth_status` test covers explicit local insecure-mode decisions |
-| `AD-CAN-011` | covered | `src/pages/ReadinessReportsPage.tsx`, `src/lib/readiness-report-service.ts`, and tests cover admin pilot readiness review decisions |
+| `AD-CAN-011` | covered | `src/pages/ReadinessReportsPage.tsx`, `src/lib/readiness-report-service.ts`, and tests cover admin pilot readiness review decisions with required Level 1 evidence checklist |
 | `AD-CAN-012` | covered | Admin execution profile UI/service/migration cover retry/backoff policy configuration |
 | `AD-CAN-013` | covered | Admin execution profile UI/service/migration cover target failure policy configuration |
 | `AD-NO-001..010` | covered | Auth/RLS boundary, no plaintext credential UI, product guardrails, artifact policy, no pricing/billing runtime route, readiness verification evidence gate, no infinite retry config, valid target failure policy enum |

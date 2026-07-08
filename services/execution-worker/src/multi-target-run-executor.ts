@@ -14,10 +14,15 @@ import { buildTargetFailureDecision, type TargetFailureDecision } from './target
 function mergeResolvedTargetSummary(
   summaryJson: Record<string, unknown> | null,
   targetType: string,
-  devices: { id: string; name: string }[]
+  devices: { id: string; name: string }[],
+  targetFailurePolicy: string,
+  maxPilotTargetCount: number
 ): Record<string, unknown> {
   const patch = {
     targetType,
+    targetCount: devices.length,
+    targetFailurePolicy,
+    maxPilotTargetCount,
     resolvedDevices: devices.map((d) => ({ id: d.id, name: d.name })),
   };
   return summaryJson ? { ...summaryJson, ...patch } : patch;
@@ -105,7 +110,9 @@ export class MultiTargetRunExecutor {
             summary_json: mergeResolvedTargetSummary(
               context.summaryJson,
               context.targetType,
-              context.devices.map((d) => ({ id: d.id, name: d.name }))
+              context.devices.map((d) => ({ id: d.id, name: d.name })),
+              context.targetFailurePolicy,
+              context.maxPilotTargetCount
             ),
           })
           .eq('id', context.runId)
@@ -219,6 +226,7 @@ export class MultiTargetRunExecutor {
         skipped,
         partial,
         targetFailurePolicy: context.targetFailurePolicy,
+        maxPilotTargetCount: context.maxPilotTargetCount,
         targetFailureDecisions,
         avgCompletionRate: aggregate.avgCompletionRate,
       });

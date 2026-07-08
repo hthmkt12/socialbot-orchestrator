@@ -21,10 +21,14 @@ export function ReviewMetric({
 
 export function RunPreflightIssueCard({
   detail,
+  meta,
+  recoveryHint,
   title,
   tone,
 }: {
   detail: string;
+  meta?: string;
+  recoveryHint?: string;
   title: string;
   tone: 'amber' | 'red';
 }) {
@@ -39,6 +43,12 @@ export function RunPreflightIssueCard({
       <div>
         <p className={`text-sm font-medium ${titleColor}`}>{title}</p>
         <p className={`text-xs ${detailColor} mt-0.5`}>{detail}</p>
+        {recoveryHint && recoveryHint !== detail && (
+          <p className={`text-xs ${detailColor} mt-1`}>{recoveryHint}</p>
+        )}
+        {meta && (
+          <p className={`mt-2 text-[11px] uppercase tracking-wide ${detailColor}`}>{meta}</p>
+        )}
       </div>
     </div>
   );

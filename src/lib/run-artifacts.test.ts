@@ -11,14 +11,14 @@ function buildArtifact(overrides: Partial<Artifact> = {}): Artifact {
     storage_key: 'runs/run-1/device-1/step-1.png',
     content_type: 'image/png',
     size: 1024,
-    metadata_json: { stepId: 'step-1', base64: 'aW1hZ2U=', timestamp: '2026-05-06T00:00:00.000Z' },
+    metadata_json: { stepId: 'step-1', base64: 'aW1hZ2U=', timestamp: '2026-05-06T00:00:00.000Z', storage_mode: 'inline' },
     created_at: '2026-05-06T00:00:00.000Z',
     ...overrides,
   };
 }
 
 describe('normalizeRunArtifact', () => {
-  it('labels screenshots with inline image preview and pilot storage decision', () => {
+  it('labels screenshots with explicit inline preview metadata when legacy inline evidence is present', () => {
     const preview = normalizeRunArtifact(buildArtifact());
 
     expect(preview.evidenceLabel).toBe('Screenshot');
@@ -26,7 +26,8 @@ describe('normalizeRunArtifact', () => {
     expect(preview.previewKind).toBe('image');
     expect(preview.imageSrc).toBe('data:image/png;base64,aW1hZ2U=');
     expect(preview.storageModeLabel).toBe('Inline pilot evidence');
-    expect(preview.storageStatusLabel).toBe('Object storage deferred');
+    expect(preview.storageStatusLabel).toBe('inline preview');
+    expect(preview.storageMode).toBe('inline');
     expect(preview.previewAvailable).toBe(true);
   });
 
@@ -123,11 +124,27 @@ describe('normalizeRunArtifact', () => {
 
   it('reports object storage mode and status when storage_mode is object', () => {
     const preview = normalizeRunArtifact(buildArtifact({
-      metadata_json: { stepId: 'step-1', storage_mode: 'object' },
+      metadata_json: { stepId: 'step-1', storage_mode: 'object_storage' },
     }));
 
-    expect(preview.storageModeLabel).toBe('Supabase Storage');
-    expect(preview.storageStatusLabel).toBe('Stored remotely');
+    expect(preview.storageModeLabel).toBe('Object storage');
+    expect(preview.storageStatusLabel).toBe('stored remotely');
     expect(preview.previewAvailable).toBe(true);
+  });
+
+  it('treats artifacts past retention as expired metadata-only evidence', () => {
+    const preview = normalizeRunArtifact(buildArtifact({
+      metadata_json: {
+        stepId: 'step-1',
+        base64: 'aW1hZ2U=',
+        storage_mode: 'inline',
+        retention_expires_at: '2020-01-01T00:00:00.000Z',
+      },
+    }));
+
+    expect(preview.isExpired).toBe(true);
+    expect(preview.previewAvailable).toBe(false);
+    expect(preview.previewAvailabilityLabel).toBe('Artifact expired');
+    expect(preview.imageSrc).toBeNull();
   });
 });

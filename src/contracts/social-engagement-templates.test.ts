@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SOCIAL_TEMPLATES,
+  INSTAGRAM_PILOT_OPEN_CAPTURE,
   INSTAGRAM_LIKE_HASHTAG,
   INSTAGRAM_FOLLOW_ACCOUNTS,
   INSTAGRAM_MASS_LIKE_HASHTAGS,
@@ -9,9 +10,10 @@ import {
 } from './social-engagement-templates';
 
 describe('SOCIAL_TEMPLATES', () => {
-  it('exports all 5 templates', () => {
+  it('exports all 6 templates', () => {
     const keys = Object.keys(SOCIAL_TEMPLATES);
-    expect(keys).toHaveLength(5);
+    expect(keys).toHaveLength(6);
+    expect(keys).toContain('instagram_pilot_open_capture');
     expect(keys).toContain('instagram_like_hashtag');
     expect(keys).toContain('instagram_follow_accounts');
     expect(keys).toContain('instagram_mass_like_hashtags');
@@ -28,6 +30,23 @@ describe('SOCIAL_TEMPLATES', () => {
       expect(template.definition.steps.length).toBeGreaterThan(0);
       expect(template.definition.target.mode).toBe('single_device');
     }
+  });
+});
+
+describe('INSTAGRAM_PILOT_OPEN_CAPTURE', () => {
+  it('opens Instagram and captures evidence without engagement actions', () => {
+    expect(INSTAGRAM_PILOT_OPEN_CAPTURE.platform).toBe('instagram');
+    expect(INSTAGRAM_PILOT_OPEN_CAPTURE.definition.meta.key).toBe('instagram_pilot_open_capture');
+    expect(INSTAGRAM_PILOT_OPEN_CAPTURE.definition.target.mode).toBe('single_device');
+    expect(INSTAGRAM_PILOT_OPEN_CAPTURE.definition.steps.map((step) => step.type)).toEqual([
+      'launch_app',
+      'wait',
+      'get_current_app',
+      'screenshot',
+    ]);
+    expect(INSTAGRAM_PILOT_OPEN_CAPTURE.definition.steps.some((step) => step.params.actionBudgetType)).toBe(false);
+    const lastStep = INSTAGRAM_PILOT_OPEN_CAPTURE.definition.steps[INSTAGRAM_PILOT_OPEN_CAPTURE.definition.steps.length - 1];
+    expect(lastStep.params.actionHistoryType).toBe('instagram_pilot_open');
   });
 });
 

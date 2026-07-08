@@ -13,6 +13,36 @@ export interface SocialTemplate {
   platform: 'instagram' | 'tiktok' | 'facebook';
 }
 
+export const INSTAGRAM_PILOT_OPEN_CAPTURE: SocialTemplate = {
+  platform: 'instagram',
+  antiDetection: DEFAULT_ANTI_DETECTION,
+  definition: {
+    version: 1,
+    meta: {
+      key: 'instagram_pilot_open_capture',
+      name: 'Instagram Pilot Open Capture',
+      description: 'Open Instagram, verify the foreground app, capture screenshot evidence, and record a pilot-safe action event.',
+      tags: ['instagram', 'pilot', 'evidence', 'mobile-mcp'],
+    },
+    inputs: {},
+    target: { mode: 'single_device' },
+    execution: { defaultTimeoutMs: 30_000, maxRetries: 1, onError: 'stop' },
+    steps: [
+      { id: 'launch_instagram', type: 'launch_app', params: { appName: 'com.instagram.android' } },
+      { id: 'wait_loaded', type: 'wait', params: { ms: 4000 } },
+      { id: 'current_app', type: 'get_current_app', params: {} },
+      {
+        id: 'capture_pilot_evidence',
+        type: 'screenshot',
+        params: {
+          saveToArtifact: true,
+          actionHistoryType: 'instagram_pilot_open',
+        },
+      },
+    ],
+  },
+};
+
 export const INSTAGRAM_LIKE_HASHTAG: SocialTemplate = {
   platform: 'instagram',
   antiDetection: DEFAULT_ANTI_DETECTION,
@@ -199,6 +229,7 @@ export const INSTAGRAM_MASS_FOLLOW: SocialTemplate = {
 
 /** All available social templates, indexed by key. */
 export const SOCIAL_TEMPLATES: Record<string, SocialTemplate> = {
+  instagram_pilot_open_capture: INSTAGRAM_PILOT_OPEN_CAPTURE,
   instagram_like_hashtag: INSTAGRAM_LIKE_HASHTAG,
   instagram_follow_accounts: INSTAGRAM_FOLLOW_ACCOUNTS,
   instagram_mass_like_hashtags: INSTAGRAM_MASS_LIKE_HASHTAGS,

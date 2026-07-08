@@ -1,6 +1,7 @@
 import { validateMacroDefinition } from '../contracts/macro';
 import type { TargetMode } from '../contracts/macro';
 import type { TargetType } from './database.types';
+import { buildLaunchGateResults } from './readiness-gates';
 import { targetModeToTargetType as mapTargetModeToTargetType } from './run-preflight-helpers';
 import { analyzeRunPreflightSteps } from './run-preflight-step-analysis';
 import { buildDevicePreflightWarnings, buildTargetPreflightIssues } from './run-preflight-target-issues';
@@ -24,8 +25,19 @@ function buildMissingDefinitionSummary(): RunPreflightSummary {
       severity: 'blocking',
       title: 'Macro definition is unavailable',
       detail: 'Choose a macro version with a valid definition before dispatching a run.',
+      recoveryHint: 'Select a macro version with a valid definition before dispatching.',
     }],
     warnings: [],
+    gates: buildLaunchGateResults({
+      blockingIssues: [{
+        id: 'missing-definition',
+        severity: 'blocking',
+        title: 'Macro definition is unavailable',
+        detail: 'Choose a macro version with a valid definition before dispatching a run.',
+        recoveryHint: 'Select a macro version with a valid definition before dispatching.',
+      }],
+      warnings: [],
+    }),
     sensitiveStepCount: 0,
     approvalStepCount: 0,
   };
@@ -65,13 +77,16 @@ export function buildRunPreflightSummary(args: BuildRunPreflightSummaryArgs): Ru
   const stepAnalysis = analyzeRunPreflightSteps(definition);
   blockingIssues.push(...stepAnalysis.blockingIssues);
 
+  const warnings = [
+    ...buildDevicePreflightWarnings(args),
+    ...stepAnalysis.warnings,
+  ];
+
   return {
     declaredTargetType,
     blockingIssues,
-    warnings: [
-      ...buildDevicePreflightWarnings(args),
-      ...stepAnalysis.warnings,
-    ],
+    warnings,
+    gates: buildLaunchGateResults({ blockingIssues, warnings }),
     sensitiveStepCount: stepAnalysis.sensitiveStepCount,
     approvalStepCount: stepAnalysis.approvalStepCount,
   };

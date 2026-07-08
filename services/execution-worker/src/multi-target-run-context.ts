@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition } from '../../../src/contracts/macro';
 import type { Device, TargetType } from '../../../src/lib/database.types';
 import { normalizeRetryBackoffPolicy, type RetryBackoffPolicy } from './retry-backoff-policy.js';
-import { normalizeTargetFailurePolicy, type TargetFailurePolicy } from './target-failure-policy.js';
+import { assertTargetFailurePolicy, normalizeTargetFailurePolicy, type TargetFailurePolicy } from './target-failure-policy.js';
 
 type MultiTargetType = Exclude<TargetType, 'SINGLE_DEVICE'>;
 
@@ -16,6 +16,7 @@ export interface MultiTargetRunContext {
   definition: MacroDefinition;
   retryBackoffPolicy: RetryBackoffPolicy;
   targetFailurePolicy: TargetFailurePolicy;
+  maxPilotTargetCount: number;
   summaryJson: Record<string, unknown>;
   resolvedDeviceIdsPersisted: boolean;
 }
@@ -34,6 +35,12 @@ interface WorkflowRunRow {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeMaxPilotTargetCount(value: unknown) {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return 5;
+  if (value < 1 || value > 10) throw new Error('Invalid max pilot target count: expected integer between 1 and 10');
+  return value;
 }
 
 function extractDeviceIds(selector: unknown) {
@@ -173,11 +180,12 @@ export async function loadMultiTargetRunContext(
   let definition = await loadMacroDefinition(supabase, run.macro_version_id);
   let retryBackoffPolicy = normalizeRetryBackoffPolicy({ maxRetries: definition.execution.maxRetries });
   let targetFailurePolicy = normalizeTargetFailurePolicy(null);
+  let maxPilotTargetCount = 5;
 
   if (run.execution_profile_id) {
     const { data: executionProfile, error: profileError } = await supabase
       .from('execution_profiles')
-      .select('default_timeout_ms, max_retries, retry_base_delay_ms, retry_max_delay_ms, retry_max_elapsed_ms, target_failure_policy')
+      .select('default_timeout_ms, max_retries, retry_base_delay_ms, retry_max_delay_ms, retry_max_elapsed_ms, target_failure_policy, max_pilot_target_count')
       .eq('id', run.execution_profile_id)
       .maybeSingle();
 
@@ -200,11 +208,15 @@ export async function loadMultiTargetRunContext(
         maxDelayMs: executionProfile.retry_max_delay_ms ?? 30000,
         maxElapsedMs: executionProfile.retry_max_elapsed_ms ?? 120000,
       });
-      targetFailurePolicy = normalizeTargetFailurePolicy(executionProfile.target_failure_policy);
+      targetFailurePolicy = assertTargetFailurePolicy(executionProfile.target_failure_policy);
+      maxPilotTargetCount = normalizeMaxPilotTargetCount(executionProfile.max_pilot_target_count);
     }
   }
   const { devices, resolvedDeviceIdsPersisted } = await resolveMultiTargetDevices(supabase, run);
   if (devices.length === 0) throw new Error(`Run ${runId} resolved no online devices`);
+  if (devices.length > maxPilotTargetCount) {
+    throw new Error(`Run ${runId} resolved ${devices.length} targets, exceeding max pilot target count ${maxPilotTargetCount}`);
+  }
 
   return {
     runId: run.id,
@@ -216,6 +228,7 @@ export async function loadMultiTargetRunContext(
     definition,
     retryBackoffPolicy,
     targetFailurePolicy,
+    maxPilotTargetCount,
     summaryJson: isRecord(run.summary_json) ? run.summary_json : {},
     resolvedDeviceIdsPersisted,
   };

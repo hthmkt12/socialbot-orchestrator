@@ -71,13 +71,17 @@ export async function submitRunWizard({
       }
     }
 
+    const targetSelector = targetType === 'DEVICE_GROUP'
+      ? { groupId: selectedGroupId }
+      : targetType === 'SINGLE_DEVICE'
+        ? { target_ids: dispatchableDevices.map((device) => device.id) }
+        : { deviceIds: dispatchableDevices.map((device) => device.id) };
+
     const result = await createRun({
       macroVersionId: selectedVersionId,
       profileId: profile.id,
       targetType,
-      targetSelector: targetType === 'DEVICE_GROUP'
-        ? { groupId: selectedGroupId }
-        : { deviceIds: dispatchableDevices.map((device) => device.id) },
+      targetSelector,
       inputVariables: resolvedInputs,
     });
     const status = String(result.status);

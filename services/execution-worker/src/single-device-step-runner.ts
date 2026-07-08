@@ -6,8 +6,9 @@ import { ExecutionContext } from './engine/execution-context.js';
 import { StepTimeoutError, withTimeout } from '../../../src/engine/step-timeout.js';
 import { applyAntiDetection, randomDelayMs } from '../../../src/lib/anti-detection-helpers.js';
 import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer.js';
+import type { BudgetedAccountActionType } from '../../../src/lib/action-budget-types.js';
 import { handlePotentialBlock } from '../../../src/lib/account-block-detector.js';
-import type { Account, AccountActionType, AccountActionHistory } from '../../../src/lib/database.types';
+import type { Account, AccountActionHistory } from '../../../src/lib/database.types';
 import type { DeviceStepBackend } from './device-step-backend.js';
 import {
   getRetryDelayMs,
@@ -754,13 +755,14 @@ export class SingleDeviceStepRunner {
 
   /* ── Action budget helpers ── */
 
-  private static readonly VALID_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share']);
+  private static readonly BUDGETED_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share']);
+  private static readonly HISTORY_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share', 'instagram_pilot_open']);
 
   /** Check action budget for a step that declares `params.actionBudgetType`.
    *  Returns null when the step is not budget-gated. */
   private async budgetCheckForStep(step: MacroStep): Promise<BudgetCheckResult | null> {
     const actionType = step.params?.actionBudgetType;
-    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.VALID_ACTION_TYPES.has(actionType)) return null;
+    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.BUDGETED_ACTION_TYPES.has(actionType)) return null;
 
     const accountId = this.params.inputVariables?.accountId;
     if (typeof accountId !== 'string') return null;
@@ -793,13 +795,13 @@ export class SingleDeviceStepRunner {
       .gte('created_at', today.toISOString());
 
     const todayCounts = getTodayActionCounts((history ?? []) as AccountActionHistory[], accountId);
-    return checkActionBudget(account as Account, actionType as AccountActionType, todayCounts);
+    return checkActionBudget(account as Account, actionType as BudgetedAccountActionType, todayCounts);
   }
 
   /** Record a completed action in account_action_history and increment current_action_count. */
   private async recordStepAction(step: MacroStep, success: boolean): Promise<void> {
-    const actionType = step.params?.actionBudgetType;
-    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.VALID_ACTION_TYPES.has(actionType)) return;
+    const actionType = step.params?.actionHistoryType ?? step.params?.actionBudgetType;
+    if (typeof actionType !== 'string' || !SingleDeviceStepRunner.HISTORY_ACTION_TYPES.has(actionType)) return;
 
     const accountId = this.params.inputVariables?.accountId;
     if (typeof accountId !== 'string') return;
@@ -808,11 +810,13 @@ export class SingleDeviceStepRunner {
       await this.params.supabase.from('account_action_history').insert({
         account_id: accountId,
         action_type: actionType,
-        step_id: step.id,
+        step_id: null,
+        source_run_id: this.params.runId,
+        source_step_id: step.id,
         success,
       });
 
-      if (success) {
+      if (success && SingleDeviceStepRunner.BUDGETED_ACTION_TYPES.has(actionType)) {
         const { error: rpcError } = await this.params.supabase.rpc('increment_account_action_count', {
           p_account_id: accountId,
         });

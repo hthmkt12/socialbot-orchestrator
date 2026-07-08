@@ -11,7 +11,7 @@ export function useArtifactUrl(artifact: Artifact) {
     let isMounted = true;
 
     async function loadUrl() {
-      if (artifact.metadata_json?.storage_mode !== 'object') {
+      if (!['object', 'object_storage'].includes(String(artifact.metadata_json?.storage_mode))) {
         setUrl(null);
         return;
       }

@@ -14,6 +14,7 @@ export type ExecutionProfileInput = {
   retry_max_delay_ms: number;
   retry_max_elapsed_ms: number;
   target_failure_policy: TargetFailurePolicy;
+  max_pilot_target_count: number;
   require_approval_for_adb: boolean;
   require_approval_for_autox: boolean;
 };
@@ -47,6 +48,12 @@ function normalizeProfileInput(input: ExecutionProfileInput) {
   }
   if (input.target_failure_policy !== 'fail_fast' && input.target_failure_policy !== 'skip_failed_target') {
     throw new Error('Target failure policy must be fail_fast or skip_failed_target');
+  }
+  if (!Number.isInteger(input.max_pilot_target_count) || input.max_pilot_target_count < 1) {
+    throw new Error('Max pilot target count must be at least 1');
+  }
+  if (input.max_pilot_target_count > 10) {
+    throw new Error('Max pilot target count must be 10 or less');
   }
 
   return {

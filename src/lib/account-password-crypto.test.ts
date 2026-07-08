@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AccountPasswordCryptoError, decryptPassword, encryptPassword } from './account-password-crypto';
+import {
+  AccountPasswordCryptoError,
+  decryptPassword,
+  encryptPassword,
+  getCredentialPolicyStatus,
+} from './account-password-crypto';
 
 const TEST_KEY = '0123456789abcdef0123456789abcdef';
 
@@ -11,18 +16,30 @@ describe('account-password-crypto', () => {
   it('fails closed when the encryption key is missing', async () => {
     vi.stubEnv('VITE_ACCOUNT_PASSWORD_KEY', '');
 
+    expect(getCredentialPolicyStatus()).toMatchObject({
+      status: 'missing_key',
+      canSavePilotCredential: false,
+    });
     await expect(encryptPassword('secret')).rejects.toThrow(AccountPasswordCryptoError);
   });
 
   it('requires a sufficiently long encryption key', async () => {
     vi.stubEnv('VITE_ACCOUNT_PASSWORD_KEY', 'short');
 
+    expect(getCredentialPolicyStatus()).toMatchObject({
+      status: 'weak_key',
+      canSavePilotCredential: false,
+    });
     await expect(encryptPassword('secret')).rejects.toThrow('at least 32 characters');
   });
 
   it('round-trips v2 encrypted passwords with the configured key', async () => {
     vi.stubEnv('VITE_ACCOUNT_PASSWORD_KEY', TEST_KEY);
 
+    expect(getCredentialPolicyStatus()).toMatchObject({
+      status: 'pilot_client_encrypted',
+      canSavePilotCredential: true,
+    });
     const encrypted = await encryptPassword('secret-password');
 
     expect(encrypted.startsWith('v2:')).toBe(true);

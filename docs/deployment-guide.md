@@ -53,7 +53,7 @@ Required environment variables in `.env`:
 |----------|----------|-------------|
 | `VITE_SUPABASE_URL` | frontend | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | frontend | Supabase anon key |
-| `VITE_ACCOUNT_PASSWORD_KEY` | frontend | 32+ character pilot encryption key for social account passwords |
+| `VITE_ACCOUNT_PASSWORD_KEY` | frontend | 32+ character pilot-only browser encryption key for social account passwords; not a production vault |
 | `SUPABASE_URL` | worker | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | worker | Supabase service role key |
 | `DEVICE_BACKEND` | worker | `mobile-mcp` (default) or `laixi` |
@@ -64,9 +64,33 @@ Required environment variables in `.env`:
 
 ## CI/CD
 
+## Credential Boundary
+
+Social account credential storage is pilot-only. `VITE_ACCOUNT_PASSWORD_KEY` must be configured with at least 32 characters before account save/import flows are enabled, and stored account payloads must remain `v2:` encrypted values. Do not treat this browser-side key as production credential management; production social credentials require a later server-side encryption/key-management boundary before scale.
+
 GitHub Actions workflow at `.github/workflows/ci.yml`:
 - Runs on push/PR to `master`
-- Jobs: lint → typecheck → build → test (42 unit tests)
+- Jobs: web lint/typecheck/build/test, worker build, gateway build, Python bridge unit tests, and Python bridge compile check.
+
+## Pilot Release Gates
+
+Before making pilot-to-production readiness claims, run the full local gate suite:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run build:worker
+npm run build:gateway
+python -m unittest discover -s services/mobile-mcp-bridge/tests -p "test_*.py"
+python -m py_compile services/mobile-mcp-bridge/src/android_session_manager.py services/mobile-mcp-bridge/src/bridge_server.py services/mobile-mcp-bridge/src/json_response.py
+npm run verify:use-cases
+npm run preflight:mobile-mcp
+npm run verify:mobile-mcp
+```
+
+Artifact evidence must use explicit storage metadata: `inline`, `object_storage`, `external_ref`, or `omitted`. Large JSON/text previews over 64 KB and screenshot/base64 payloads must not be stored inline by default. Readiness reports cannot be marked `pilot_verified` when submitted evidence or artifact metadata has `redaction_status: blocked` or secret-like fields.
 
 ## Build Commands
 

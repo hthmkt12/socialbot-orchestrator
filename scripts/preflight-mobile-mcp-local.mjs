@@ -30,7 +30,9 @@ const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const uiUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
 const macroName = env.UI_SMOKE_MACRO_NAME ?? 'Mobile MCP DB Multi Smoke';
 const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
-const deviceMatches = (env.UI_SMOKE_DEVICE_MATCHES ?? '23106RN0DA,SM-A515F')
+const defaultDeviceMatches = expectedSerials.length ? expectedSerials.join(',') : '23106RN0DA,SM-A515F';
+const deviceMatchSource = expectedSerials.length ? defaultDeviceMatches : (env.UI_SMOKE_DEVICE_MATCHES ?? defaultDeviceMatches);
+const deviceMatches = deviceMatchSource
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);

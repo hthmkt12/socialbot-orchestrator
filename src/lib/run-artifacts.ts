@@ -3,8 +3,9 @@ import type { Artifact } from './database.types';
 export type RunArtifactPreviewKind = 'image' | 'text' | 'json' | 'binary';
 export type RunArtifactEvidenceKind = 'screenshot' | 'log' | 'json' | 'unknown';
 export type RunArtifactLinkageStatus = 'linked' | 'missing-device' | 'missing-step' | 'missing-device-and-step';
+export type RunArtifactStorageMode = 'inline' | 'object_storage' | 'external_ref' | 'omitted' | 'unknown';
 
-const MAX_INLINE_PREVIEW_BYTES = 512_000;
+const MAX_INLINE_PREVIEW_BYTES = 64 * 1024;
 
 export interface RunArtifactPreview {
   artifact: Artifact;
@@ -21,6 +22,9 @@ export interface RunArtifactPreview {
   linkageMessage: string;
   storageModeLabel: string;
   storageStatusLabel: string;
+  storageMode: RunArtifactStorageMode;
+  retentionExpiresAt: string | null;
+  isExpired: boolean;
   previewAvailable: boolean;
   previewAvailabilityLabel: string;
   previewAvailabilityReason: string | null;
@@ -103,6 +107,20 @@ function getPreviewAvailability(previewKind: RunArtifactPreviewKind, hasPreview:
   };
 }
 
+function normalizeStorageMode(value: unknown): RunArtifactStorageMode {
+  if (value === 'object' || value === 'object_storage') return 'object_storage';
+  if (value === 'inline' || value === 'external_ref' || value === 'omitted') return value;
+  return 'unknown';
+}
+
+function getStorageDisplay(mode: RunArtifactStorageMode, status: unknown) {
+  if (mode === 'object_storage') return { storageModeLabel: 'Object storage', storageStatusLabel: String(status ?? 'stored remotely') };
+  if (mode === 'external_ref') return { storageModeLabel: 'External reference', storageStatusLabel: String(status ?? 'referenced') };
+  if (mode === 'omitted') return { storageModeLabel: 'Payload omitted', storageStatusLabel: String(status ?? 'metadata only') };
+  if (mode === 'inline') return { storageModeLabel: 'Inline pilot evidence', storageStatusLabel: String(status ?? 'inline preview') };
+  return { storageModeLabel: 'Unknown storage mode', storageStatusLabel: String(status ?? 'metadata only') };
+}
+
 function readJsonPayload(metadata: Record<string, unknown>) {
   if (Object.prototype.hasOwnProperty.call(metadata, 'json')) return metadata.json;
   if (Object.prototype.hasOwnProperty.call(metadata, 'payload')) return metadata.payload;
@@ -133,15 +151,18 @@ export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
   const source = asString(metadata.source);
   const jsonPayload = readJsonPayload(metadata);
   const isOversized = artifact.size > MAX_INLINE_PREVIEW_BYTES;
-  const isObjectStorage = metadata.storage_mode === 'object';
+  const storageMode = normalizeStorageMode(metadata.storage_mode);
+  const isObjectStorage = storageMode === 'object_storage';
+  const retentionExpiresAt = asValidTimestamp(metadata.retention_expires_at);
+  const isExpired = retentionExpiresAt ? new Date(retentionExpiresAt).getTime() < Date.now() : false;
 
-  const imageSrc = artifact.type === 'SCREENSHOT' && base64 && !isOversized
+  const imageSrc = artifact.type === 'SCREENSHOT' && base64 && !isOversized && !isExpired
     ? `data:${artifact.content_type};base64,${base64}`
     : null;
 
-  const previewText = jsonPayload !== undefined && !isOversized
+  const previewText = jsonPayload !== undefined && !isOversized && !isExpired
     ? stringifyJson(jsonPayload)
-    : isOversized
+    : isOversized || isExpired
       ? null
       : text;
 
@@ -154,7 +175,14 @@ export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
         : 'binary';
   const evidenceDisplay = getEvidenceDisplay(artifact.type);
   const linkage = getLinkageStatus(artifact.device_id, stepId);
-  const previewAvailability = getPreviewAvailability(previewKind, Boolean(imageSrc || previewText || isObjectStorage), isOversized);
+  const previewAvailability = isExpired
+    ? {
+      previewAvailable: false,
+      previewAvailabilityLabel: 'Artifact expired',
+      previewAvailabilityReason: 'Artifact retention window has expired; metadata is shown instead.',
+    }
+    : getPreviewAvailability(previewKind, Boolean(imageSrc || previewText || isObjectStorage), isOversized);
+  const storageDisplay = getStorageDisplay(storageMode, metadata.storage_status);
 
   return {
     artifact,
@@ -168,8 +196,10 @@ export function normalizeRunArtifact(artifact: Artifact): RunArtifactPreview {
     rawMetadataPreviewText: buildRawMetadataPreviewText(metadata, isOversized),
     ...evidenceDisplay,
     ...linkage,
-    storageModeLabel: isObjectStorage ? 'Supabase Storage' : 'Inline pilot evidence',
-    storageStatusLabel: isObjectStorage ? 'Stored remotely' : 'Object storage deferred',
+    storageMode,
+    retentionExpiresAt,
+    isExpired,
+    ...storageDisplay,
     ...previewAvailability,
   };
 }

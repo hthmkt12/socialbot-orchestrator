@@ -55,6 +55,23 @@ const report = {
   cases: [],
 };
 
+function buildLevel1Evidence(evidence) {
+  return {
+    pilot_level: 'level_1',
+    backend_mode: evidence.workerBackend ?? 'unknown',
+    bridge_health: evidence.bridgeStatus && evidence.bridgeStatus < 500 ? 'ok' : 'failed',
+    worker_health: evidence.workerStatus && evidence.workerStatus < 500 ? 'ok' : 'failed',
+    supabase_health: evidence.latestRunError ? 'failed' : 'ok',
+    expected_serials: env.MOBILE_MCP_EXPECTED_SERIALS?.split(',').map((serial) => serial.trim()).filter(Boolean) ?? [],
+    observed_serials: evidence.bridgeDeviceIds ?? [],
+    run_id: evidence.latestRunId,
+    run_status: evidence.latestRunStatus,
+    artifact_refs: evidence.artifactRefs ?? [],
+    secret_scrub_status: containsSensitiveKey(evidence) ? 'blocked' : 'passed',
+    claim_summary: 'Level 1 Mobile MCP Android readiness evidence snapshot from real use-case verifier.',
+  };
+}
+
 function redactUrl(value) {
   try {
     const url = new URL(value);
@@ -454,26 +471,34 @@ async function main() {
     const worker = await fetchJson(`${workerUrl}/health`);
     const ui = await fetch(uiUrl, { method: 'HEAD', signal: AbortSignal.timeout(5000) }).then((response) => response.status).catch((error) => String(error));
     const latestRun = runs?.[0] ?? null;
+    const bridgeDeviceIds = bridge.body?.output?.devices?.map((device) => device.id ?? device.serial).filter(Boolean) ?? [];
     const evidence = {
       bridgeStatus: bridge.status,
       bridgeAuthConfigured: bridge.body?.authConfigured ?? null,
       bridgeSessionCount: bridge.body?.sessionCount ?? null,
+      bridgeDeviceIds,
       workerStatus: worker.status,
       workerBackend: worker.body?.deviceBackend ?? null,
       uiStatus: ui,
+      latestRunError: runError?.message ?? null,
       latestRunId: latestRun?.id ?? null,
       latestRunStatus: latestRun?.status ?? null,
       latestRunTarget: latestRun?.target_type ?? null,
+      artifactRefs: latestRun?.summary_json?.artifactRefs ?? latestRun?.summary_json?.artifacts ?? [],
     };
+    const level1Evidence = buildLevel1Evidence(evidence);
+    report.readinessEvidence = level1Evidence;
     return {
       status: runError ? 'WARN' : 'PASS',
       lines: [
         `bridge: ${bridge.status}, authConfigured=${evidence.bridgeAuthConfigured}, sessionCount=${evidence.bridgeSessionCount}`,
+        `observed serials: ${bridgeDeviceIds.join(', ') || 'none'}`,
         `worker: ${worker.status}, backend=${evidence.workerBackend}`,
         `ui: ${ui}`,
         `latest run: ${evidence.latestRunId ?? 'none'} ${evidence.latestRunStatus ?? ''} ${evidence.latestRunTarget ?? ''}`.trim(),
+        `level1 evidence: pilot_level=${level1Evidence.pilot_level}, backend_mode=${level1Evidence.backend_mode}, secret_scrub_status=${level1Evidence.secret_scrub_status}`,
       ],
-      data: evidence,
+      data: { evidence, level1Evidence },
     };
   });
 

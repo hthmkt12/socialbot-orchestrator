@@ -27,6 +27,7 @@ export function RunArtifactPreviewCard({ artifact }: { artifact: RunArtifactPrev
             <span className="text-[10px] text-gray-400 uppercase tracking-wide">{artifact.source}</span>
           )}
           {artifact.linkageStatus !== 'linked' && <Badge variant="orange">Linkage warning</Badge>}
+          {artifact.isExpired && <Badge variant="orange">Expired</Badge>}
           {!artifact.previewAvailable && <Badge variant="orange">Preview warning</Badge>}
         </div>
         <span className="text-[10px] text-gray-400">{(artifact.artifact.size / 1024).toFixed(1)} KB</span>
@@ -39,6 +40,9 @@ export function RunArtifactPreviewCard({ artifact }: { artifact: RunArtifactPrev
         <p>step: <span className="font-mono">{artifact.stepId ?? 'missing'}</span></p>
         <p>created: {new Date(createdAt).toLocaleString()}</p>
         <p>storage: {artifact.storageModeLabel} · {artifact.storageStatusLabel}</p>
+        {artifact.retentionExpiresAt && (
+          <p>retention: {new Date(artifact.retentionExpiresAt).toLocaleString()}</p>
+        )}
         {artifact.linkageStatus !== 'linked' && <p className="text-amber-700">{artifact.linkageMessage}</p>}
       </div>
 

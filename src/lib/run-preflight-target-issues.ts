@@ -1,7 +1,27 @@
 import type { MacroDefinition } from '../contracts/macro';
+import type { MacroStep } from '../contracts/macro';
 import type { TargetType } from './database.types';
 import { validateInputField } from './run-preflight-helpers';
 import type { BuildRunPreflightSummaryArgs, RunPreflightIssue } from './run-preflight-types';
+
+const INSTAGRAM_PILOT_MACRO_KEY = 'instagram_pilot_open_capture';
+const PILOT_DISALLOWED_ACTIONS = new Set(['like', 'follow', 'comment', 'post', 'message', 'share']);
+const DEFAULT_MAX_PILOT_TARGET_COUNT = 5;
+
+function collectPilotDisallowedActionIds(steps: MacroStep[]): string[] {
+  const ids: string[] = [];
+  for (const step of steps) {
+    const actionType = step.params?.actionBudgetType ?? step.params?.actionType ?? step.params?.socialAction;
+    if (typeof actionType === 'string' && PILOT_DISALLOWED_ACTIONS.has(actionType)) {
+      ids.push(step.id);
+    }
+    if (step.steps) ids.push(...collectPilotDisallowedActionIds(step.steps));
+    if (step.then) ids.push(...collectPilotDisallowedActionIds(step.then));
+    if (step.else) ids.push(...collectPilotDisallowedActionIds(step.else));
+    if (step.catch) ids.push(...collectPilotDisallowedActionIds(step.catch));
+  }
+  return ids;
+}
 
 export function buildTargetPreflightIssues(
   args: BuildRunPreflightSummaryArgs,
@@ -31,6 +51,27 @@ export function buildTargetPreflightIssues(
 
   for (const [inputKey, field] of Object.entries(definition.inputs ?? {})) {
     issues.push(...validateInputField(inputKey, field, args.inputValues));
+  }
+
+  if (definition.meta.key === INSTAGRAM_PILOT_MACRO_KEY) {
+    const disallowedStepIds = collectPilotDisallowedActionIds(definition.steps);
+    if (disallowedStepIds.length > 0) {
+      issues.push({
+        id: 'instagram-pilot-disallowed-action',
+        severity: 'blocking',
+        title: 'Instagram pilot workflow contains an out-of-scope action',
+        detail: `Remove follow/like/comment/post/message/share actions from steps: ${disallowedStepIds.join(', ')}.`,
+      });
+    }
+
+    if (args.selectedAccount && args.selectedAccount.platform !== 'instagram') {
+      issues.push({
+        id: 'instagram-pilot-account-platform',
+        severity: 'blocking',
+        title: 'Instagram pilot workflow requires an Instagram account',
+        detail: `${args.selectedAccount.username} is a ${args.selectedAccount.platform} account.`,
+      });
+    }
   }
 
   if (args.requiresAccount && !args.selectedAccount) {
@@ -78,6 +119,17 @@ export function buildTargetPreflightIssues(
       severity: 'blocking',
       title: 'Single-device target requires exactly one device',
       detail: 'Select one device before dispatching a single-device macro.',
+    });
+  }
+
+  const maxPilotTargetCount = args.maxPilotTargetCount ?? DEFAULT_MAX_PILOT_TARGET_COUNT;
+  if (args.targetType !== 'SINGLE_DEVICE' && args.targetDevicesCount > maxPilotTargetCount) {
+    issues.push({
+      id: 'max-pilot-target-count-exceeded',
+      severity: 'blocking',
+      title: 'Selected targets exceed the pilot device limit',
+      detail: `${args.targetDevicesCount} targets resolved, but this pilot profile allows at most ${maxPilotTargetCount}.`,
+      recoveryHint: 'Reduce the selected devices or ask an admin to raise the bounded pilot target limit.',
     });
   }
 

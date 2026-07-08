@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, FileCheck2, Plus, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleSlash, FileCheck2, Plus, ShieldAlert, ShieldCheck } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Spinner from '../components/ui/Spinner';
 import { useCreateReadinessReport, useReadinessReports, useReviewReadinessReport } from '../hooks/use-readiness-reports';
 import { canCreateReadinessReports, canReviewReadinessReports, getRoleLabel } from '../lib/role-access';
 import type { PilotReadinessBackend, PilotReadinessReport, PilotReadinessStatus } from '../lib/database.types';
-import type { ReadinessReviewDecision } from '../lib/readiness-report-service';
+import { getReadinessReportGates, type ReadinessReviewDecision } from '../lib/readiness-report-service';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 
@@ -66,6 +66,12 @@ function getEvidenceSummary(report: PilotReadinessReport) {
   return Object.entries(evidence as Record<string, unknown>)
     .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
     .slice(0, 6);
+}
+
+function gateStyle(status: string, type: string) {
+  if (status === 'passed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (type === 'warning') return 'border-amber-200 bg-amber-50 text-amber-800';
+  return 'border-red-200 bg-red-50 text-red-800';
 }
 
 export default function ReadinessReportsPage() {
@@ -237,6 +243,30 @@ export default function ReadinessReportsPage() {
                       <p className="text-sm text-gray-600 border-l-2 border-gray-200 pl-3">{report.review_notes}</p>
                     )}
 
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Readiness gates</p>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+                        {getReadinessReportGates(report).map((gate) => (
+                          <div key={gate.key} className={`rounded-lg border px-3 py-2 ${gateStyle(gate.status, gate.type)}`}>
+                            <div className="flex items-start gap-2">
+                              {gate.status === 'passed' ? (
+                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                              ) : gate.type === 'warning' ? (
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                              ) : (
+                                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                              )}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium">{gate.message}</p>
+                                <p className="text-xs opacity-80">{gate.recoveryHint}</p>
+                                <p className="mt-1 text-[11px] uppercase tracking-wide opacity-70">{gate.type.replace(/_/g, ' ')} · {gate.status}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
@@ -262,6 +292,7 @@ export default function ReadinessReportsPage() {
                         disabled={!canReview || reviewReport.isPending}
                         className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 text-white text-sm font-medium hover:bg-gray-900 disabled:bg-gray-300 disabled:cursor-not-allowed"
                       >
+                        <CircleSlash className="w-4 h-4" />
                         Not verified
                       </button>
                     </div>

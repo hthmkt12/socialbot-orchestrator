@@ -17,6 +17,11 @@ export function normalizeTargetFailurePolicy(value: unknown): TargetFailurePolic
   return value === 'fail_fast' || value === 'skip_failed_target' ? value : 'skip_failed_target';
 }
 
+export function assertTargetFailurePolicy(value: unknown): TargetFailurePolicy {
+  if (value === 'fail_fast' || value === 'skip_failed_target') return value;
+  throw new Error('Invalid target failure policy: expected fail_fast or skip_failed_target');
+}
+
 export function buildTargetFailureDecision(args: {
   device: Pick<Device, 'id' | 'name'>;
   error?: { code: string; message: string };

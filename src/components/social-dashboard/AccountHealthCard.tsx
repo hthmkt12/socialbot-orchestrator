@@ -6,8 +6,8 @@ import {
   daysInWarmUp,
 } from '../../lib/account-warmup-engine';
 import { getAccountBudgets } from '../../lib/action-budget-enforcer';
-import { ACTION_TYPE_LABELS } from '../../lib/action-budget-types';
-import type { Account, AccountActionType } from '../../lib/database.types';
+import { ACTION_TYPE_LABELS, type BudgetedAccountActionType } from '../../lib/action-budget-types';
+import type { Account } from '../../lib/database.types';
 
 interface AccountHealthCardProps {
   account: Account;
@@ -93,7 +93,7 @@ export function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: Acc
 
       {/* Per-type budget breakdown */}
       <div className="flex flex-wrap gap-1 mb-3">
-        {(Object.keys(budgets) as AccountActionType[]).map((type) => {
+        {(Object.keys(budgets) as BudgetedAccountActionType[]).map((type) => {
           const bgt = budgets[type];
           return (
             <span key={type} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600">

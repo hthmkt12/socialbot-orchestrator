@@ -70,6 +70,8 @@ function history(actionType = 'like'): AccountActionHistory {
     account_id: 'account-1',
     action_type: actionType as AccountActionHistory['action_type'],
     step_id: 'existing-step',
+    source_run_id: null,
+    source_step_id: null,
     success: true,
     error_message: null,
     created_at: new Date().toISOString(),
@@ -255,7 +257,9 @@ describe('single-device step runner account budgets', () => {
       {
         account_id: 'account-1',
         action_type: 'like',
-        step_id: 'like-step',
+        step_id: null,
+        source_run_id: 'run-1',
+        source_step_id: 'like-step',
         success: true,
       },
     ]);
@@ -265,6 +269,36 @@ describe('single-device step runner account budgets', () => {
         payload: { p_account_id: 'account-1' },
       },
     ]);
+  });
+
+  it('records Instagram pilot open history without consuming the action budget counter', async () => {
+    const supabase = makeSupabase({
+      account: account({ daily_action_limit: 10 }),
+      history: [],
+    });
+
+    const result = await runnerFor({
+      supabase: supabase.supabase,
+      step: {
+        id: 'capture_pilot_evidence',
+        type: 'screenshot',
+        params: { actionHistoryType: 'instagram_pilot_open' },
+      },
+      backendResult: { success: true, output: { screenshot: true } },
+    }).run();
+
+    expect(result.status).toBe('COMPLETED');
+    expect(supabase.historyInserts).toEqual([
+      {
+        account_id: 'account-1',
+        action_type: 'instagram_pilot_open',
+        step_id: null,
+        source_run_id: 'run-1',
+        source_step_id: 'capture_pilot_evidence',
+        success: true,
+      },
+    ]);
+    expect(supabase.rpcCalls).toHaveLength(0);
   });
 
   it('WORK-CAN-011 marks an account blocked when a failed step contains a block signature', async () => {
