@@ -138,6 +138,24 @@ describe('readiness report service', () => {
     });
   });
 
+  it('keeps scrub-status fields while stripping real secret-like keys', () => {
+    expect(sanitizeReadinessEvidence({
+      secret_scrub_status: 'passed',
+      secretScrubStatus: 'passed',
+      bridge_token: 'do-not-store',
+      artifact_metadata: {
+        redaction_status: 'scrubbed',
+        account_password_key: 'do-not-store',
+      },
+    })).toEqual({
+      secret_scrub_status: 'passed',
+      secretScrubStatus: 'passed',
+      artifact_metadata: {
+        redaction_status: 'scrubbed',
+      },
+    });
+  });
+
   it('rejects pilot verification when required evidence is missing', () => {
     const result = validateReadinessEvidence({
       backend: 'mobile_mcp',
