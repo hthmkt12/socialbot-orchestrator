@@ -33,7 +33,8 @@ Health check: `http://127.0.0.1:8080/health`
 - Verify: `npm run preflight:mobile-mcp` → `npm run verify:mobile-mcp`
 - Expected device serials: configured via `MOBILE_MCP_EXPECTED_SERIALS` env
 - Protected bridge endpoints require `MOBILE_MCP_BRIDGE_TOKEN`.
-- Set `MOBILE_MCP_ALLOW_INSECURE_DEV=true` only for isolated local development without real account credentials.
+- `npm run runtime:mobile-mcp` fails closed when `MOBILE_MCP_BRIDGE_TOKEN` is missing.
+- Set `MOBILE_MCP_ALLOW_INSECURE_DEV=true` only as an explicit isolated-local bypass without real account credentials.
 
 ## Docker (Full Stack)
 

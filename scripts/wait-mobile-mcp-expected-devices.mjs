@@ -32,6 +32,7 @@ function loadDotEnv(path) {
 const dotEnv = loadDotEnv(join(rootDir, '.env'));
 const env = { ...dotEnv, ...process.env };
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
+const bridgeToken = env.MOBILE_MCP_BRIDGE_TOKEN;
 const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
 const timeoutMs = Number(argValue('--timeout-ms', env.MOBILE_MCP_WAIT_TIMEOUT_MS ?? 60_000));
 const intervalMs = Number(argValue('--interval-ms', env.MOBILE_MCP_WAIT_INTERVAL_MS ?? 2_000));
@@ -66,7 +67,8 @@ function readAdbOnline() {
 
 async function readBridgeOnline() {
   try {
-    const response = await fetch(`${bridgeUrl}/devices`, { signal: AbortSignal.timeout(3000) });
+    const headers = bridgeToken ? { 'x-bridge-token': bridgeToken } : {};
+    const response = await fetch(`${bridgeUrl}/devices`, { headers, signal: AbortSignal.timeout(3000) });
     const body = await response.json();
     const online = body?.output?.devices?.map((device) => device.id ?? device.serial).filter(Boolean) ?? [];
     return { ok: response.ok, online, status: response.status };

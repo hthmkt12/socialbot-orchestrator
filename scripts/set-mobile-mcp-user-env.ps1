@@ -107,6 +107,18 @@ function Read-OptionalSecret {
   return ConvertTo-PlainText -SecureValue $value
 }
 
+function New-BridgeToken {
+  $bytes = New-Object byte[] 32
+  $rng = [Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $rng.GetBytes($bytes)
+    return ([BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
+  }
+  finally {
+    $rng.Dispose()
+  }
+}
+
 Write-Host 'Mobile MCP local env setup'
 Write-Host 'Scope: Windows User environment. Values are not written to repo files.'
 
@@ -118,6 +130,11 @@ $expectedSerials = Read-OptionalText -Prompt 'MOBILE_MCP_EXPECTED_SERIALS' -Defa
 $operatorEmail = Read-OptionalText -Prompt 'UI_SMOKE_EMAIL' -DefaultValue (Get-ConfigDefault -Name 'UI_SMOKE_EMAIL')
 $deviceMatches = Read-OptionalText -Prompt 'UI_SMOKE_DEVICE_MATCHES' -DefaultValue (Get-ConfigDefault -Name 'UI_SMOKE_DEVICE_MATCHES' -Fallback '23106RN0DA,SM-A515F')
 $appName = Read-OptionalText -Prompt 'UI_SMOKE_APP_NAME' -DefaultValue (Get-ConfigDefault -Name 'UI_SMOKE_APP_NAME' -Fallback 'com.android.settings')
+$bridgeTokenDefault = Get-ConfigDefault -Name 'MOBILE_MCP_BRIDGE_TOKEN' -Fallback (New-BridgeToken)
+$bridgeToken = Read-OptionalSecret -Prompt 'MOBILE_MCP_BRIDGE_TOKEN (hidden; Enter keeps/generates secure token)'
+if ([string]::IsNullOrWhiteSpace($bridgeToken)) {
+  $bridgeToken = $bridgeTokenDefault
+}
 $serviceRoleKey = Read-OptionalSecret -Prompt 'SUPABASE_SERVICE_ROLE_KEY / sb_secret (hidden; Enter skips)'
 $operatorPassword = Read-OptionalSecret -Prompt 'UI_SMOKE_PASSWORD (hidden; Enter skips)'
 
@@ -125,6 +142,8 @@ Set-UserEnvironmentValue -Name 'SUPABASE_URL' -Value $supabaseUrl
 Set-UserEnvironmentValue -Name 'SUPABASE_SERVICE_ROLE_KEY' -Value $serviceRoleKey -Sensitive
 Set-UserEnvironmentValue -Name 'DEVICE_BACKEND' -Value 'mobile-mcp'
 Set-UserEnvironmentValue -Name 'MOBILE_MCP_BRIDGE_URL' -Value $bridgeUrl
+Set-UserEnvironmentValue -Name 'MOBILE_MCP_BRIDGE_TOKEN' -Value $bridgeToken -Sensitive
+Set-UserEnvironmentValue -Name 'MOBILE_MCP_ALLOW_INSECURE_DEV' -Value 'false'
 Set-UserEnvironmentValue -Name 'MOBILE_MCP_EXPECTED_SERIALS' -Value $expectedSerials
 Set-UserEnvironmentValue -Name 'DEVICE_COMMAND_TIMEOUT_MS' -Value '30000'
 Set-UserEnvironmentValue -Name 'RUN_POLL_INTERVAL_MS' -Value '2000'

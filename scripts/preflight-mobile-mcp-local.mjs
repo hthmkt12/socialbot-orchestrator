@@ -28,6 +28,7 @@ const env = { ...dotEnv, ...process.env };
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const uiUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
+const bridgeToken = env.MOBILE_MCP_BRIDGE_TOKEN;
 const macroName = env.UI_SMOKE_MACRO_NAME ?? 'Mobile MCP DB Multi Smoke';
 const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
 const defaultDeviceMatches = expectedSerials.length ? expectedSerials.join(',') : '23106RN0DA,SM-A515F';
@@ -80,7 +81,11 @@ function readAdbDevices() {
 }
 
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(5000) });
+  const headers = {
+    ...(options.headers ?? {}),
+    ...(bridgeToken && url.startsWith(bridgeUrl) ? { 'x-bridge-token': bridgeToken } : {}),
+  };
+  const response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(5000) });
   const text = await response.text();
   let body;
   try {
@@ -112,6 +117,7 @@ async function main() {
   try {
     const bridgeHealth = await fetchJson(`${bridgeUrl}/health`);
     addCheck('bridge.health', bridgeHealth.ok, `${bridgeUrl}/health -> ${bridgeHealth.status}`);
+    addCheck('bridge.auth', bridgeHealth.body?.authRequired === true || bridgeHealth.body?.insecureDevMode === true, bridgeHealth.body?.authRequired === true ? 'token-required' : bridgeHealth.body?.insecureDevMode === true ? 'explicit insecure local mode' : 'not configured');
     const bridgeDevices = await fetchJson(`${bridgeUrl}/devices`);
     const ids = bridgeDevices.body?.output?.devices?.map((device) => device.id ?? device.serial) ?? [];
     addCheck('bridge.devices', ids.length >= deviceMatches.length, ids.join(', ') || 'none');

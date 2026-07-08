@@ -34,6 +34,7 @@ const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const uiUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
+const bridgeToken = env.MOBILE_MCP_BRIDGE_TOKEN;
 const runPrefix = `real-verify-${Date.now()}`;
 
 const report = {
@@ -122,7 +123,11 @@ async function runCase(id, title, fn) {
 }
 
 async function fetchJson(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(5000) });
+  const headers = {
+    ...(options.headers ?? {}),
+    ...(bridgeToken && url.startsWith(bridgeUrl) ? { 'x-bridge-token': bridgeToken } : {}),
+  };
+  const response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(5000) });
   const text = await response.text();
   let body = text;
   try {
@@ -652,7 +657,7 @@ async function main() {
         `/health -> ${health.status}`,
         `/devices -> ${devices.status}`,
         `device ids: ${ids.join(', ') || 'none'}`,
-        `auth mode: ${health.body?.authRequired === false ? 'insecure/no-token' : health.body?.authRequired === true ? 'token-required' : 'unknown'}`,
+        `auth mode: ${health.body?.authRequired === true ? 'token-required' : health.body?.insecureDevMode === true ? 'explicit-insecure-local' : 'not-configured'}`,
         `authConfigured: ${health.body?.authConfigured ?? 'unknown'}`,
         `protectedEndpointsAvailable: ${health.body?.protectedEndpointsAvailable ?? 'unknown'}`,
         `health leaks sensitive keys: ${containsSensitiveKey(health.body) ? 'yes' : 'no'}`,

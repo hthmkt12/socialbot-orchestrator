@@ -39,6 +39,8 @@ const workerUrl = localUrl('VITE_WORKER_BASE_URL', 'http://127.0.0.1:4310');
 const viteUrl = 'http://127.0.0.1:5173';
 const serviceRoleKey = mergedEnv.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseUrl = mergedEnv.SUPABASE_URL ?? mergedEnv.VITE_SUPABASE_URL;
+const bridgeToken = mergedEnv.MOBILE_MCP_BRIDGE_TOKEN;
+const allowInsecureBridge = mergedEnv.MOBILE_MCP_ALLOW_INSECURE_DEV === 'true';
 const children = [];
 
 function print(message) {
@@ -98,12 +100,16 @@ function serviceDefinitions() {
       command: [npmCommand, ['--prefix', 'services/mobile-mcp-bridge', 'run', 'dev']],
       env: {
         MOBILE_MCP_BRIDGE_PORT: new URL(bridgeUrl).port || '4321',
-        MOBILE_MCP_ALLOW_INSECURE_DEV: mergedEnv.MOBILE_MCP_BRIDGE_TOKEN ? 'false' : 'true',
+        MOBILE_MCP_BRIDGE_TOKEN: bridgeToken,
+        MOBILE_MCP_ALLOW_INSECURE_DEV: allowInsecureBridge ? 'true' : 'false',
       },
       preflight() {
         const pythonPath = join(rootDir, 'services', 'mobile-mcp-bridge', '.venv', 'Scripts', 'python.exe');
         if (isWindows && !existsSync(pythonPath)) {
           throw new Error('Mobile MCP bridge venv missing. Run: npm run setup:mobile-mcp-bridge');
+        }
+        if (!bridgeToken && !allowInsecureBridge) {
+          throw new Error('MOBILE_MCP_BRIDGE_TOKEN is required. For isolated local development only, set MOBILE_MCP_ALLOW_INSECURE_DEV=true explicitly.');
         }
       },
     },
@@ -116,6 +122,7 @@ function serviceDefinitions() {
         SUPABASE_SERVICE_ROLE_KEY: serviceRoleKey,
         DEVICE_BACKEND: 'mobile-mcp',
         MOBILE_MCP_BRIDGE_URL: bridgeUrl,
+        MOBILE_MCP_BRIDGE_TOKEN: bridgeToken,
         DEVICE_COMMAND_TIMEOUT_MS: mergedEnv.DEVICE_COMMAND_TIMEOUT_MS ?? '30000',
         RUN_POLL_INTERVAL_MS: mergedEnv.RUN_POLL_INTERVAL_MS ?? '2000',
       },

@@ -27,6 +27,7 @@ const env = { ...dotEnv, ...process.env };
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const uiUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
+const bridgeToken = env.MOBILE_MCP_BRIDGE_TOKEN;
 const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
 
 function parseCsv(value) {
@@ -66,7 +67,8 @@ function readAdb() {
 
 async function fetchStatus(name, url, method = 'GET') {
   try {
-    const response = await fetch(url, { method, signal: AbortSignal.timeout(3000) });
+    const headers = bridgeToken && url.startsWith(bridgeUrl) ? { 'x-bridge-token': bridgeToken } : {};
+    const response = await fetch(url, { method, headers, signal: AbortSignal.timeout(3000) });
     let body = null;
     const text = await response.text();
     try {
@@ -131,9 +133,16 @@ function buildWarnings(report) {
   const adbOnline = report.adb.devices.filter((device) => device.online).map((device) => device.serial);
   const bridgeOnline = bridgeSerials(report);
   const adbSyncOnline = latestAdbSyncSerials(report);
+  const bridgeHealth = report.services.find((service) => service.name === 'bridge.health');
 
   if (!report.env.hasServiceRoleKey) {
     warnings.push('SUPABASE_SERVICE_ROLE_KEY is not loaded; write operations will use dry-run/preview modes.');
+  }
+  if (bridgeHealth?.body?.insecureDevMode === true) {
+    warnings.push('Mobile MCP bridge is running in explicit insecure local mode; do not use real account credentials.');
+  }
+  if (bridgeHealth?.body?.authConfigured === false) {
+    warnings.push('Mobile MCP bridge protected endpoints are not configured; set MOBILE_MCP_BRIDGE_TOKEN or explicitly allow insecure local mode.');
   }
   if (!report.env.hasUiSmokeLogin) {
     warnings.push('UI_SMOKE_EMAIL/UI_SMOKE_PASSWORD are not loaded; full UI smoke cannot run from this shell.');
@@ -184,6 +193,8 @@ async function main() {
       expectedSerials,
       hasServiceRoleKey: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
       hasUiSmokeLogin: Boolean(env.UI_SMOKE_EMAIL && env.UI_SMOKE_PASSWORD),
+      hasBridgeToken: Boolean(bridgeToken),
+      allowInsecureBridge: env.MOBILE_MCP_ALLOW_INSECURE_DEV === 'true',
     },
     adb: readAdb(),
     services: [
