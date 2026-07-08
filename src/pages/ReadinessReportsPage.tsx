@@ -10,6 +10,12 @@ import {
   getReadinessReportGates,
   type ReadinessReviewDecision,
 } from '../lib/readiness-report-service';
+import {
+  compactReadinessEvidence,
+  createInitialReadinessEvidence,
+  readinessEvidenceFieldKeys,
+  type ReadinessEvidenceForm,
+} from '../lib/readiness-report-form-helpers';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 
@@ -34,58 +40,6 @@ const freshnessStyles = {
   missing: 'bg-amber-100 text-amber-700',
   invalid: 'bg-red-100 text-red-700',
 };
-
-type EvidenceForm = {
-  pilot_level: string;
-  backend_mode: string;
-  runtimeStatus: string;
-  worker_health: string;
-  reportStatus: string;
-  deviceSerial: string;
-  sessionId: string;
-  runId: string;
-  smokeResult: string;
-  artifact_refs: string;
-  secret_scrub_status: string;
-  verified_at: string;
-  claim_summary: string;
-  laixiLiveSessionProof: string;
-  iosPortalProof: string;
-};
-
-function createInitialEvidence(backend: PilotReadinessBackend): EvidenceForm {
-  return {
-    pilot_level: 'level_1',
-    backend_mode: backend,
-    runtimeStatus: '',
-    worker_health: '',
-    reportStatus: '',
-    deviceSerial: '',
-    sessionId: '',
-    runId: '',
-    smokeResult: '',
-    artifact_refs: '',
-    secret_scrub_status: 'passed',
-    verified_at: new Date().toISOString(),
-    claim_summary: '',
-    laixiLiveSessionProof: '',
-    iosPortalProof: '',
-  };
-}
-
-const evidenceFieldKeys = Object.keys(createInitialEvidence('mobile_mcp')) as Array<keyof EvidenceForm>;
-
-function compactEvidence(evidence: EvidenceForm) {
-  const compacted = Object.fromEntries(
-    Object.entries(evidence).filter(([, value]) => value.trim().length > 0)
-  );
-  return {
-    ...compacted,
-    expected_serials: evidence.deviceSerial.split(',').map((serial) => serial.trim()).filter(Boolean),
-    observed_serials: evidence.sessionId.split(',').map((serial) => serial.trim()).filter(Boolean),
-    artifact_refs: evidence.artifact_refs.split(',').map((artifact) => artifact.trim()).filter(Boolean),
-  };
-}
 
 function formatStatus(status: PilotReadinessStatus) {
   return status.replace(/_/g, ' ');
@@ -128,7 +82,7 @@ export default function ReadinessReportsPage() {
   const reviewReport = useReviewReadinessReport();
   const [backend, setBackend] = useState<PilotReadinessBackend>('mobile_mcp');
   const [reportPath, setReportPath] = useState('');
-  const [evidence, setEvidence] = useState<EvidenceForm>(() => createInitialEvidence('mobile_mcp'));
+  const [evidence, setEvidence] = useState<ReadinessEvidenceForm>(() => createInitialReadinessEvidence('mobile_mcp'));
   const canCreate = canCreateReadinessReports(profile?.role);
   const canReview = canReviewReadinessReports(profile?.role);
 
@@ -142,13 +96,13 @@ export default function ReadinessReportsPage() {
       await createReport.mutateAsync({
         backend,
         report_path: reportPath,
-        evidence_json: compactEvidence({
+        evidence_json: compactReadinessEvidence({
           ...evidence,
           backend_mode: evidence.backend_mode || backend,
         }),
       });
       setReportPath('');
-      setEvidence(createInitialEvidence(backend));
+      setEvidence(createInitialReadinessEvidence(backend));
       addToast('Readiness report submitted', 'success');
     } catch (error) {
       addToast(error instanceof Error ? error.message : 'Failed to submit readiness report', 'error', 5000);
@@ -235,7 +189,7 @@ export default function ReadinessReportsPage() {
               </label>
 
               <div className="grid grid-cols-1 gap-3">
-                {evidenceFieldKeys.map((key) => (
+                {readinessEvidenceFieldKeys.map((key) => (
                   <label key={key} className="block text-sm font-medium text-gray-700">
                     {key}
                     <input
