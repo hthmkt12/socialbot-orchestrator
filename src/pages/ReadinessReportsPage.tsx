@@ -69,10 +69,10 @@ function gateStyle(status: string, type: string) {
 function formatFreshnessDetail(report: PilotReadinessReport) {
   const freshness = getReadinessEvidenceFreshness(report.evidence_json);
   if (freshness.status === 'fresh' && freshness.expiresAt) {
-    return `Fresh evidence; expires ${new Date(freshness.expiresAt).toLocaleDateString()}`;
+    return `Fresh evidence for ${freshness.maxAgeDays} days; expires ${new Date(freshness.expiresAt).toLocaleDateString()}`;
   }
   if (freshness.status === 'expired' && freshness.ageDays !== null) {
-    return `Expired evidence; age ${Math.floor(freshness.ageDays)} days`;
+    return `Expired evidence; age ${Math.floor(freshness.ageDays)} days; max ${freshness.maxAgeDays} days`;
   }
   return freshness.label;
 }
