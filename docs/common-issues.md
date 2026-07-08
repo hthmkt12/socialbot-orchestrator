@@ -153,6 +153,9 @@ Verification:
 
 ## Windows spawn EINVAL With npm.cmd
 
+Status:
+- Fixed in `scripts/start-mobile-mcp-local-runtime.mjs`; keep this entry for regression diagnosis.
+
 Symptoms:
 - `start-mobile-mcp-local-runtime.mjs` fails with `runtime error: spawn EINVAL`.
 - The bridge/worker/UI services do not start, but the preflight venv checks pass.
@@ -164,7 +167,8 @@ Common Triggers:
 - Running `node scripts/start-mobile-mcp-local-runtime.mjs` on Windows without `shell: isWindows`.
 
 Solutions:
-- Add `shell: isWindows` to the `spawn()` call options in `start-mobile-mcp-local-runtime.mjs:155`.
+- Ensure service spawns use `shell: isWindows` when the command is `npm.cmd`.
+- Current runtime script already sets `shell: isWindows` in `start-mobile-mcp-local-runtime.mjs`.
 
 Verification:
 - `node scripts/start-mobile-mcp-local-runtime.mjs --check` reports all services healthy.
