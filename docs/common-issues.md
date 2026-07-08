@@ -98,7 +98,7 @@ Four guardrails against common LLM coding failures.
 
 Symptoms:
 - `npm.cmd run status:mobile-mcp` shows no online ADB devices.
-- Expected serial, such as `QC4DKJUO6PW4FMQW`, is missing from ADB and bridge checks.
+- Expected serial, such as the current pilot serial `97249fb5`, is missing from ADB and bridge checks.
 - `npm.cmd run diagnose:mobile-mcp:devices` reports `Windows does not see an Android USB device`.
 
 Root Cause:
@@ -213,7 +213,7 @@ Solutions:
 Verification:
 - Run `npx.cmd vitest run src/lib/anti-detection-helpers.test.ts` to ensure 100% pass rate.
 
-## Unresolved Questions
+## Current Decisions
 
-- Should Laixi gateway proof still be required for pilot, or is Mobile MCP enough?
-- Should `speckit init --here --ai claude` run in this app root after git/root decision?
+- Mobile MCP is the accepted pilot-default backend. Laixi remains future-compatible until VIP/API/live-session proof is available.
+- Spec Kit workflow documentation lives in `docs/specify-workflow.md`; do not rerun bootstrap unless a new Spec Kit feature or repo-root migration explicitly requires it.
