@@ -177,6 +177,19 @@ describe('readiness report service', () => {
     ]));
   });
 
+  it('allows non-verified review decisions without complete Level 1 evidence', () => {
+    expect(validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'needs_rerun',
+      evidence: { runtimeStatus: 'partial' },
+    })).toMatchObject({ valid: true, issues: [] });
+    expect(validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'not_verified',
+      evidence: {},
+    })).toMatchObject({ valid: true, issues: [] });
+  });
+
   it('reports the level 1 readiness evidence checklist', () => {
     expect(getLevel1ReadinessEvidenceChecklist({
       pilot_level: 'level_1',
