@@ -45,6 +45,24 @@ export const readinessEvidenceFieldKeys = Object.keys(
   createInitialReadinessEvidence('mobile_mcp')
 ) as Array<keyof ReadinessEvidenceForm>;
 
+export const readinessEvidenceFieldMeta: Record<keyof ReadinessEvidenceForm, { label: string; placeholder: string }> = {
+  pilot_level: { label: 'Pilot level', placeholder: 'level_1' },
+  backend_mode: { label: 'Backend mode', placeholder: 'mobile_mcp' },
+  runtimeStatus: { label: 'Bridge health', placeholder: 'ok' },
+  worker_health: { label: 'Worker health', placeholder: 'ok' },
+  reportStatus: { label: 'Supabase health', placeholder: 'ok' },
+  deviceSerial: { label: 'Expected serials', placeholder: 'device-1, device-2' },
+  sessionId: { label: 'Observed serials', placeholder: 'device-1, device-2' },
+  runId: { label: 'Run id', placeholder: 'workflow run id' },
+  smokeResult: { label: 'Run status', placeholder: 'COMPLETED' },
+  artifact_refs: { label: 'Artifact refs', placeholder: 'artifact-1, artifact-2' },
+  secret_scrub_status: { label: 'Secret scrub status', placeholder: 'passed' },
+  verified_at: { label: 'Verified at', placeholder: 'ISO timestamp' },
+  claim_summary: { label: 'Claim summary', placeholder: 'Level 1 Mobile MCP proof only' },
+  laixiLiveSessionProof: { label: 'LAIXI live proof', placeholder: 'required only for LAIXI' },
+  iosPortalProof: { label: 'iOS Portal proof', placeholder: 'required only for iOS Portal' },
+};
+
 export function compactReadinessEvidence(evidence: ReadinessEvidenceForm) {
   const compacted = Object.fromEntries(
     Object.entries(evidence).filter(([, value]) => value.trim().length > 0)

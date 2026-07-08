@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
+  readinessEvidenceFieldMeta,
   readinessEvidenceFieldKeys,
 } from './readiness-report-form-helpers';
 
@@ -35,6 +36,13 @@ describe('readiness report form helpers', () => {
       'laixiLiveSessionProof',
       'iosPortalProof',
     ]);
+  });
+
+  it('has display metadata for every form field', () => {
+    for (const key of readinessEvidenceFieldKeys) {
+      expect(readinessEvidenceFieldMeta[key].label).not.toHaveLength(0);
+      expect(readinessEvidenceFieldMeta[key].placeholder).not.toHaveLength(0);
+    }
   });
 
   it('compacts evidence and converts comma-separated fields into arrays', () => {

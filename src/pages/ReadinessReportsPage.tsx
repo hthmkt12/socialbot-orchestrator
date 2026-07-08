@@ -13,6 +13,7 @@ import {
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
+  readinessEvidenceFieldMeta,
   readinessEvidenceFieldKeys,
   type ReadinessEvidenceForm,
 } from '../lib/readiness-report-form-helpers';
@@ -191,9 +192,10 @@ export default function ReadinessReportsPage() {
               <div className="grid grid-cols-1 gap-3">
                 {readinessEvidenceFieldKeys.map((key) => (
                   <label key={key} className="block text-sm font-medium text-gray-700">
-                    {key}
+                    {readinessEvidenceFieldMeta[key].label}
                     <input
                       value={evidence[key]}
+                      placeholder={readinessEvidenceFieldMeta[key].placeholder}
                       onChange={(event) => setEvidence((current) => ({
                         ...current,
                         [key]: event.target.value,
