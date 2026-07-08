@@ -36,31 +36,51 @@ const freshnessStyles = {
 };
 
 type EvidenceForm = {
+  pilot_level: string;
+  backend_mode: string;
   runtimeStatus: string;
+  worker_health: string;
   reportStatus: string;
   deviceSerial: string;
   sessionId: string;
   runId: string;
   smokeResult: string;
+  artifact_refs: string;
+  secret_scrub_status: string;
+  verified_at: string;
+  claim_summary: string;
   laixiLiveSessionProof: string;
   iosPortalProof: string;
 };
 
 const initialEvidence: EvidenceForm = {
+  pilot_level: 'level_1',
+  backend_mode: 'mobile_mcp',
   runtimeStatus: '',
+  worker_health: '',
   reportStatus: '',
   deviceSerial: '',
   sessionId: '',
   runId: '',
   smokeResult: '',
+  artifact_refs: '',
+  secret_scrub_status: '',
+  verified_at: '',
+  claim_summary: '',
   laixiLiveSessionProof: '',
   iosPortalProof: '',
 };
 
 function compactEvidence(evidence: EvidenceForm) {
-  return Object.fromEntries(
+  const compacted = Object.fromEntries(
     Object.entries(evidence).filter(([, value]) => value.trim().length > 0)
   );
+  return {
+    ...compacted,
+    expected_serials: evidence.deviceSerial.split(',').map((serial) => serial.trim()).filter(Boolean),
+    observed_serials: evidence.sessionId.split(',').map((serial) => serial.trim()).filter(Boolean),
+    artifact_refs: evidence.artifact_refs.split(',').map((artifact) => artifact.trim()).filter(Boolean),
+  };
 }
 
 function formatStatus(status: PilotReadinessStatus) {
@@ -118,10 +138,13 @@ export default function ReadinessReportsPage() {
       await createReport.mutateAsync({
         backend,
         report_path: reportPath,
-        evidence_json: compactEvidence(evidence),
+        evidence_json: compactEvidence({
+          ...evidence,
+          backend_mode: evidence.backend_mode || backend,
+        }),
       });
       setReportPath('');
-      setEvidence(initialEvidence);
+      setEvidence({ ...initialEvidence, backend_mode: backend });
       addToast('Readiness report submitted', 'success');
     } catch (error) {
       addToast(error instanceof Error ? error.message : 'Failed to submit readiness report', 'error', 5000);
@@ -182,7 +205,11 @@ export default function ReadinessReportsPage() {
                 Backend
                 <select
                   value={backend}
-                  onChange={(event) => setBackend(event.target.value as PilotReadinessBackend)}
+                  onChange={(event) => {
+                    const selectedBackend = event.target.value as PilotReadinessBackend;
+                    setBackend(selectedBackend);
+                    setEvidence((current) => ({ ...current, backend_mode: selectedBackend }));
+                  }}
                   disabled={!canCreate}
                   className="mt-1 w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-sky-500 focus:ring-sky-500 disabled:bg-gray-100"
                 >
