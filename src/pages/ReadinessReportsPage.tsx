@@ -10,6 +10,7 @@ import {
   getReadinessReportGates,
   type ReadinessReviewDecision,
 } from '../lib/readiness-report-service';
+import { getBlockingGates } from '../lib/readiness-gates';
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
@@ -227,7 +228,7 @@ export default function ReadinessReportsPage() {
                 reports.map((report) => {
                   const freshness = getReadinessEvidenceFreshness(report.evidence_json);
                   const gates = getReadinessReportGates(report);
-                  const blockingReadinessGate = gates.find((gate) => gate.type !== 'warning' && gate.status === 'failed');
+                  const blockingReadinessGate = getBlockingGates(gates)[0];
                   const verifyDisabledReason = !canReview
                     ? 'Only admins can verify readiness reports'
                     : blockingReadinessGate
