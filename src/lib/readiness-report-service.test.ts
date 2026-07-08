@@ -343,13 +343,14 @@ describe('readiness report service', () => {
 
     await expect(createReadinessReport({
       backend: 'mobile_mcp',
-      report_path: 'docs/pilot.md',
+      report_path: '  docs/pilot.md  ',
       evidence_json: { runtimeStatus: 'ok', token: 'secret' },
     })).resolves.toMatchObject({ id: 'report-1' });
 
     expect(reportTable.insert).toHaveBeenCalledWith(expect.objectContaining({
       status: 'submitted',
       created_by_user_id: 'operator-1',
+      report_path: 'docs/pilot.md',
       evidence_json: { runtimeStatus: 'ok' },
     }));
     expect(mockLogAudit).toHaveBeenCalledWith(
