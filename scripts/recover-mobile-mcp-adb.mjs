@@ -79,7 +79,7 @@ function readStatusReport(result) {
 
 function bridgeSerials(statusReport) {
   const bridgeDevices = statusReport?.services?.find((service) => service.name === 'bridge.devices');
-  return bridgeDevices?.body?.output?.devices?.map((device) => device.id).filter(Boolean) ?? [];
+  return bridgeDevices?.body?.output?.devices?.map((device) => device.id ?? device.serial).filter(Boolean) ?? [];
 }
 
 function buildExpectedSummary(statusReport) {

@@ -4,6 +4,11 @@ export interface MobileMcpFleetDevice {
   platform?: string;
 }
 
+type MobileMcpRawFleetDevice = Partial<MobileMcpFleetDevice> & {
+  serial?: string;
+  state?: string;
+};
+
 export interface MobileMcpFleetHealth {
   service: string;
   status: string;
@@ -54,7 +59,7 @@ export async function loadMobileMcpFleet(baseUrl: string): Promise<MobileMcpFlee
   const normalized = normalizeMobileMcpBridgeUrl(baseUrl);
   const [health, deviceResponse] = await Promise.all([
     fetchJson<MobileMcpFleetHealth>(`${normalized}/health`),
-    fetchJson<{ success: boolean; output?: { devices?: Array<string | Partial<MobileMcpFleetDevice>> }; error?: string }>(`${normalized}/devices`),
+    fetchJson<{ success: boolean; output?: { devices?: Array<string | MobileMcpRawFleetDevice> }; error?: string }>(`${normalized}/devices`),
   ]);
 
   if (!deviceResponse.success) throw new Error(deviceResponse.error ?? 'Mobile MCP device list failed');
@@ -63,9 +68,10 @@ export async function loadMobileMcpFleet(baseUrl: string): Promise<MobileMcpFlee
     health,
     devices: (deviceResponse.output?.devices ?? []).map((device) => {
       if (typeof device === 'string') return { id: device, status: 'device' };
+      const id = device.id ?? device.serial;
       return {
-        id: String(device.id ?? ''),
-        status: String(device.status ?? 'unknown'),
+        id: String(id ?? ''),
+        status: String(device.status ?? device.state ?? 'unknown'),
         platform: String(device.platform ?? 'android'),
       };
     }).filter((device) => device.id),

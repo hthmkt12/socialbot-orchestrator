@@ -129,6 +129,9 @@ Verification:
 
 ## Mobile MCP Bridge Serial Field Mismatch
 
+Status:
+- Fixed in runtime scripts and UI fleet loading. Keep this entry for regression diagnosis.
+
 Symptoms:
 - `wait-mobile-mcp-expected-devices.mjs` reports `bridge: none` even though the bridge `/devices` endpoint returns the device.
 - Preflight reports `bridge.devices` PASS but `bridge.expectedSerials` FAIL.
@@ -141,10 +144,12 @@ Common Triggers:
 - Running Mobile MCP scripts (preflight, wait-devices, status) against a Mobilerun-based bridge that returns `serial` instead of `id`.
 
 Solutions:
-- Replace `device.id` with `device.id ?? device.serial` in all three scripts: `preflight-mobile-mcp-local.mjs:113`, `status-mobile-mcp-local.mjs:120`, `wait-mobile-mcp-expected-devices.mjs:70`.
+- Normalize bridge device identity with `device.id ?? device.serial` in scripts and UI code that read `/devices`.
+- Current fixed surfaces include `preflight-mobile-mcp-local.mjs`, `status-mobile-mcp-local.mjs`, `wait-mobile-mcp-expected-devices.mjs`, `recover-mobile-mcp-adb.mjs`, `verify-use-cases-real.mjs`, and `src/lib/mobile-mcp-orchestrator.ts`.
 
 Verification:
-- `node -e "process.env.MOBILE_MCP_EXPECTED_SERIALS='<serial>'; require('./scripts/wait-mobile-mcp-expected-devices.mjs')"` shows "missing: none".
+- `npm.cmd run diagnose:mobile-mcp:devices` shows the expected serial as present in both ADB and bridge checks.
+- `npm.cmd run status:mobile-mcp` does not warn that an ADB-online serial is missing from bridge `/devices`.
 
 ## Windows spawn EINVAL With npm.cmd
 
