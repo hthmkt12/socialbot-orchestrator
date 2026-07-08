@@ -231,6 +231,23 @@ describe('readiness report service', () => {
     ]));
   });
 
+  it('blocks pilot verification when evidence timestamp is in the future', () => {
+    const futureDate = new Date(Date.now() + 60 * 60 * 1000);
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({ verified_at: futureDate.toISOString() }),
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      'Evidence timestamp invalid',
+    ]));
+    expect(result.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.evidence_fresh', status: 'failed' }),
+    ]));
+  });
+
   it('reports readiness evidence freshness metadata', () => {
     const now = new Date('2026-07-08T00:00:00.000Z');
     expect(getReadinessEvidenceFreshness({
