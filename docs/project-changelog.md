@@ -1,5 +1,16 @@
 # Project Changelog
 
+## 2026-07-08
+
+- **Dependency and audit hardening completed**: Upgraded the root Vite/Vitest/tooling stack and worker/gateway build tooling, added the required `react-is` dependency for Recharts under the current bundler, and verified `npm audit` reports `0 vulnerabilities` in the root app, execution worker, and Laixi gateway workspaces.
+- **Mobile MCP bridge auth locked down**: Local runtime now requires `MOBILE_MCP_BRIDGE_TOKEN` for protected bridge endpoints by default, with insecure local mode available only through explicit `MOBILE_MCP_ALLOW_INSECURE_DEV=true`. Runtime checks verified anonymous protected requests return `401 BRIDGE_UNAUTHORIZED` while token-authenticated requests pass.
+- **Role accounts established for smoke and governance checks**: Confirmed operator profiles, created verified Admin and Viewer Supabase accounts, and stabilized Playwright RBAC coverage for Viewer read-only and Operator account-management behavior.
+- **First social pilot proof completed**: Ran the Instagram open/capture pilot on Android serial `97249fb5` / model `25053RT47C`; proof run `a414e519-c1ac-44df-b287-e91e845f0084` completed 4/4 steps with screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd` and an `instagram_pilot_open` action-history row.
+- **Pilot readiness verified in DB**: Created readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` with `backend=mobile_mcp`, `status=pilot_verified`, report path `db://workflow_runs/a414e519-c1ac-44df-b287-e91e845f0084`, and secret/claim-token evidence redaction confirmed.
+- **Evidence redaction tightened**: Updated Mobile MCP UI smoke and first-social-pilot verification scripts so claim tokens are redacted from generated evidence/output before they are written or printed.
+- **Current verification baseline captured**: Full `npm.cmd run verify:mobile-mcp` passed with report `plans/reports/mobile-mcp-verify-2026-07-08T06-50-50-734Z.json`; UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561` completed with 4 steps.
+- **CI moved to Node 24 actions**: Updated GitHub Actions workflow to `actions/checkout@v6`, `actions/setup-node@v6`, `actions/setup-python@v6`, and `node-version: 24`; latest CI on `master` passed without the previous Node 20 deprecation warnings.
+
 ## 2026-07-07
 
 - **Use-case implementation sequence completed**: Implemented the role/flow sequence from Visitor through Viewer, Operator, Scheduler, Admin, Worker, Mobile MCP Bridge, and out-of-scope guardrails. Added `docs/use-cases.md`, `docs/use-cases-architecture-spec.md`, `docs/use-case-coding-sequence.md`, and final traceability report `docs/use-case-final-coverage.md`.
