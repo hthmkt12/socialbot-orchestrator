@@ -13,8 +13,8 @@ import {
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
+  getReadinessEvidenceFieldKeysForBackend,
   readinessEvidenceFieldMeta,
-  readinessEvidenceFieldKeys,
   type ReadinessEvidenceForm,
 } from '../lib/readiness-report-form-helpers';
 import { useAuthStore } from '../stores/auth';
@@ -190,7 +190,7 @@ export default function ReadinessReportsPage() {
               </label>
 
               <div className="grid grid-cols-1 gap-3">
-                {readinessEvidenceFieldKeys.map((key) => (
+                {getReadinessEvidenceFieldKeysForBackend(backend).map((key) => (
                   <label key={key} className="block text-sm font-medium text-gray-700">
                     {readinessEvidenceFieldMeta[key].label}
                     <input

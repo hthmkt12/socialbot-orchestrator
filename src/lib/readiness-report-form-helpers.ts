@@ -63,6 +63,14 @@ export const readinessEvidenceFieldMeta: Record<keyof ReadinessEvidenceForm, { l
   iosPortalProof: { label: 'iOS Portal proof', placeholder: 'required only for iOS Portal' },
 };
 
+export function getReadinessEvidenceFieldKeysForBackend(backend: PilotReadinessBackend) {
+  return readinessEvidenceFieldKeys.filter((key) => {
+    if (key === 'laixiLiveSessionProof') return backend === 'laixi';
+    if (key === 'iosPortalProof') return backend === 'ios_portal';
+    return true;
+  });
+}
+
 export function compactReadinessEvidence(evidence: ReadinessEvidenceForm) {
   const compacted = Object.fromEntries(
     Object.entries(evidence).filter(([, value]) => value.trim().length > 0)

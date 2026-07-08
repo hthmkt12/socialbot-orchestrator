@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
+  getReadinessEvidenceFieldKeysForBackend,
   readinessEvidenceFieldMeta,
   readinessEvidenceFieldKeys,
 } from './readiness-report-form-helpers';
@@ -43,6 +44,25 @@ describe('readiness report form helpers', () => {
       expect(readinessEvidenceFieldMeta[key].label).not.toHaveLength(0);
       expect(readinessEvidenceFieldMeta[key].placeholder).not.toHaveLength(0);
     }
+  });
+
+  it('shows only backend-specific proof fields for the selected backend', () => {
+    expect(getReadinessEvidenceFieldKeysForBackend('mobile_mcp')).not.toEqual(expect.arrayContaining([
+      'laixiLiveSessionProof',
+      'iosPortalProof',
+    ]));
+    expect(getReadinessEvidenceFieldKeysForBackend('laixi')).toEqual(expect.arrayContaining([
+      'laixiLiveSessionProof',
+    ]));
+    expect(getReadinessEvidenceFieldKeysForBackend('laixi')).not.toEqual(expect.arrayContaining([
+      'iosPortalProof',
+    ]));
+    expect(getReadinessEvidenceFieldKeysForBackend('ios_portal')).toEqual(expect.arrayContaining([
+      'iosPortalProof',
+    ]));
+    expect(getReadinessEvidenceFieldKeysForBackend('ios_portal')).not.toEqual(expect.arrayContaining([
+      'laixiLiveSessionProof',
+    ]));
   });
 
   it('compacts evidence and converts comma-separated fields into arrays', () => {
