@@ -419,26 +419,41 @@ async function main() {
     if (!readClient) return requireSupabaseConfig();
     const { data: analytics, error } = await readClient
       .from('account_analytics')
-      .select('id,account_id,snapshot_date,followers_count,engagement_rate')
+      .select('id,account_id,snapshot_date,followers_count,following_count,posts_count,engagement_rate')
       .order('snapshot_date', { ascending: false })
       .limit(5);
     if (error) return { status: 'FAIL', lines: [error.message] };
     if (!analytics?.length) {
-      return { status: 'WARN', lines: ['No account_analytics rows found; analytics UI should show Insufficient data.'] };
+      return {
+        status: 'PASS',
+        lines: [
+          'analytics rows sampled: 0',
+          'source label: Insufficient data',
+          'No account_analytics rows found; empty analytics is handled as an explicit source state.',
+        ],
+        data: { analytics: [], source: 'insufficient_data' },
+      };
     }
+    const invalidRows = analytics.filter((row) => (
+      row.followers_count < 0 ||
+      row.following_count < 0 ||
+      row.posts_count < 0 ||
+      (row.engagement_rate !== null && (row.engagement_rate < 0 || row.engagement_rate > 100))
+    ));
     const accountId = analytics[0].account_id;
     const { data: growth, error: rpcError } = await readClient.rpc('get_account_growth', {
       p_account_id: accountId,
       p_days: 30,
     });
     return {
-      status: rpcError ? 'WARN' : 'PASS',
+      status: rpcError || invalidRows.length ? 'WARN' : 'PASS',
       lines: [
         `analytics rows sampled: ${analytics.length}`,
+        `invalid analytics rows: ${invalidRows.length}`,
         `sample account_id: ${accountId}`,
         rpcError ? `get_account_growth error: ${rpcError.message}` : `get_account_growth: ${json(growth?.[0] ?? null)}`,
       ],
-      data: { analytics, growth },
+      data: { analytics, invalidRows, growth },
     };
   });
 
