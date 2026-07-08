@@ -13,6 +13,7 @@ import {
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
+  getReadinessEvidenceDisplayLabel,
   getReadinessEvidenceFieldKeysForBackend,
   getReadinessVerifyBlockerMessage,
   readinessEvidenceFieldMeta,
@@ -251,7 +252,7 @@ export default function ReadinessReportsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {getEvidenceSummary(report).map(([key, value]) => (
                         <div key={key} className="rounded-lg bg-gray-50 px-3 py-2">
-                          <p className="text-[11px] uppercase tracking-wide text-gray-400">{key}</p>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-400">{getReadinessEvidenceDisplayLabel(key)}</p>
                           <p className="text-sm text-gray-700 break-words">{String(value)}</p>
                         </div>
                       ))}

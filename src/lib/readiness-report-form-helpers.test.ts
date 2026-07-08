@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   compactReadinessEvidence,
   createInitialReadinessEvidence,
+  getReadinessEvidenceDisplayLabel,
   getReadinessEvidenceFieldKeysForBackend,
   getReadinessVerifyBlockerMessage,
   readinessEvidenceFieldMeta,
@@ -45,6 +46,12 @@ describe('readiness report form helpers', () => {
       expect(readinessEvidenceFieldMeta[key].label).not.toHaveLength(0);
       expect(readinessEvidenceFieldMeta[key].placeholder).not.toHaveLength(0);
     }
+  });
+
+  it('formats evidence summary labels with metadata fallback', () => {
+    expect(getReadinessEvidenceDisplayLabel('runtimeStatus')).toBe('Bridge health');
+    expect(getReadinessEvidenceDisplayLabel('verified_at')).toBe('Verified at');
+    expect(getReadinessEvidenceDisplayLabel('custom_metric_name')).toBe('custom metric name');
   });
 
   it('shows only backend-specific proof fields for the selected backend', () => {

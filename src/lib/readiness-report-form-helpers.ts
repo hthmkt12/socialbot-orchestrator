@@ -78,6 +78,13 @@ export function getReadinessVerifyBlockerMessage(gates: ReadinessGateResult[], c
   return blockingGate ? `Resolve blocker: ${blockingGate.message}` : null;
 }
 
+export function getReadinessEvidenceDisplayLabel(key: string) {
+  if (key in readinessEvidenceFieldMeta) {
+    return readinessEvidenceFieldMeta[key as keyof ReadinessEvidenceForm].label;
+  }
+  return key.replace(/_/g, ' ');
+}
+
 export function compactReadinessEvidence(evidence: ReadinessEvidenceForm) {
   const compacted = Object.fromEntries(
     Object.entries(evidence).filter(([, value]) => value.trim().length > 0)
