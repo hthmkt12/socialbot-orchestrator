@@ -72,10 +72,12 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Fresh Mobile MCP artifact-producing smoke requires the expected Android device to be visible to ADB.
 - Laixi clean-path proof cannot run without VIP/API access and a live Laixi-compatible device session.
 
-## Unresolved Questions
+## Current Decisions
 - Laixi is future-compatible for now; pilot default remains Mobile MCP until Laixi VIP/API access enables a clean-path proof.
+- Keep `MOBILE_MCP_EXPECTED_SERIALS` pinned to `97249fb5` for this workstation while it remains the active pilot device.
+
+## Unresolved Questions
 - What is the next Spec Kit feature after artifact threshold policy?
-- Should `MOBILE_MCP_EXPECTED_SERIALS` stay pinned to `97249fb5` for this workstation?
 - Social pivot Phase 0-5 needs user validation — is "SocialBot Orchestrator" the right product name?
 - Instagram/TikTok API vs pure UI automation for account actions?
 - Encrypted password storage or OAuth tokens for social account credentials?
