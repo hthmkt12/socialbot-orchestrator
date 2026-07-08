@@ -42,6 +42,7 @@ Recommended theme: Pilot Readiness and Safe Scale.
 
 - La admin, toi KHONG THE xem plaintext social password trong UI hoac report.
 - La admin, toi KHONG THE mark pilot verified neu report thieu device/session/run evidence bat buoc.
+- La admin, toi KHONG THE mark pilot verified neu report thieu `verified_at`, timestamp khong hop le, hoac evidence da qua cua so 14 ngay.
 - La admin, toi KHONG THE claim Laixi live readiness neu report khong co VIP/API/live session proof.
 - La admin, toi KHONG THE claim iOS readiness neu report khong co Portal app va iproxy proof.
 - La admin, toi KHONG THE cau hinh artifact retention vo han trong DB inline rows.
@@ -51,7 +52,7 @@ Recommended theme: Pilot Readiness and Safe Scale.
 ### Khi loi
 
 - La admin, khi credential key/policy rotation dang co run active, thi he thong canh bao risk va khong rotate neu rotation co the lam hong run dang chay.
-- La admin, khi verification report thieu run id hoac artifact evidence, thi he thong khong cho mark `pilot_verified`.
+- La admin, khi verification report thieu run id, artifact evidence, hoac fresh `verified_at`, thi he thong khong cho mark `pilot_verified`.
 - La admin, khi storage mode hoac retention policy vuot nguong MVP, thi he thong tu choi va noi ro nguong hop le.
 - La admin, khi failover policy khong co target hop le, thi he thong bao loi policy invalid va khong luu.
 - La admin, khi retry/backoff profile co max retry am, delay khong hop le, hoac retry vo han, thi validation tu choi.

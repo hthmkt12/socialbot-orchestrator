@@ -119,7 +119,7 @@ Rules:
 - `backend` enum: `mobile_mcp`, `laixi`, `ios_portal`, `unknown`.
 - `status` enum: `draft`, `submitted`, `pilot_verified`, `not_verified`, `needs_rerun`.
 - Evidence JSON must be scrubbed for secret-like keys before insert.
-- `pilot_verified` requires backend proof, runtime/report status, device/session evidence, and run/smoke evidence.
+- `pilot_verified` requires backend proof, runtime/report status, device/session evidence, run/smoke evidence, secret-scrubbed evidence, and a valid `verified_at` timestamp within the 14-day freshness window.
 - LAIXI verification additionally requires `laixiLiveSessionProof`.
 - iOS verification additionally requires `iosPortalProof`.
 
