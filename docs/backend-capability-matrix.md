@@ -18,6 +18,8 @@ Three backends available, configured via `DEVICE_BACKEND` env var on the worker:
 
 Mobile MCP is the current pilot validation backend. Current Level 1 proof is Android serial `97249fb5`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
 
+Level 1 readiness evidence must include a valid `verified_at` timestamp and remains fresh for 14 days. Rerun verification before claiming readiness if evidence expires or if the pilot device, runtime backend, bridge auth mode, Supabase project, or proof workflow changes.
+
 ## Security Defaults
 
 - The Mobile MCP bridge requires `MOBILE_MCP_BRIDGE_TOKEN` for protected endpoints.

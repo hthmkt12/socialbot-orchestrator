@@ -91,7 +91,7 @@ npm run preflight:mobile-mcp
 npm run verify:mobile-mcp
 ```
 
-Artifact evidence must use explicit storage metadata: `inline`, `object_storage`, `external_ref`, or `omitted`. Large JSON/text previews over 64 KB and screenshot/base64 payloads must not be stored inline by default. Readiness reports cannot be marked `pilot_verified` when submitted evidence or artifact metadata has `redaction_status: blocked` or secret-like fields.
+Artifact evidence must use explicit storage metadata: `inline`, `object_storage`, `external_ref`, or `omitted`. Large JSON/text previews over 64 KB and screenshot/base64 payloads must not be stored inline by default. Readiness reports cannot be marked `pilot_verified` when submitted evidence or artifact metadata has `redaction_status: blocked`, secret-like fields, a missing/invalid `verified_at`, or evidence older than 14 days.
 
 ## Build Commands
 
