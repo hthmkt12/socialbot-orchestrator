@@ -2,13 +2,13 @@
 
 Source of truth for current product behavior and near-term MVP scope.
 
-Date: 2026-07-07
+Date: 2026-07-08
 
 ## Context
 
 Product: SocialBot Orchestrator, an internal Android device automation and social workflow pilot platform.
 
-Current strongest proof: Mobile MCP Android local runtime verified on real device `97249fb5` / model `25053RT47C`, with UI smoke run `ec7f6fab-81fc-4dfd-8ceb-8a98e1835fff` completing 4 steps.
+Current strongest proof: Mobile MCP Android local runtime verified on real device `97249fb5` / model `25053RT47C`, with first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084` completing 4 steps, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
 
 Primary constraint: production-grade social account credential handling, Laixi live proof, iOS Portal proof, and large-scale social bot claims are not in current verified scope.
 
