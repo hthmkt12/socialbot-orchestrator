@@ -1,6 +1,6 @@
 # Backend Capability Matrix
 
-Date: 2026-06-26
+Date: 2026-07-08
 
 Purpose: make pilot backend support explicit before adding more workflows.
 
@@ -16,7 +16,7 @@ Three backends available, configured via `DEVICE_BACKEND` env var on the worker:
 
 ## Pilot Default
 
-Mobile MCP is the current pilot validation backend.
+Mobile MCP is the current pilot validation backend. Current Level 1 proof is Android serial `97249fb5`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
 
 ## Security Defaults
 

@@ -1,6 +1,6 @@
 # Project Roadmap
 
-Date: 2026-06-29
+Date: 2026-07-08
 
 ## Readiness Legend
 
@@ -17,14 +17,14 @@ Date: 2026-06-29
 - Backend-owned run execution path. Status: Unit/smoke verified.
 - Worker claim and lease handling. Status: Unit/smoke verified.
 - Gateway and Mobile MCP bridge integration. Status: Implemented.
-- Mobile MCP real-device and missing-device clean paths. Status: Pilot verified for prior runs; current local readiness depends on expected devices being online.
+- Mobile MCP real-device and missing-device clean paths. Status: Pilot verified on Android serial `97249fb5`; keep expected-device checks before reruns.
 - Spec Kit local bootstrap and repo-local agent instruction hardening. Status: Implemented.
 - `001-normalize-pilot-artifact`. Status: Implemented and unit verified.
 - `002-laixi-gateway-live-proof`. Status: Blocked for live proof; gateway health works, but live Laixi sessions require VIP/API access.
 - `003-artifact-storage-thresholds`. Status: Implemented as policy; object storage is intentionally deferred.
 - Mobilerun AndroidDriver bridge swap, `DEVICE_BACKEND=mobilerun`, `ai_task`, and iOS driver support. Status: Implemented; verify per backend before claiming pilot readiness.
 - Foreach loop execution worker integration and loop repetition fix. Status: Unit/smoke verified.
-- Testing baseline. Status: `npm.cmd test` currently covers 160 tests after the stabilization work.
+- Testing baseline. Status: `npm.cmd test` currently covers 263 tests; CI runs on Node 24 actions.
 
 ## Now
 
@@ -34,8 +34,8 @@ Date: 2026-06-29
 - Require `VITE_ACCOUNT_PASSWORD_KEY` before saving social account credentials; treat the browser key as pilot-only until credential encryption moves server-side.
 - Use `docs/backend-capability-matrix.md` as the backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
-- Restore current Mobile MCP local readiness by making the expected Android serial visible to ADB/Windows, then rerun preflight, verification, and fresh UI smoke. A readiness claim needs Level 1 evidence fields: backend mode, bridge/worker/Supabase health, expected/observed serials, run id/status, artifact refs, scrub status, and claim summary.
-- Run manual Run Detail smoke for an authenticated artifact-bearing completed run when UI/auth/Supabase are available.
+- Preserve the current Mobile MCP local readiness baseline: expected serial `97249fb5`, full verify report `plans/reports/mobile-mcp-verify-2026-07-08T06-50-50-734Z.json`, UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
+- Keep generated readiness evidence free of secrets and claim tokens; smoke and pilot verification scripts now redact claim tokens before writing/printing evidence.
 
 ## Next
 
@@ -50,16 +50,16 @@ Strategic direction: reposition from generic device orchestration to a social me
 
 ### Phase 0: Foundation (Jun-Jul 2026)
 
-Status: Unit/smoke verified, with current Mobile MCP readiness dependent on local device availability.
+Status: Unit/smoke verified, with Mobile MCP Level 1 pilot readiness verified on 2026-07-08.
 
 - Social positioning docs and app messaging: Implemented.
 - `accounts` and `account_action_history` schema: Implemented.
-- Mobile MCP pilot backend proof: Previously verified; rerun required for current workstation state.
+- Mobile MCP pilot backend proof: Verified on current workstation with Android serial `97249fb5`.
 - Proof target: 5 devices on a simple workflow. Current evidence should be refreshed before claiming this again.
 
 ### Phase 1: Anti-Detection and Account Lifecycle (Q3 2026 MVP)
 
-Status: Implemented with unit coverage; pilot proof still needs current real-device evidence.
+Status: Implemented with unit coverage; first social pilot proof completed for Instagram open/capture.
 
 - Anti-detection helpers and worker integration: Implemented.
 - Account state tracking, warm-up stages, daily limits, block detection: Implemented.
@@ -69,7 +69,7 @@ Status: Implemented with unit coverage; pilot proof still needs current real-dev
 
 ### Phase 2: Social Macro Templates and Multi-App (Q4 2026)
 
-Status: Implemented in code; pilot readiness depends on current verification.
+Status: Implemented in code; Mobile MCP pilot readiness is verified for current Level 1 scope.
 
 - Instagram/TikTok/Facebook starter templates: Implemented.
 - Multi-app macro step routing: Implemented.
@@ -169,7 +169,7 @@ Status: Removed from MVP runtime scope during use-case cleanup.
 ## Unresolved Questions
 
 - When will Laixi VIP/API access be available for clean-path proof?
-- What authenticated artifact-bearing run should be used for deferred Run Detail smoke?
-- Is `QC4DKJUO6PW4FMQW` still the pilot device, or should `MOBILE_MCP_EXPECTED_SERIALS` be updated?
+- Should readiness reports expire or require periodic rerun after device/runtime changes?
+- Should `97249fb5` remain the pinned pilot device for this workstation?
 - Instagram/TikTok API vs UI automation for initial accounts?
 - What is the required credential boundary before production social credentials are allowed?

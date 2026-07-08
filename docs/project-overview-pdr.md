@@ -1,6 +1,6 @@
 # Project Overview PDR
 
-Date: 2026-06-29
+Date: 2026-07-08
 
 ## Problem
 Operators need a durable way to define, run, monitor, and audit device automation workflows — specifically for **social media automation** teams managing 5-50 Android/iOS devices running Instagram, TikTok, and Facebook accounts.
@@ -26,12 +26,15 @@ Operators need a durable way to define, run, monitor, and audit device automatio
 ## Current Pilot Definition
 Pilot readiness is measured against Mobile MCP with Mobilerun AndroidDriver/IOSDriver. Social automation is the primary use case.
 
+Current Level 1 proof is Mobile MCP Android serial `97249fb5` / model `25053RT47C`. First social pilot run `a414e519-c1ac-44df-b287-e91e845f0084` completed with screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`; readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` is `pilot_verified`.
+
 ## Success Metrics
 - Preflight passes from current workstation.
 - Full Mobile MCP verify passes with expected serial.
 - Clean run completes with screenshot artifact.
 - Missing-device failure gives actionable diagnostics.
-- **Social runs**: 5-device Instagram like-automation completes without bot detection.
+- **Level 1 social run**: Instagram open/capture completes on a real Android device with screenshot artifact and account action history.
+- **Scale social runs**: 5-device Instagram like-automation completes without bot detection.
 - **Anti-detection verified**: Random delay variation 3-8s per run; device fingerprint changes per execution.
 - **Account tracking accurate**: Action counts correct, warm-up stage advances, daily limits enforced.
 
@@ -40,3 +43,4 @@ Pilot readiness is measured against Mobile MCP with Mobilerun AndroidDriver/IOSD
 - Encrypted password storage or OAuth tokens?
 - What warm-up sequence is conservative enough to avoid detection?
 - When will Laixi VIP/API access be available for clean-path proof?
+- Should Level 1 readiness reports expire after a fixed time or runtime config change?
