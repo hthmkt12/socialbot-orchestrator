@@ -31,7 +31,7 @@ Date: 2026-07-08
 - Keep Mobile MCP as the pilot-default backend.
 - Use `specs/004-pilot-success-criteria/spec.md` as the Level 1 pilot evidence contract before claiming current readiness.
 - Require `MOBILE_MCP_BRIDGE_TOKEN` for protected bridge endpoints unless `MOBILE_MCP_ALLOW_INSECURE_DEV=true` is explicitly set for isolated local development.
-- Require `VITE_ACCOUNT_PASSWORD_KEY` before saving social account credentials; treat the browser key as pilot-only until credential encryption moves server-side.
+- Server-side credential encryption implemented via the `credential-vault` Edge Function. UI uses `encryptCredentialViaVault` instead of client-side `encryptPassword`. `VITE_ACCOUNT_PASSWORD_KEY` is only needed for legacy `v2:` decrypt/migration, not for new credential creation.
 - Use `docs/backend-capability-matrix.md` as the backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
 - Preserve the current Mobile MCP local readiness baseline: expected serial `97249fb5`, full verify report `plans/reports/mobile-mcp-verify-2026-07-10T04-48-02-006Z.json`, UI smoke run `96ae236c-fcbd-4eb9-bc3b-7673e11cd84d`, first social pilot run `f8e94b1d-34bc-4e3c-8b59-ecdf4d5f7955`, and readiness report `86622b49-5876-4152-bfcb-f09c9b7ad090` marked `pilot_verified`.
@@ -43,11 +43,11 @@ Date: 2026-07-08
 
 - Keep sequential multi-target execution for small pilot validation unless fleet-speed SLA appears.
 - Keep authenticated route lazy-loading in place; main Vite chunk is below the warning threshold.
-- Tighten account credential handling by supporting a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). Implemented in Phase 2: if no server-side vault is configured, block saving/importing under `server_boundary_required` status when `VITE_ACCOUNT_PASSWORD_KEY` is missing/weak. Stored credentials remain `v2:` client-encrypted. Browser-side encryption is pilot-only and a server boundary is required for production. Secret keys are automatically scrubbed from readiness reports and evidence.
+- Tighten account credential handling by supporting a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). Implemented in Phase 2 with server-side vault: the credential-vault Edge Function encrypts new credentials via `encryptCredentialViaVault`, producing `s3:` server-managed payloads. Stored credentials migrate from `v2:` client-encrypted format. Browser-side `VITE_ACCOUNT_PASSWORD_KEY` encryption is pilot-only and used solely for legacy `v2:` decrypt/migration. Secret keys are automatically scrubbed from readiness reports and evidence.
 - Phase 3 operator journey cleanup implemented: sidebar regrouped to match primary operator flow (Readiness -> Accounts -> Runs -> Devices -> Analytics), Social Dashboard Go/No-Go box, Readiness stale evidence warning, Run Wizard preflight blockers linked to recovery pages, Analytics badge colored by data source state.
 - Finish navigation cleanup so operators can reach runs, approvals, devices, setup, schedules, fleet health, and other in-scope operational screens from the primary sidebar.
-- Production credential boundary design completed (design only, no implementation). Recommended architecture: Supabase Edge Function credential vault with server-held key, `s3:` payload prefix, and `v2:` migration path. Design report at `plans/260708-1630-pilot-production-priority/reports/phase-08-production-credential-boundary-design.md`. Implementation deferred to a future phase.
-- Production credential boundary implementation plan created at `plans/260710-credential-boundary-implementation-plan/plan.md`. No implementation yet; server-managed credential status remains future work.
+- Production credential boundary design and implementation completed (phases A-G) and non-device verified. Recommended architecture: Supabase Edge Function credential vault with server-held key, `s3:` payload prefix, and `v2:` migration path. Design report at `plans/260708-1630-pilot-production-priority/reports/phase-08-production-credential-boundary-design.md`. Implementation complete; production claim blocked until runtime device proof.
+- Production credential boundary implementation plan created at `plans/260710-credential-boundary-implementation-plan/plan.md`. All phases A-G implemented and non-device verified. Production claim blocked until runtime device proof.
 
 ## Social Pivot
 
@@ -167,13 +167,12 @@ Status: Removed from MVP runtime scope during use-case cleanup.
 
 ## Later
 
-- Move social account credential encryption server-side.
 - Add Laixi-specific live clean-path proof when access is available.
 - Parallelize multi-target execution only when pilot fleet speed requires it.
+- Complete runtime device proof for credential boundary (requires Mobile MCP bridge + connected device).
 
 ## Unresolved Questions
 
 - When will Laixi VIP/API access be available for clean-path proof?
 - Should `97249fb5` remain the pinned pilot device for this workstation?
 - Instagram/TikTok API vs UI automation for initial accounts?
-- What is the required credential boundary before production social credentials are allowed?
