@@ -7,15 +7,14 @@
  * encryption key is never shipped to the browser.
  */
 
+import type { AccountCredentialPolicyStatus } from './database.types';
+
 const ENCRYPTED_PASSWORD_PREFIX = 'v2';
 const PBKDF2_ITERATIONS = 100_000;
 const SALT = new TextEncoder().encode('socialbot-account-password-salt-v2');
 const MIN_PASSPHRASE_LENGTH = 32;
 
-export type CredentialPolicyStatus =
-  | 'pilot_client_encrypted'
-  | 'server_boundary_required'
-  | 'server_managed';
+export type CredentialPolicyStatus = AccountCredentialPolicyStatus;
 
 export interface CredentialPolicyState {
   status: CredentialPolicyStatus;

@@ -5,6 +5,7 @@ import {
   encryptPassword,
   getCredentialPolicyStatus,
 } from './account-password-crypto';
+import type { CredentialPolicyStatus } from './account-password-crypto';
 
 const TEST_KEY = '0123456789abcdef0123456789abcdef';
 
@@ -50,5 +51,15 @@ describe('account-password-crypto', () => {
     vi.stubEnv('VITE_ACCOUNT_PASSWORD_KEY', TEST_KEY);
 
     await expect(decryptPassword('iv:ciphertext')).rejects.toThrow('Unsupported encrypted password format');
+  });
+
+  it('CredentialPolicyStatus type includes migration_pending', () => {
+    const statuses: CredentialPolicyStatus[] = [
+      'pilot_client_encrypted',
+      'server_boundary_required',
+      'server_managed',
+      'migration_pending',
+    ];
+    expect(statuses).toContain('migration_pending');
   });
 });

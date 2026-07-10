@@ -12,6 +12,7 @@ export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 export type PilotReadinessBackend = 'mobile_mcp' | 'laixi' | 'ios_portal' | 'unknown';
 export type PilotReadinessStatus = 'draft' | 'submitted' | 'pilot_verified' | 'not_verified' | 'needs_rerun';
 export type TargetFailurePolicy = 'fail_fast' | 'skip_failed_target';
+export type AccountCredentialPolicyStatus = 'pilot_client_encrypted' | 'server_boundary_required' | 'server_managed' | 'migration_pending';
 
 export interface Profile {
   id: string;
@@ -206,6 +207,9 @@ export interface Account {
   last_action_reset_at: string | null;
   is_blocked: boolean;
   detected_block_reason: string | null;
+  credential_policy_status: AccountCredentialPolicyStatus | null;
+  credential_key_version: number | null;
+  credential_rotated_at: string | null;
   created_at: string;
   updated_at: string;
 }
