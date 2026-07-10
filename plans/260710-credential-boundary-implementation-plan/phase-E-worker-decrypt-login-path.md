@@ -11,7 +11,7 @@
 
 Date: 2026-07-10
 Priority: P1
-Implementation status: Pending
+Implementation status: Implemented
 Review status: Not reviewed
 
 Allow login macros to use decrypted credentials in worker memory only.
@@ -59,10 +59,10 @@ Worker flow:
 
 ## Todo List
 
-- [ ] Decrypt endpoint requires service-role.
-- [ ] `{{accountPassword}}` resolves only at execution time.
-- [ ] Step persistence stores template or redacted marker, not plaintext.
-- [ ] Decrypt failure produces safe operator-facing error.
+- [x] Decrypt endpoint requires service-role.
+- [x] `{{accountPassword}}` resolves only at execution time.
+- [x] Step persistence stores template or redacted marker, not plaintext.
+- [x] Decrypt failure produces safe operator-facing error.
 
 ## Success Criteria
 

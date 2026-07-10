@@ -200,6 +200,11 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
         serial,
       };
     }
+    // input_text steps contain plaintext passwords in resolvedParams.text.
+    // Never include the plaintext in the normalized output - redact it.
+    if (stepType === 'input_text') {
+      return { text: '[REDACTED]', backend: 'mobile-mcp', serial, bridge: stripArtifacts(bridgeOutput) };
+    }
     return { ...resolvedParams, backend: 'mobile-mcp', serial, bridge: stripArtifacts(bridgeOutput) };
   }
 }

@@ -2,14 +2,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import {
   encryptCredential,
+  decryptServerCredential,
   decryptLegacyCredential,
   MIN_SERVER_KEY_LENGTH,
   MIN_LEGACY_KEY_LENGTH,
+  SERVER_PAYLOAD_PREFIX,
   LEGACY_PAYLOAD_PREFIX,
 } from "./crypto-helper.ts";
 
 /*
- * credential-vault Edge Function (Phase D - Encrypt + Migrate)
+ * credential-vault Edge Function (Phase D - Encrypt + Migrate, Phase E - Decrypt)
  *
  * Purpose:
  *   Accept plaintext social credentials over HTTPS and return an encrypted
@@ -26,10 +28,16 @@ import {
  *   - No plaintext logging. Plaintext, keys, ciphertext are never logged or
  *     returned in errors.
  *
+ * Phase E additions:
+ *   - `action: 'decrypt'` (ADMIN only) decrypts an `s3:` or `v2:` payload and
+ *     returns the plaintext to the caller (the execution worker). Plaintext is
+ *     returned only over the authenticated service-role channel and is never
+ *     logged or persisted by this function.
+ *
  * Auth:
  *   Requires a valid Supabase JWT in the Authorization header.
  *   - `encrypt` action: OPERATOR or ADMIN.
- *   - `migrate` / `dry-run` actions: ADMIN only.
+ *   - `migrate` / `dry-run` / `decrypt` actions: ADMIN only.
  *   Unauthenticated callers get 401; unauthorized roles get 403.
  */
 
@@ -42,7 +50,7 @@ const corsHeaders = {
 
 const ALLOWED_ROLES = new Set(["OPERATOR", "ADMIN"]);
 const ADMIN_ONLY_ROLES = new Set(["ADMIN"]);
-type VaultAction = "encrypt" | "migrate" | "dry-run";
+type VaultAction = "encrypt" | "migrate" | "dry-run" | "decrypt";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -55,6 +63,7 @@ interface VaultRequestBody {
   plaintext?: string;
   accountId?: string;
   action?: string;
+  encryptedPayload?: string;
 }
 
 /**
@@ -209,6 +218,43 @@ async function handleMigrate(
   return json({ migrated, failed, skipped, details }, 200);
 }
 
+/**
+ * Decrypt: decrypt an `s3:` or `v2:` payload and return the plaintext to the
+ * caller (the execution worker). Admin-only. Never logs plaintext, ciphertext,
+ * or keys. On any failure returns a generic 400 error with no sensitive detail.
+ */
+async function handleDecrypt(
+  body: VaultRequestBody,
+  serverKey: string
+): Promise<Response> {
+  if (!body.encryptedPayload || typeof body.encryptedPayload !== "string" || body.encryptedPayload.length === 0) {
+    return json({ error: "encryptedPayload is required." }, 400);
+  }
+
+  const payload = body.encryptedPayload;
+  let plaintext: string;
+  try {
+    if (payload.startsWith(`${SERVER_PAYLOAD_PREFIX}:`)) {
+      // s3: payload - decrypt with server credential key
+      plaintext = await decryptServerCredential(payload, serverKey);
+    } else if (payload.startsWith(`${LEGACY_PAYLOAD_PREFIX}:`)) {
+      // v2: payload - decrypt with legacy pilot key
+      const legacyKey = Deno.env.get("LEGACY_PILOT_KEY");
+      if (!legacyKey || legacyKey.length < MIN_LEGACY_KEY_LENGTH) {
+        return json({ error: "Decrypt failed." }, 400);
+      }
+      plaintext = await decryptLegacyCredential(payload, legacyKey);
+    } else {
+      return json({ error: "Decrypt failed." }, 400);
+    }
+  } catch {
+    // Never leak decrypt error details that could expose key material state.
+    return json({ error: "Decrypt failed." }, 400);
+  }
+
+  return json({ plaintext }, 200);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -272,7 +318,7 @@ Deno.serve(async (req: Request) => {
 
     // Determine action (default to encrypt for backward compatibility)
     const action: VaultAction =
-      body.action === "migrate" || body.action === "dry-run"
+      body.action === "migrate" || body.action === "dry-run" || body.action === "decrypt"
         ? body.action
         : "encrypt";
 
@@ -288,6 +334,10 @@ Deno.serve(async (req: Request) => {
 
     if (action === "migrate") {
       return await handleMigrate(supabaseUrl, body, serverKey);
+    }
+
+    if (action === "decrypt") {
+      return await handleDecrypt(body, serverKey);
     }
 
     // --- Encrypt action (existing behavior) ---

@@ -46,6 +46,13 @@ export class SingleDeviceStepRunner {
   private readonly persistedSteps = new Map<string, StoredRunStepRecord>();
   private executionContext!: ExecutionContext;
 
+  /**
+   * Transient sensitive variables (e.g. decrypted account passwords) held in
+   * memory ONLY for the duration of the step that needs them. Never persisted
+   * to the database, logs, or artifacts. Cleared after each step execution.
+   */
+  private readonly sensitiveInputVariables = new Map<string, string>();
+
   constructor(private readonly params: RunnerParams) {}
 
   async run() {
@@ -535,7 +542,54 @@ export class SingleDeviceStepRunner {
     return 'WAITING_APPROVAL';
   }
 
+  /**
+   * Resolve sensitive credential variables for a step.
+   * If the step's params contain `{{accountPassword}}`, fetch and decrypt
+   * the credential, storing it in sensitiveInputVariables.
+   * Called BEFORE resolveParams so the value is available during resolution.
+   * Plaintext is held in memory only and is never persisted.
+   */
+  private async resolveSensitiveVariables(step: MacroStep): Promise<void> {
+    const accountId = this.params.inputVariables?.accountId as string | undefined;
+    if (!accountId) return;
+
+    // Check if any param value references {{accountPassword}}
+    const paramJson = JSON.stringify(step.params);
+    if (!paramJson.includes('{{accountPassword}}')) return;
+
+    // Avoid re-fetching if already decrypted for this run
+    if (this.sensitiveInputVariables.has('accountPassword')) return;
+
+    try {
+      const { fetchAndDecryptCredential } = await import('./credential-decrypt-client.js');
+      const result = await fetchAndDecryptCredential(this.params.supabase, accountId);
+      this.sensitiveInputVariables.set('accountPassword', result.plaintext);
+    } catch {
+      // Mark as failed so the step produces a safe error; don't throw here
+      this.sensitiveInputVariables.set('accountPassword', '__DECRYPT_FAILED__');
+    }
+  }
+
+  /**
+   * Remove sensitive values (e.g. plaintext passwords) from step output
+   * before persistence. For input_text steps, redact the 'text' field.
+   */
+  private scrubSensitiveOutput(
+    output: Record<string, unknown>,
+    stepType: string
+  ): Record<string, unknown> {
+    if (stepType === 'input_text') {
+      const scrubbed = { ...output };
+      if ('text' in scrubbed) {
+        scrubbed.text = '[REDACTED]';
+      }
+      return scrubbed;
+    }
+    return output;
+  }
+
   private async executeDeviceStepWithRetry(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
+    try {
     /* Action budget check: before executing a budget-consuming step, verify the
        account has remaining capacity for this action type today. */
     const budgetCheck = await budgetCheckForStep(this.params.supabase, step, this.params.inputVariables);
@@ -551,6 +605,11 @@ export class SingleDeviceStepRunner {
       });
       return { status: 'FAILED' as const };
     }
+
+    /* Resolve sensitive credential variables (e.g. {{accountPassword}}) BEFORE
+       the retry loop so the decrypted value persists across retry attempts.
+       Plaintext is held in sensitiveInputVariables (in-memory only, never persisted). */
+    await this.resolveSensitiveVariables(step);
 
     const timeoutMs = step.policy?.timeoutMs ?? this.params.definition.execution.defaultTimeoutMs;
     const retryPolicy = normalizeRetryBackoffPolicy({
@@ -577,6 +636,36 @@ export class SingleDeviceStepRunner {
       });
 
       const resolvedParams = resolveParams(step.params, this.params.inputVariables, this.stepOutputs);
+
+      // Overlay sensitive variables (never persisted - only used for device execution)
+      // resolveParams has already replaced {{accountPassword}} with '' because the
+      // sensitive value is NOT in inputVariables. We re-apply the template here using
+      // the original raw params as the source so the plaintext is injected correctly.
+      for (const [key, value] of this.sensitiveInputVariables) {
+        if (value === '__DECRYPT_FAILED__') {
+          // Handle decrypt failure - fail the step with a safe error
+          await this.saveStep({
+            runId: this.params.runId,
+            step,
+            deviceId: this.params.device.id,
+            stepIndex,
+            status: 'FAILED',
+            retryCount: attempt,
+            errorPayload: {
+              code: 'CREDENTIAL_DECRYPT_FAILED',
+              message: 'Failed to decrypt account credential. Check SERVER_CREDENTIAL_KEY or LEGACY_PILOT_KEY configuration.',
+              timestamp: new Date().toISOString(),
+            },
+          });
+          return { status: 'FAILED' as const };
+        }
+        // Re-resolve from raw params so {{accountPassword}} is replaced with plaintext
+        for (const [paramKey, paramValue] of Object.entries(step.params)) {
+          if (typeof paramValue === 'string' && paramValue.includes(`{{${key}}}`)) {
+            resolvedParams[paramKey] = resolveTemplate(paramValue, { ...this.params.inputVariables, [key]: value }, this.stepOutputs);
+          }
+        }
+      }
 
       /* Apply anti-detection transforms (coordinate jitter, delay randomization)
          when the macro definition includes an antiDetection config. */
@@ -607,6 +696,9 @@ export class SingleDeviceStepRunner {
             result
           );
 
+          // Scrub sensitive values from output before persistence
+          const safeOutput = this.scrubSensitiveOutput(result.output, step.type);
+
           await this.saveStep({
             runId: this.params.runId,
             step,
@@ -614,7 +706,7 @@ export class SingleDeviceStepRunner {
             stepIndex,
             status: 'SUCCESS',
             retryCount: attempt,
-            output: result.output,
+            output: safeOutput,
             screenshotArtifactId,
           });
           await recordStepAction(this.params.supabase, step, this.params.runId, this.params.inputVariables, true);
@@ -736,6 +828,10 @@ export class SingleDeviceStepRunner {
     }
 
     return { status: 'FAILED' as const };
+    } finally {
+      // Clear sensitive variables after step execution (success, failure, or exception)
+      this.sensitiveInputVariables.clear();
+    }
   }
 
   private async saveStep(
