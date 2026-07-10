@@ -118,7 +118,7 @@ export default function SocialDashboardPage() {
                   {totalAccounts === 0 && (
                     <li>
                       No social accounts registered.{' '}
-                      <Link to="/accounts" className="font-semibold underline hover:text-red-955">
+                      <Link to="/accounts" className="font-semibold underline hover:text-red-950">
                         Register at least one social account
                       </Link>
                     </li>

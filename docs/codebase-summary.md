@@ -35,8 +35,8 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - `npm.cmd run build:worker`: pass on 2026-07-08 (457KB).
 - `npm.cmd run build:gateway`: pass on 2026-07-08 (20KB).
 - `python -m unittest discover -s services\mobile-mcp-bridge\tests -p "test_*.py"`: pass on 2026-07-08 (6 tests OK).
-- `npm.cmd run test:e2e -- tests/e2e/navigation.spec.ts`: pass on 2026-07-08 (3 tests passed).
-- Runtime-only gates (`preflight:mobile-mcp`, `verify:mobile-mcp`): not run on 2026-07-08 due to device/env unavailability.
+- `npm.cmd run test:e2e -- tests/e2e/navigation.spec.ts tests/e2e/operator-journey.spec.ts`: pass on 2026-07-10 (4 tests passed; Playwright workers pinned to 1 for local stability).
+- Runtime-only gates (`preflight:mobile-mcp`, `verify:mobile-mcp`): pass on 2026-07-10 with device `97249fb5` and full UI smoke run `1b6ec7a2-0078-4493-91a5-37af2e918d66`.
 - `npm.cmd audit`: 0 vulnerabilities in root app, execution worker, and Laixi gateway workspaces on 2026-07-08.
 - `npm.cmd run smoke:backend`: last documented pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.

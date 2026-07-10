@@ -144,7 +144,7 @@ export default function ReadinessReportsPage() {
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {showWarning && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-850 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-4 flex items-start gap-3 shadow-sm">
               <AlertTriangle className="mt-0.5 w-5 h-5 text-amber-600 shrink-0" />
               <div>
                 <h3 className="font-semibold text-sm">Next Action: Refresh Pilot Verification</h3>
