@@ -36,7 +36,7 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - `npm.cmd run build:gateway`: pass on 2026-07-08 (20KB).
 - `python -m unittest discover -s services\mobile-mcp-bridge\tests -p "test_*.py"`: pass on 2026-07-08 (6 tests OK).
 - `npm.cmd run test:e2e -- tests/e2e/navigation.spec.ts tests/e2e/operator-journey.spec.ts`: pass on 2026-07-10 (4 tests passed; Playwright workers pinned to 1 for local stability).
-- Runtime-only gates (`preflight:mobile-mcp`, `verify:mobile-mcp`): pass on 2026-07-10 with device `97249fb5` and full UI smoke run `1b6ec7a2-0078-4493-91a5-37af2e918d66`.
+- Runtime-only gates (`preflight:mobile-mcp`, `verify:mobile-mcp`): pass on 2026-07-10 with device `97249fb5` and full UI smoke run `96ae236c-fcbd-4eb9-bc3b-7673e11cd84d`.
 - `npm.cmd audit`: 0 vulnerabilities in root app, execution worker, and Laixi gateway workspaces on 2026-07-08.
 - `npm.cmd run smoke:backend`: last documented pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.
@@ -61,8 +61,9 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - Spec Kit feature `001-normalize-pilot-artifact` is implemented for artifact display normalization and storage-decision documentation.
 - Spec Kit feature `002-laixi-gateway-live-proof` is blocked/future-only until Laixi VIP/API access enables a live session.
 - Spec Kit feature `003-artifact-storage-thresholds` is completed and merged.
-- **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). Full `npm.cmd run verify:mobile-mcp` passed on 2026-07-08 with browser UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561`.
-- **First social pilot readiness**: Instagram open/capture proof run `a414e519-c1ac-44df-b287-e91e845f0084` completed with screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`; readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` is `pilot_verified`.
+- **Mobile MCP local readiness**: Local stack operational with device `97249fb5` (Redmi/onyx, Android 16). Full `npm.cmd run verify:mobile-mcp` passed on 2026-07-10 with browser UI smoke run `96ae236c-fcbd-4eb9-bc3b-7673e11cd84d`.
+- **First social pilot readiness**: Instagram open/capture proof run `f8e94b1d-34bc-4e3c-8b59-ecdf4d5f7955` completed with screenshot artifact `a9c4cc2f-7afb-418c-b698-039735282683`; readiness report `86622b49-5876-4152-bfcb-f09c9b7ad090` is `pilot_verified`.
+- **Phase 6: Pilot Beta Hardening implemented**: Hardened operator loop (Readiness -> Accounts -> Macro -> Run -> Artifact -> Report) with automated DB inserts for pilot readiness reports. Stuck queued run `cb7b7c01-3a61-4d7f-809f-2890668ff152` was safely transitioned to CANCELLED.
 - `scripts/verify-mobile-mcp-local.mjs` writes a `readinessEvidence` object containing pilot level, backend mode, bridge/worker/Supabase health, serials, run id/status, artifact refs, scrub status, `verified_at`, and claim summary.
 - `/readiness` uses `readiness-report-form-helpers` for tested evidence defaults, labels, backend-specific proof fields, comma-separated serial/artifact conversion, and blocker-aware admin verification affordances.
 - Foreach loop execution integration in backend worker (`handleForeachLoop` in `single-device-step-runner.ts`) along with a critical bug fix resolving loop step repetition/skipping defects across all loop types.

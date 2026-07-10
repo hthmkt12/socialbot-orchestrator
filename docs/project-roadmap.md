@@ -34,7 +34,8 @@ Date: 2026-07-08
 - Require `VITE_ACCOUNT_PASSWORD_KEY` before saving social account credentials; treat the browser key as pilot-only until credential encryption moves server-side.
 - Use `docs/backend-capability-matrix.md` as the backend capability source of truth.
 - Use `docs/file-size-refactor-plan.md` to sequence large-file refactors.
-- Preserve the current Mobile MCP local readiness baseline: expected serial `97249fb5`, full verify report `plans/reports/mobile-mcp-verify-2026-07-08T06-50-50-734Z.json`, UI smoke run `63ce7aea-0b13-4998-a990-cc15bdfc8561`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
+- Preserve the current Mobile MCP local readiness baseline: expected serial `97249fb5`, full verify report `plans/reports/mobile-mcp-verify-2026-07-10T04-48-02-006Z.json`, UI smoke run `96ae236c-fcbd-4eb9-bc3b-7673e11cd84d`, first social pilot run `f8e94b1d-34bc-4e3c-8b59-ecdf4d5f7955`, and readiness report `86622b49-5876-4152-bfcb-f09c9b7ad090` marked `pilot_verified`.
+- Added Phase 6 Pilot Beta Hardening. The Readiness -> Accounts -> Macro -> Run -> Artifact -> Report operator loop has a repeatable script path with database inserts; runtime reruns require Mobile MCP bridge, worker, and expected device serial to be healthy. Queued run `cb7b7c01-3a61-4d7f-809f-2890668ff152` was safely transitioned to CANCELLED during runtime re-validation.
 - Keep generated readiness evidence free of secrets and claim tokens; smoke and pilot verification scripts now redact claim tokens before writing/printing evidence.
 - Treat Level 1 readiness evidence as fresh for 14 days from `verified_at`; rerun verification before admin `pilot_verified` if the evidence expires or the pilot device, runtime backend, bridge token/auth mode, Supabase project, or workflow proof changes.
 
