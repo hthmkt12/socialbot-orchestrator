@@ -1,6 +1,6 @@
 # Phase G - Verification Report
 
-Date: 2026-07-10 (re-verified 2026-07-10T07:55:55Z)
+Date: 2026-07-10 (re-verified 2026-07-10T08:20:28Z)
 Verifier: `scripts/verify-credential-boundary.mjs` (version `phase-g-1`)
 Overall verdict: **full_verified**
 
@@ -68,6 +68,31 @@ The Edge Function `supabase/functions/credential-vault/index.ts` was statically 
 | Device serial | 97249fb5 |
 
 The runtime device proof was re-run with `MOBILE_MCP_BRIDGE_URL=http://127.0.0.1:4321` and device `97249fb5` connected. The bridge health check returned 200 and the device was available, confirming the credential boundary holds at runtime.
+
+## Remote Edge Function Proof
+
+The `credential-vault` Edge Function was deployed to remote Supabase project `gzwwqhgvrfsqokrxfhyu` and verified with real test requests on 2026-07-10T08:20:28Z.
+
+### Remote Deployment
+
+- **Endpoint**: `https://gzwwqhgvrfsqokrxfhyu.supabase.co/functions/v1/credential-vault`
+- **Secrets set**: `SERVER_CREDENTIAL_KEY` and `LEGACY_PILOT_KEY` configured on remote.
+- **Phase A migration applied to remote DB**: `credential_policy_status` column exists on `accounts` table; existing `v2:` rows backfilled to `pilot_client_encrypted`.
+
+### Encrypt/Decrypt Round-Trip on Remote
+
+- **Encrypt test**: Input `{"plaintext":"DO_NOT_PERSIST_PASSWORD_123"}` returned `{"encryptedPayload":"s3:1:...","keyVersion":1}`. PASS.
+- **Decrypt test**: The encrypted `s3:` payload was sent back to the Edge Function decrypt action; it returned `{"plaintext":"DO_NOT_PERSIST_PASSWORD_123"}`, matching the original input. Round-trip PASS.
+
+### Dry-Run on Remote
+
+- **Dry-run result**: 1 `v2:` account found (`4857cfd5-30d3-4d06-bfb6-d398082373f3`), status `pilot_client_encrypted`. PASS.
+
+### Real Device Verification
+
+- **`verify:mobile-mcp`**: Run `66abcf36-b04f-4b5d-a109-d8b124b25152` COMPLETED (4 steps) on device `97249fb5`. PASS.
+- **`verify:first-social-pilot`**: Instagram pilot run `2b1d2b2b-d586-4ebf-8606-34cafce2b298` COMPLETED; `secret_scrub_status` passed. PASS.
+- **`credential-boundary verify`**: overallVerdict `full_verified`, deviceAvailable `true`, bridge health `200`.
 
 ## Overall Verdict
 
