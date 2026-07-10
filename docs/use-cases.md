@@ -321,7 +321,6 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - Khong co public social network trong app nhu like/share/follow giua nguoi dung.
 - Khong co real-time collaborative macro editing.
 - Khong co guarantee bypass anti-bot/anti-detection cua Instagram, TikTok, Facebook.
-- Khong co production-grade credential vault cho social account password; browser encryption key chi la pilot-only. (DA TRIEN KHAI: Supabase Edge Function credential-vault voi AES-GCM 256-bit, s3: payload,Phase B-G full verified tren device 97249fb5.)
 - Khong tu dong tao hoac mua social accounts.
 - Khong tu dong publish/post noi dung nhay cam mac dinh; publish phai review-gated/explicit allow.
 - Khong support `run_autox` execution qua Mobile MCP V1.
@@ -332,6 +331,10 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - Khong co SLA fleet parallel speed; sequential multi-target la acceptable pilot decision.
 - Khong co native mobile app; current UI la web app.
 - Khong co offline-first mode; Supabase/runtime/device connectivity la bat buoc.
+
+## Da trien khai (truoc day la KHONG lam)
+
+- Production-grade credential vault cho social account password: DA TRIEN KHAI qua Supabase Edge Function credential-vault voi AES-GCM 256-bit, s3: payload, Phase B-G full verified tren device 97249fb5. Browser encryption key (VITE_ACCOUNT_PASSWORD_KEY) chi con dung cho v2: migration, khong con dung cho tao account moi.
 
 ## Review Checklist
 
