@@ -30,6 +30,7 @@ const dotEnv = loadDotEnv(join(rootDir, '.env'));
 const env = { ...dotEnv, ...process.env };
 const supabaseUrl = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL;
 const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+const runId = process.argv[2] ?? env.CLEANUP_RUN_ID ?? 'cb7b7c01-3a61-4d7f-809f-2890668ff152';
 
 async function main() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -38,12 +39,11 @@ async function main() {
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
-  const runId = 'cb7b7c01-3a61-4d7f-809f-2890668ff152';
 
   console.log(`Checking run ID: ${runId}`);
   const { data: run, error: getError } = await supabase
     .from('workflow_runs')
-    .select('id,status')
+    .select('id,status,execution_claim_token,summary_json')
     .eq('id', runId)
     .maybeSingle();
 
@@ -59,11 +59,35 @@ async function main() {
 
   console.log(`Current status of run ${runId} is: ${run.status}`);
 
-  if (run.status === 'QUEUED') {
+  const { data: steps, error: stepsError } = await supabase
+    .from('run_steps')
+    .select('id')
+    .eq('workflow_run_id', runId)
+    .limit(1);
+
+  if (stepsError) {
+    console.error('Error checking run steps:', stepsError.message);
+    process.exit(1);
+  }
+
+  const hasWorkerClaim = Boolean(run.execution_claim_token);
+  const hasSteps = Boolean(steps?.length);
+
+  if (run.status === 'QUEUED' && !hasWorkerClaim && !hasSteps) {
     console.log(`Updating run ${runId} status to CANCELLED...`);
     const { data: updated, error: updateError } = await supabase
       .from('workflow_runs')
-      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+      .update({
+        status: 'CANCELLED',
+        updated_at: new Date().toISOString(),
+        summary_json: {
+          ...(run.summary_json ?? {}),
+          cleanup: {
+            reason: 'queued_without_worker_claim_or_steps',
+            cleanedAt: new Date().toISOString(),
+          },
+        },
+      })
       .eq('id', runId)
       .select('id,status')
       .maybeSingle();
@@ -75,7 +99,9 @@ async function main() {
 
     console.log(`Successfully updated. New status: ${updated.status}`);
   } else {
-    console.log(`Run ${runId} is not in QUEUED state. Skipping update.`);
+    console.log(
+      `Skipping update. status=${run.status}, hasWorkerClaim=${hasWorkerClaim}, hasSteps=${hasSteps}`,
+    );
   }
 }
 

@@ -11,6 +11,7 @@ import {
   INSTAGRAM_HASHTAG_ENGAGE,
   TIKTOK_VIEW_BOT,
 } from './social-engagement-templates';
+import { validateMacroDefinition } from './macro';
 
 describe('SOCIAL_TEMPLATES', () => {
   it('exports all 9 templates', () => {
@@ -35,6 +36,14 @@ describe('SOCIAL_TEMPLATES', () => {
       expect(template.definition.meta.key).toBe(key);
       expect(template.definition.steps.length).toBeGreaterThan(0);
       expect(template.definition.target.mode).toBe('single_device');
+    }
+  });
+
+  it('each template passes the macro contract validator', () => {
+    for (const [key, template] of Object.entries(SOCIAL_TEMPLATES)) {
+      const result = validateMacroDefinition(template.definition);
+      expect(result.errors, key).toEqual([]);
+      expect(result.valid, key).toBe(true);
     }
   });
 });

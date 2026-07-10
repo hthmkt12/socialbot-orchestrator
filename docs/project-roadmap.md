@@ -46,6 +46,7 @@ Date: 2026-07-08
 - Tighten account credential handling by supporting a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). Implemented in Phase 2: if no server-side vault is configured, block saving/importing under `server_boundary_required` status when `VITE_ACCOUNT_PASSWORD_KEY` is missing/weak. Stored credentials remain `v2:` client-encrypted. Browser-side encryption is pilot-only and a server boundary is required for production. Secret keys are automatically scrubbed from readiness reports and evidence.
 - Phase 3 operator journey cleanup implemented: sidebar regrouped to match primary operator flow (Readiness -> Accounts -> Runs -> Devices -> Analytics), Social Dashboard Go/No-Go box, Readiness stale evidence warning, Run Wizard preflight blockers linked to recovery pages, Analytics badge colored by data source state.
 - Finish navigation cleanup so operators can reach runs, approvals, devices, setup, schedules, fleet health, and other in-scope operational screens from the primary sidebar.
+- Production credential boundary design completed (design only, no implementation). Recommended architecture: Supabase Edge Function credential vault with server-held key, `s3:` payload prefix, and `v2:` migration path. Design report at `plans/260708-1630-pilot-production-priority/reports/phase-08-production-credential-boundary-design.md`. Implementation deferred to a future phase.
 
 ## Social Pivot
 

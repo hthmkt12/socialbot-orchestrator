@@ -4,6 +4,7 @@
  * config embedded in step params.
  */
 import type { MacroDefinition } from './macro';
+import { validateMacroDefinition } from './macro';
 import type { AntiDetectionConfig } from '../lib/anti-detection-helpers';
 import { DEFAULT_ANTI_DETECTION } from '../lib/anti-detection-helpers';
 
@@ -146,7 +147,7 @@ export const INSTAGRAM_WARMUP: SocialTemplate = {
     meta: {
       key: 'instagram_warmup',
       name: 'Instagram Account Warmup',
-      description: 'Scroll the home feed, like random posts, and pause to simulate natural human warmup pacing.',
+      description: 'Scroll the home feed, perform warm-up-safe like taps, and pause to simulate natural human pacing.',
       tags: ['instagram', 'engagement', 'warmup'],
     },
     inputs: {
@@ -227,7 +228,7 @@ export const INSTAGRAM_HASHTAG_ENGAGE: SocialTemplate = {
               { id: 'type_comment', type: 'input_text', params: { text: '{{commentText}}' } },
               { id: 'wait_type', type: 'wait', params: { ms: 1500 } },
               { id: 'tap_post_comment', type: 'tap', params: { x: 0.9, y: 0.5, actionBudgetType: 'comment' } },
-              { id: 'wait_post_load', type: 'wait', params: { ms: 3000 } },
+              { id: 'wait_comment_post', type: 'wait', params: { ms: 3000 } },
               { id: 'go_back', type: 'tap', params: { x: 0.05, y: 0.08 } },
               { id: 'wait_back', type: 'wait', params: { ms: 1500 } }
             ],
@@ -250,7 +251,7 @@ export const TIKTOK_VIEW_BOT: SocialTemplate = {
     meta: {
       key: 'tiktok_view_bot',
       name: 'TikTok View Bot',
-      description: 'Scroll the For You Page, watch videos for simulated view time, and randomly like videos to mimic natural user behaviour.',
+      description: 'Scroll the For You Page, watch videos for simulated view time, and perform warm-up-safe like taps.',
       tags: ['tiktok', 'engagement', 'view', 'like'],
     },
     inputs: {
@@ -387,3 +388,10 @@ export const SOCIAL_TEMPLATES: Record<string, SocialTemplate> = {
   instagram_hashtag_engage: INSTAGRAM_HASHTAG_ENGAGE,
   tiktok_view_bot: TIKTOK_VIEW_BOT,
 };
+
+for (const [key, template] of Object.entries(SOCIAL_TEMPLATES)) {
+  const result = validateMacroDefinition(template.definition);
+  if (!result.valid) {
+    throw new Error(`Invalid social template ${key}: ${result.errors.join('; ')}`);
+  }
+}
