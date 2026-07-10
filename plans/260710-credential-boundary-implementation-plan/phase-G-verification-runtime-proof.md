@@ -10,8 +10,8 @@
 
 Date: 2026-07-10
 Priority: P1
-Implementation status: Pending
-Review status: Not reviewed
+Implementation status: Implemented
+Review status: Non-device verified
 
 Verify the production credential boundary end to end.
 
@@ -59,14 +59,14 @@ Final evidence report should include:
 
 ## Todo List
 
-- [ ] `npm.cmd run lint`
-- [ ] `npm.cmd run typecheck`
-- [ ] `npm.cmd test`
-- [ ] `npm.cmd run build`
-- [ ] `npm.cmd run build:worker`
-- [ ] Edge Function tests
-- [ ] Runtime proof
-- [ ] Plaintext canary search
+- [x] `npm.cmd run lint`
+- [x] `npm.cmd run typecheck`
+- [x] `npm.cmd test`
+- [x] `npm.cmd run build`
+- [x] `npm.cmd run build:worker`
+- [x] Edge Function tests (13 crypto-helper tests pass)
+- [x] Runtime proof (device unavailable - non_device_only, production claim blocked)
+- [x] Plaintext canary search (canary only in test files and verification script, no violations)
 
 ## Success Criteria
 
