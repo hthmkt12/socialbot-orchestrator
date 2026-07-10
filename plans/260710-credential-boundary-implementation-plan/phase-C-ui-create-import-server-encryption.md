@@ -11,7 +11,7 @@
 
 Date: 2026-07-10
 Priority: P1
-Implementation status: Pending
+Implementation status: Implemented
 Review status: Not reviewed
 
 Switch create/import from browser encryption to the Edge Function encrypt endpoint.
@@ -56,10 +56,28 @@ Add a small helper:
 
 ## Todo List
 
-- [ ] Create flow stores `s3:` payload.
-- [ ] CSV import stores `s3:` payloads.
-- [ ] UI copy says server-managed credential boundary.
-- [ ] Tests cover encrypt helper success/failure.
+- [x] Create flow stores `s3:` payload (via `encryptCredentialViaVault`)
+- [x] CSV import stores `s3:` payloads (via `encryptCredentialViaVault`)
+- [x] UI copy says server-side encryption (s3:) banner replaces pilot credential policy banner
+- [x] Tests cover encrypt helper success/failure (5 tests in `account-credential-vault-client.test.ts`)
+
+## Files Changed
+
+- `src/lib/account-credential-vault-client.ts` (created) - Vault client helper
+- `src/lib/account-credential-vault-client.test.ts` (created) - 5 Vitest tests
+- `src/components/accounts/create-account-modal.tsx` (modified) - Uses vault client, removed client-side encrypt gate
+- `src/pages/AccountsPage.tsx` (modified) - CSV import uses vault client, removed credential policy gate
+- `src/components/accounts/csv-import-modal.tsx` (modified) - Removed credentialPolicy prop, static server vault banner
+
+## Verification Commands
+
+| Command | Status |
+|---------|--------|
+| `npm.cmd run lint` | PASS |
+| `npm.cmd run typecheck` | PASS |
+| `npm.cmd test` | PASS (295 tests, 35 files) |
+| `npm.cmd run build` | PASS |
+| `git diff --check` | PASS (exit 0) |
 
 ## Success Criteria
 

@@ -10,7 +10,7 @@
 
 Date: 2026-07-10
 Priority: P1
-Implementation status: Pending
+Implementation status: Implemented
 Review status: Not reviewed
 
 Introduce the Supabase Edge Function encryption boundary without changing UI writes yet.
@@ -57,11 +57,31 @@ Encryption:
 
 ## Todo List
 
-- [ ] Function validates auth role.
-- [ ] Function rejects missing/short plaintext.
-- [ ] Function rejects missing `SERVER_CREDENTIAL_KEY`.
-- [ ] Function emits no plaintext logs.
-- [ ] Function returns `s3:` payload.
+- [x] Function validates auth role (OPERATOR/ADMIN via JWT + profiles lookup)
+- [x] Function rejects missing/empty plaintext (400)
+- [x] Function rejects missing/weak `SERVER_CREDENTIAL_KEY` (500)
+- [x] Function emits no plaintext logs (generic 500 error, no console.log of body)
+- [x] Function returns `s3:1:` payload with random IV per call
+- [x] Unit tests added (6 tests in `crypto-helper.test.ts`)
+- [x] `.env.example` documents `SERVER_CREDENTIAL_KEY` (commented out, server-only)
+
+## Files Changed
+
+- `supabase/functions/credential-vault/index.ts` (created) - Edge Function, encrypt-only
+- `supabase/functions/credential-vault/crypto-helper.ts` (created) - Testable crypto module
+- `supabase/functions/credential-vault/crypto-helper.test.ts` (created) - 6 Vitest tests
+- `.env.example` (modified) - Added `SERVER_CREDENTIAL_KEY` documentation
+- `package.json` (modified) - Test script includes `supabase/functions/credential-vault`
+
+## Verification Commands
+
+| Command | Status |
+|---------|--------|
+| `npm.cmd run lint` | PASS |
+| `npm.cmd run typecheck` | PASS |
+| `npm.cmd test` | PASS (290 tests, 34 files) |
+| `npm.cmd run build` | PASS |
+| `git diff --check` | PASS (exit 0) |
 
 ## Success Criteria
 

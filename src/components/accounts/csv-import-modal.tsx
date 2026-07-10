@@ -9,14 +9,9 @@ interface Props {
   onClose: () => void;
   onImport: (rows: CsvAccountRow[]) => void;
   isImporting: boolean;
-  credentialPolicy: {
-    canSavePilotCredential: boolean;
-    severity: 'blocking' | 'warning';
-    message: string;
-  };
 }
 
-export function CsvImportModal({ open, onClose, onImport, isImporting, credentialPolicy }: Props) {
+export function CsvImportModal({ open, onClose, onImport, isImporting }: Props) {
   const [parseResult, setParseResult] = useState<CsvParseResult | null>(null);
   const [fileName, setFileName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -47,7 +42,7 @@ export function CsvImportModal({ open, onClose, onImport, isImporting, credentia
   };
 
   const handleImport = () => {
-    if (credentialPolicy.canSavePilotCredential && parseResult?.valid.length) {
+    if (parseResult?.valid.length) {
       onImport(parseResult.valid);
     }
   };
@@ -68,17 +63,9 @@ export function CsvImportModal({ open, onClose, onImport, isImporting, credentia
           <p className="mt-1 text-xs text-gray-500">Platform must be: instagram, tiktok, or facebook. Daily limit is optional (default: 100).</p>
         </div>
 
-        <div className={`rounded-lg border px-3 py-2 text-xs ${
-          credentialPolicy.severity === 'blocking'
-            ? 'border-red-200 bg-red-50 text-red-700'
-            : 'border-amber-200 bg-amber-50 text-amber-800'
-        }`}>
-          <div className="font-semibold mb-0.5">
-            {credentialPolicy.canSavePilotCredential
-              ? 'Pilot-Only Client-Side Encryption'
-              : 'Credential Boundary Required'}
-          </div>
-          {credentialPolicy.message}
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700">
+          <div className="font-semibold mb-0.5">Server-Side Encryption</div>
+          Credentials are encrypted via the credential vault (s3:) on the server. The encryption key never leaves the server.
         </div>
 
         {/* File picker + sample download */}
@@ -171,7 +158,7 @@ export function CsvImportModal({ open, onClose, onImport, isImporting, credentia
           <button
             type="button"
             onClick={handleImport}
-            disabled={!parseResult?.valid.length || isImporting || !credentialPolicy.canSavePilotCredential}
+            disabled={!parseResult?.valid.length || isImporting}
             className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isImporting ? 'Importing…' : `Import ${parseResult?.valid.length ?? 0} Account${(parseResult?.valid.length ?? 0) !== 1 ? 's' : ''}`}

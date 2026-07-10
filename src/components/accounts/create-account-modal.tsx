@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import Modal from '../ui/Modal';
 import { computeDefaultBudgets, ACTION_TYPE_LABELS } from '../../lib/action-budget-types';
-import { encryptPassword, getCredentialPolicyStatus } from '../../lib/account-password-crypto';
+import { encryptCredentialViaVault } from '../../lib/account-credential-vault-client';
 import type { AccountPlatform } from '../../lib/database.types';
 
 interface CreateAccountModalProps {
@@ -23,20 +23,15 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
   const [dailyLimit, setDailyLimit] = useState(100);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const budgetMap = useMemo(() => computeDefaultBudgets(dailyLimit), [dailyLimit]);
-  const credentialPolicy = getCredentialPolicyStatus();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
     try {
-      if (!credentialPolicy.canSavePilotCredential) {
-        setSubmitError(credentialPolicy.message);
-        return;
-      }
-      const encrypted = await encryptPassword(password);
+      const { encryptedPayload } = await encryptCredentialViaVault(password);
       await onSubmit({
         username,
-        encrypted_password: encrypted,
+        encrypted_password: encryptedPayload,
         platform,
         daily_action_limit: dailyLimit,
       });
@@ -76,17 +71,9 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
           />
         </div>
 
-        <div className={`rounded-lg border px-3 py-2 text-xs ${
-          credentialPolicy.severity === 'blocking'
-            ? 'border-red-200 bg-red-50 text-red-700'
-            : 'border-amber-200 bg-amber-50 text-amber-800'
-        }`}>
-          <div className="font-semibold mb-0.5">
-            {credentialPolicy.status === 'pilot_client_encrypted'
-              ? 'Pilot-Only Client-Side Encryption'
-              : 'Credential Boundary Required'}
-          </div>
-          {credentialPolicy.message}
+        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700">
+          <div className="font-semibold mb-0.5">Server-Side Encryption</div>
+          Credentials are encrypted via the credential vault (s3:) on the server. The encryption key never leaves the server.
         </div>
 
         {submitError && (
@@ -143,7 +130,7 @@ export function CreateAccountModal({ open, onClose, onSubmit, isSubmitting }: Cr
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || !username || !password || !credentialPolicy.canSavePilotCredential}
+            disabled={isSubmitting || !username || !password}
             className="px-4 py-2 text-sm font-medium text-white bg-sky-500 hover:bg-sky-600 rounded-lg transition-colors disabled:opacity-50"
           >
             {isSubmitting ? 'Adding...' : 'Add Account'}

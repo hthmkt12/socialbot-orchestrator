@@ -8,7 +8,7 @@ import EmptyState from '../components/ui/EmptyState';
 import RoleAccessNotice from '../components/ui/RoleAccessNotice';
 import Spinner from '../components/ui/Spinner';
 import { useAccounts, useCreateAccount, useBatchCreateAccounts, useDeleteAccount, useUpdateAccount } from '../hooks/use-accounts';
-import { encryptPassword, getCredentialPolicyStatus } from '../lib/account-password-crypto';
+import { encryptCredentialViaVault } from '../lib/account-credential-vault-client';
 import { canManageAccounts, getRoleLabel } from '../lib/role-access';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
@@ -26,7 +26,6 @@ export default function AccountsPage() {
   const updateAccount = useUpdateAccount();
   const addToast = useUIStore((s) => s.addToast);
   const canEditAccounts = canManageAccounts(profile?.role);
-  const credentialPolicy = getCredentialPolicyStatus();
 
   const handleCreate = async (data: {
     username: string;
@@ -82,15 +81,11 @@ export default function AccountsPage() {
       addToast('Only operators and admins can import social accounts', 'error');
       return;
     }
-    if (!credentialPolicy.canSavePilotCredential) {
-      addToast(credentialPolicy.message, 'error');
-      return;
-    }
     try {
       const encryptedRows = await Promise.all(
         rows.map(async (row) => ({
           username: row.username,
-          encrypted_password: await encryptPassword(row.password),
+          encrypted_password: (await encryptCredentialViaVault(row.password)).encryptedPayload,
           platform: row.platform,
           daily_action_limit: row.daily_limit,
         }))
@@ -156,8 +151,8 @@ export default function AccountsPage() {
 
         {canEditAccounts && (
           <RoleAccessNotice
-            title="Pilot-only credential boundary"
-            detail={credentialPolicy.message}
+            title="Server-side credential vault"
+            detail="Credentials are encrypted via the credential vault (s3:) on the server. The encryption key never leaves the server."
           />
         )}
 
@@ -262,7 +257,6 @@ export default function AccountsPage() {
         onClose={() => setShowCsvImport(false)}
         onImport={handleCsvImport}
         isImporting={batchCreate.isPending}
-        credentialPolicy={credentialPolicy}
       />
     </>
   );
