@@ -53,6 +53,7 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - **Phase 10: User Documentation** — Removed from runtime scope during use-case cleanup; operational guidance now lives in focused in-app setup panels and repo docs.
 - MVP runtime scope is implemented for the current use-case set; docs/pricing/AI builder are intentionally out of runtime scope.
 - **ESLint cleanup** — 17 type/lint errors resolved; 0 errors across the codebase.
+- **5 GHOST Features Alignment** — The 5 GHOST features (Device Setup, Schedules, Analytics, Admin Execution Profiles, Device Groups) have been fully aligned, verified, and documented as part of the core product use-cases inside `docs/use-cases.md`.
 - **CI pipeline** — GitHub Actions workflow (lint → typecheck → build → test).
 - **Docker** — Multi-stage Dockerfiles for worker + gateway, 3-service docker-compose.yml.
 - Mobile MCP real-device UI smoke passed on 2026-07-08 with device `97249fb5`.

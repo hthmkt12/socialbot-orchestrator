@@ -63,6 +63,10 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La viewer, toi co the xem readiness evidence con fresh hay da expired/missing de biet report co can rerun khong.
 - La viewer, toi co the xem analytics data source label de biet chart dang dung real persisted data, insufficient data, hay unknown source.
 - La viewer, toi co the xem retry/backoff timeline read-only trong run detail/monitor khi step duoc retry.
+- La viewer, toi co the xem pilot readiness status read-only de biet backend/device nao da duoc verified.
+- La viewer, toi co the xem schedules cua workflow runs o che do read-only.
+- La viewer, toi co the xem analytics voi nhan data-source ro rang: real persisted data, seed data, hay insufficient data.
+- La viewer, toi co the xem device groups va target devices detail o che do read-only.
 
 ### Khong the
 
@@ -75,6 +79,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La viewer, toi KHONG THE xem audit logs neu UI/RLS yeu cau operator/admin.
 - La viewer, toi KHONG THE thay doi role cua user khac - chi admin.
 - La viewer, toi KHONG THE submit hoac review pilot readiness report - viewer chi doc.
+- La viewer, toi KHONG THE xem secret, token, credential key, hoac plaintext password trong analytics/reports.
 
 ### Khi loi
 
@@ -84,6 +89,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La viewer, khi artifact khong doc duoc hoac payload preview qua lon, thi he thong hien metadata/error thay vi crash.
 - La viewer, khi RLS tu choi doc bang, thi he thong hien loi truy cap hoac empty state an toan.
 - La viewer, khi analytics khong co persisted rows, thi he thong hien source label `Insufficient data` thay vi coi account health la tot.
+- La viewer, khi report/artifact bi RLS tu choi, thi he thong hien access-safe empty state.
 
 ## Operator
 
@@ -114,6 +120,11 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La operator, toi co the xem nhan freshness cua readiness evidence de biet khi nao can rerun truoc khi xin verify.
 - La operator, toi co the xem retry reason, retry attempt, next retry delay, va terminal failure reason trong run monitor/detail.
 - La operator, toi co the xem target failure policy va quyet dinh skip/fail-fast cua multi-target run trong run summary.
+- La operator, toi co the chay pilot readiness checklist hoac dung Device Setup de kiem tra bridge, worker, UI, Supabase va ADB serials.
+- La operator, toi co the xem checklist/preflight go/no-go truoc khi launch run de phat hien va khac phuc device offline/stale/locked.
+- La operator, toi co the tao va cau hinh workflow runs schedules tu schedules page.
+- La operator, toi co the xem analytics voi data source label phan biet real/seed/insufficient data de dua ra quyet dinh van hanh dung dan.
+- La operator, toi co the chon rotation hoac target device group de dispatch multi-device pilot runs.
 
 ### Khong the
 
@@ -129,6 +140,8 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La operator, toi KHONG THE mark backend la `pilot_verified` - chi admin moi duoc review readiness.
 - La operator, toi KHONG THE bypass retry/backoff limit cua execution profile.
 - La operator, toi KHONG THE chon failover sang device offline, stale, locked, hoac khong nam trong resolved dispatchable targets.
+- La operator, toi KHONG THE tu mark pilot readiness la verified; operator chi co the tao report hoac request review.
+- La operator, toi KHONG THE chon rotation/failover sang device group target offline, stale, locked hoac khong dispatchable.
 
 ### Khi loi
 
@@ -146,6 +159,10 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La operator, khi approve item da het han/bi xoa/da resolve, thi he thong bao khong con approval hop le.
 - La operator, khi cancel run da terminal, thi he thong khong lap lai side effect va bao trang thai hien tai.
 - La operator, khi submit readiness evidence co key nhu secret/token/password/apiKey, thi he thong scrub cac field do truoc khi luu.
+- La operator, khi expected device serial khong online, thi checklist fail voi missing serial va recovery hint.
+- La operator, khi schedules table hoac cron input sai, thi he thong bao validation error va khong luu schedule.
+- La operator, khi analytics khong co persisted data, thi he thong hien label `Insufficient data` thay vi ve metric gia.
+- La operator, khi device group target bi lock khi dispatch, thi run se ap dung failure policy nhu fail fast hoac skip target.
 
 ## Admin
 
@@ -165,6 +182,11 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La admin, toi co the chi mark `pilot_verified` khi evidence co `verified_at` con trong cua so 14 ngay.
 - La admin, toi co the cau hinh retry/backoff policy cho execution profile gom max retries, base delay, max delay, va max elapsed.
 - La admin, toi co the cau hinh target failure policy cho execution profile: `fail_fast` hoac `skip_failed_target`.
+- La admin, toi co the review verification/readiness report va mark verified, not_verified, hoac needs_rerun.
+- La admin, toi co the check bat buoc cua pilot evidence gom runtime health, device serial, backend mode, run id, artifact evidence, va timestamp.
+- La admin, toi co the cau hinh, toggle hoac delete workflow schedules de kiem soat lich trinh tu dong hoa.
+- La admin, toi co the cau hinh default execution profile gom retry/backoff policy (max retries, base delay, max delay) va target failure policy (fail_fast, skip_failed_target).
+- La admin, toi co the tao, sua, xoa va chia nhom thiet bi (Device Groups) de phan loai fleet Android.
 
 ### Khong the
 
@@ -179,6 +201,8 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La admin, toi KHONG THE mark `pilot_verified` neu readiness evidence thieu timestamp, timestamp khong hop le, hoac da qua 14 ngay.
 - La admin, toi KHONG THE cau hinh retry vo han hoac retry/backoff delay khong hop le.
 - La admin, toi KHONG THE cau hinh target failure policy ngoai `fail_fast` hoac `skip_failed_target`.
+- La admin, toi KHONG THE mark pilot verified khi thieu proof hoac evidence qua han 14 ngay.
+- La admin, toi KHONG THE cau hinh retry vo han hoac retry/backoff delay khong hop le cho execution profile.
 
 ### Khi loi
 
@@ -192,6 +216,8 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La admin, khi verify readiness ma evidence expired, thi service tu choi va yeu cau rerun verification truoc khi pilot verified.
 - La admin, khi retry/backoff profile co max retry am/qua cao, delay khong hop le, hoac max elapsed qua nguong, thi validation tu choi truoc khi luu.
 - La admin, khi target failure policy khong hop le, thi validation tu choi truoc khi luu.
+- La admin, khi thieu bat ky evidence nao nhu run id, device serial, hoac fresh timestamp, thi he thong khong cho phep set `pilot_verified`.
+- La admin, khi cap nhat retry/backoff profile voi parameters am hoac vuot qua nguong cho phep, thi validation tu choi.
 
 ## System Worker
 
