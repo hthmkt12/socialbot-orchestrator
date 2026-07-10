@@ -133,7 +133,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La operator, toi KHONG THE xem toan bo audit logs neu policy chi cho admin xem tat ca.
 - La operator, toi KHONG THE bypass approval cho step nhay cam neu macro policy yeu cau approval.
 - La operator, toi KHONG THE chay run neu target offline, locked, stale heartbeat, hoac target mode khong khop macro.
-- La operator, toi KHONG THE luu account password neu thieu `VITE_ACCOUNT_PASSWORD_KEY`.
+- La operator, toi KHONG THE luu account password neu Edge Function `credential-vault` khong kha dung hoac `SERVER_CREDENTIAL_KEY` thieu/qua ngan.
 - La operator, toi KHONG THE su dung bridge protected endpoints khi bridge token thieu, tru khi local insecure dev mode duoc bat ro rang.
 - La operator, toi KHONG THE chay `run_autox` qua Mobile MCP V1 - backend hien khong support.
 - La operator, toi KHONG THE hua automation social production-safe hoac anti-detection dam bao - chi pilot/internal proof.
@@ -147,7 +147,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 
 - La operator, khi import CSV thieu username/password/platform, thi he thong bao row loi va khong import row do.
 - La operator, khi CSV co platform khong phai instagram/tiktok/facebook, thi he thong tu choi row va bao loi cu the.
-- La operator, khi tao account ma encryption key thieu/qua ngan, thi he thong bao loi inline va khong luu password.
+- La operator, khi tao account ma Edge Function credential-vault khong kha dung hoac SERVER_CREDENTIAL_KEY thieu/qua ngan, thi he thong bao loi inline va khong luu password.
 - La operator, khi launch run ma macro thieu input bat buoc, thi preflight bao blocking issue.
 - La operator, khi launch run ma selected account bi blocked, thi run wizard/preflight phai chan hoac canh bao theo policy.
 - La operator, khi target device offline/stale/locked, thi preflight hoac device setup hien blocker va khong dispatch an toan.
@@ -191,7 +191,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 ### Khong the
 
 - La admin, toi KHONG THE bypass Supabase Auth/RLS neu khong co backend/service-role context.
-- La admin, toi KHONG THE doc plaintext social account password tu UI - password chi duoc luu encrypted pilot payload.
+- La admin, toi KHONG THE doc plaintext social account password tu UI - password chi duoc luu encrypted (s3: payload hoac v2: pilot payload); plaintext chi ton tai trong worker memory trong thoi gian step chay.
 - La admin, toi KHONG THE dam bao social platform se khong detect automation - day la external platform risk.
 - La admin, toi KHONG THE chay Laixi live proof neu khong co VIP/API/live session.
 - La admin, toi KHONG THE chay iOS device automation neu chua co Portal app va iproxy.
@@ -245,7 +245,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La system worker, toi KHONG THE claim run neu execution_claim_token khong khop hoac lease khong thuoc ve minh.
 - La system worker, toi KHONG THE chay step tren device dang bi lock boi run khac.
 - La system worker, toi KHONG THE execute sensitive step truoc khi approval gate duoc approve.
-- La system worker, toi KHONG THE decrypt credential production-grade tren server vi credential encryption hien con pilot/browser boundary.
+- La system worker, toi KHONG THE persist plaintext credential ra DB, logs, hoac artifacts - plaintext chi ton tai trong memory trong thoi gian step chay va duoc clear sau do.
 - La system worker, toi KHONG THE dam bao parallel fleet speed neu multi-target dang duoc quyet dinh la sequential pilot path.
 - La system worker, toi KHONG THE execute backend step khong support nhu `run_autox` tren Mobile MCP V1.
 - La system worker, toi KHONG THE retry vo han; retry phai dung khi het max retries hoac max elapsed.
@@ -321,7 +321,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - Khong co public social network trong app nhu like/share/follow giua nguoi dung.
 - Khong co real-time collaborative macro editing.
 - Khong co guarantee bypass anti-bot/anti-detection cua Instagram, TikTok, Facebook.
-- Khong co production-grade credential vault cho social account password; browser encryption key chi la pilot-only.
+- Khong co production-grade credential vault cho social account password; browser encryption key chi la pilot-only. (DA TRIEN KHAI: Supabase Edge Function credential-vault voi AES-GCM 256-bit, s3: payload,Phase B-G full verified tren device 97249fb5.)
 - Khong tu dong tao hoac mua social accounts.
 - Khong tu dong publish/post noi dung nhay cam mac dinh; publish phai review-gated/explicit allow.
 - Khong support `run_autox` execution qua Mobile MCP V1.
@@ -337,6 +337,6 @@ Primary constraint: production-grade social account credential handling, Laixi l
 
 - Roles covered: Visitor, Viewer, Operator, Admin, System Worker, Mobile MCP Bridge, Scheduler.
 - Each role has Co the, Khong the, Khi loi.
-- Scope creep blocked: marketplace, billing, production credential vault, social network, anti-bot guarantee, Laixi/iOS unverified claims, infinite artifact scale.
+- Scope creep blocked: marketplace, billing, social network, anti-bot guarantee, Laixi/iOS unverified claims, infinite artifact scale.
 - Strongest verified use case: Android Mobile MCP workflow orchestration on real device.
-- Main conditional areas: social platform proof, Laixi live proof, iOS Portal proof, server-side credential boundary, larger fleet SLA.
+- Main conditional areas: social platform proof, Laixi live proof, iOS Portal proof, larger fleet SLA.
