@@ -46,8 +46,8 @@ Date: 2026-07-08
 - Tighten account credential handling by supporting a 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, and `server_managed`). Implemented in Phase 2 with server-side vault: the credential-vault Edge Function encrypts new credentials via `encryptCredentialViaVault`, producing `s3:` server-managed payloads. Stored credentials migrate from `v2:` client-encrypted format. Browser-side `VITE_ACCOUNT_PASSWORD_KEY` encryption is pilot-only and used solely for legacy `v2:` decrypt/migration. Secret keys are automatically scrubbed from readiness reports and evidence.
 - Phase 3 operator journey cleanup implemented: sidebar regrouped to match primary operator flow (Readiness -> Accounts -> Runs -> Devices -> Analytics), Social Dashboard Go/No-Go box, Readiness stale evidence warning, Run Wizard preflight blockers linked to recovery pages, Analytics badge colored by data source state.
 - Finish navigation cleanup so operators can reach runs, approvals, devices, setup, schedules, fleet health, and other in-scope operational screens from the primary sidebar.
-- Production credential boundary design and implementation completed (phases A-G) and non-device verified. Recommended architecture: Supabase Edge Function credential vault with server-held key, `s3:` payload prefix, and `v2:` migration path. Design report at `plans/260708-1630-pilot-production-priority/reports/phase-08-production-credential-boundary-design.md`. Implementation complete; production claim blocked until runtime device proof.
-- Production credential boundary implementation plan created at `plans/260710-credential-boundary-implementation-plan/plan.md`. All phases A-G implemented and non-device verified. Production claim blocked until runtime device proof.
+- Production credential boundary design and implementation completed (phases A-G) and full verified (runtime proof passed). Recommended architecture: Supabase Edge Function credential vault with server-held key, `s3:` payload prefix, and `v2:` migration path. Design report at `plans/260708-1630-pilot-production-priority/reports/phase-08-production-credential-boundary-design.md`. Implementation complete; production claim available (runtime proof passed on device 97249fb5 with bridge http://127.0.0.1:4321).
+- Production credential boundary implementation plan created at `plans/260710-credential-boundary-implementation-plan/plan.md`. All phases A-G implemented and full verified (runtime proof passed). Production claim: `runtime_proof_available`.
 
 ## Social Pivot
 
@@ -169,7 +169,6 @@ Status: Removed from MVP runtime scope during use-case cleanup.
 
 - Add Laixi-specific live clean-path proof when access is available.
 - Parallelize multi-target execution only when pilot fleet speed requires it.
-- Complete runtime device proof for credential boundary (requires Mobile MCP bridge + connected device).
 
 ## Unresolved Questions
 
