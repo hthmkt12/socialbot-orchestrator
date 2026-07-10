@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroStep } from '../../../src/contracts/macro';
 import type { RunStepStatus } from '../../../src/lib/database.types';
+import { redactSensitiveValues } from './credential-redaction.js';
 
 interface StepErrorPayload {
   code: string;
@@ -47,8 +48,8 @@ export async function persistRunStep(
   const record: Record<string, unknown> = {
     status: params.status,
     retry_count: params.retryCount,
-    output_json: params.output ?? {},
-    error_json: params.errorPayload ?? null,
+    output_json: redactSensitiveValues(params.output ?? {}),
+    error_json: params.errorPayload ? redactSensitiveValues(params.errorPayload) : null,
   };
 
   if (params.status === 'RUNNING') record.started_at = now;

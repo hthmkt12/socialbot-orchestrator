@@ -14,6 +14,49 @@ BRIDGE_TOKEN = os.environ.get("MOBILE_MCP_BRIDGE_TOKEN", "")
 ALLOW_INSECURE_DEV = os.environ.get("MOBILE_MCP_ALLOW_INSECURE_DEV", "").lower() in ("1", "true", "yes")
 ALLOWED_ORIGIN = os.environ.get("BRIDGE_CORS_ORIGIN", "http://localhost:5173")
 
+SENSITIVE_KEY_PATTERNS = [
+    re.compile(r'password', re.IGNORECASE),
+    re.compile(r'secret', re.IGNORECASE),
+    re.compile(r'token', re.IGNORECASE),
+    re.compile(r'api[_-]?key', re.IGNORECASE),
+    re.compile(r'service[_-]?role', re.IGNORECASE),
+    re.compile(r'account[_-]?password', re.IGNORECASE),
+]
+
+
+def redact_sensitive_params(params):
+    """Redact sensitive values in params dict before logging or error reporting."""
+    if not isinstance(params, dict):
+        return params
+    redacted = {}
+    for key, value in params.items():
+        if any(p.search(str(key)) for p in SENSITIVE_KEY_PATTERNS):
+            redacted[key] = '[REDACTED]'
+        elif isinstance(value, dict):
+            redacted[key] = redact_sensitive_params(value)
+        else:
+            redacted[key] = value
+    return redacted
+
+
+def redact_error_message(msg):
+    """Redact values associated with sensitive keys in error messages.
+
+    Handles both JSON-style ("password": "value") and bare key=value patterns.
+    """
+    if not isinstance(msg, str):
+        return str(msg)
+    for key_pattern in ['password', 'secret', 'token', 'apiKey', 'api_key',
+                        'serviceRole', 'service_role', 'accountPassword',
+                        'account_password']:
+        msg = re.sub(
+            rf'["\']?{key_pattern}["\']?\s*[:=]\s*["\'][^"\']*["\']',
+            f'{key_pattern}=[REDACTED]',
+            msg,
+            flags=re.IGNORECASE
+        )
+    return msg
+
 
 def bridge_auth_status(token=BRIDGE_TOKEN, allow_insecure_dev=ALLOW_INSECURE_DEV):
     protected_available = bool(token) or bool(allow_insecure_dev)
@@ -110,7 +153,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
             status, body = factory()
             self._send_json(status, body)
         except Exception as exc:
-            self._send_json(500, {"success": False, "error": str(exc)})
+            self._send_json(500, {"success": False, "error": redact_error_message(str(exc))})
 
     def _send_json(self, status, value):
         self._send(status, {"content-type": "application/json"}, to_json_bytes(value))
@@ -142,7 +185,7 @@ def _execute_step(serial, payload):
     try:
         return MANAGER.with_session(serial, run, platform=platform)
     except Exception as exc:
-        return 404, {"success": False, "code": "DEVICE_SESSION_UNAVAILABLE", "error": str(exc)}
+        return 404, {"success": False, "code": "DEVICE_SESSION_UNAVAILABLE", "error": redact_error_message(str(exc))}
 
 
 def _call_tool(serial, payload):
@@ -159,7 +202,7 @@ def _call_tool(serial, payload):
     try:
         return MANAGER.with_session(serial, run, platform=platform)
     except Exception as exc:
-        return 404, {"success": False, "code": "DEVICE_SESSION_UNAVAILABLE", "error": str(exc)}
+        return 404, {"success": False, "code": "DEVICE_SESSION_UNAVAILABLE", "error": redact_error_message(str(exc))}
 
 
 def main():

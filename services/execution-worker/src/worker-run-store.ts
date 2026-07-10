@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition } from '../../../src/contracts/macro';
 import type { Device } from '../../../src/lib/database.types';
+import { redactSensitiveValues, redactSensitiveJsonString } from './credential-redaction.js';
 
 export interface SingleDeviceRunContext {
   runId: string;
@@ -65,7 +66,7 @@ async function createArtifactRecord(
         });
 
       if (uploadError) {
-        console.error('[execution-worker] Artifact storage upload failed:', uploadError);
+        console.error('[execution-worker] Artifact storage upload failed:', redactSensitiveJsonString(String(uploadError?.message ?? uploadError)));
         artifact.metadata_json.storage_mode = 'omitted';
         artifact.metadata_json.storage_status = 'upload_failed';
         artifact.metadata_json.storage_error = uploadError.message ?? 'Artifact storage upload failed';
@@ -74,7 +75,7 @@ async function createArtifactRecord(
         artifact.metadata_json.storage_status = 'uploaded';
       }
     } catch (e) {
-      console.error('[execution-worker] Artifact storage upload exception:', e);
+      console.error('[execution-worker] Artifact storage upload exception:', redactSensitiveJsonString(String(e instanceof Error ? e.message : e)));
       artifact.metadata_json.storage_mode = 'omitted';
       artifact.metadata_json.storage_status = 'upload_failed';
       artifact.metadata_json.storage_error = e instanceof Error ? e.message : 'Artifact storage upload failed';
@@ -310,6 +311,16 @@ export async function createLogArtifact(
   text: string,
   metadata: Record<string, unknown> = {}
 ) {
+  // Defense-in-depth: scrub any sensitive key values from the log artifact
+  // metadata before persistence. The text field is preserved for debugging
+  // unless it is carried under a sensitive key.
+  const safeMetadata = redactSensitiveValues({
+    stepId,
+    text,
+    timestamp: new Date().toISOString(),
+    ...metadata,
+  });
+
   return createArtifactRecord(supabase, {
     workflow_run_id: runId,
     device_id: deviceId,
@@ -317,12 +328,7 @@ export async function createLogArtifact(
     storage_key: `logs/${runId}/${deviceId}/${stepId}_${Date.now()}.txt`,
     content_type: 'text/plain',
     size: text.length,
-    metadata_json: {
-      stepId,
-      text,
-      timestamp: new Date().toISOString(),
-      ...metadata,
-    },
+    metadata_json: safeMetadata,
   });
 }
 

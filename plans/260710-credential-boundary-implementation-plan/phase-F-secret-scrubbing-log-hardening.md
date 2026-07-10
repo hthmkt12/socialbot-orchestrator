@@ -11,7 +11,7 @@
 
 Date: 2026-07-10
 Priority: P1
-Implementation status: Pending
+Implementation status: Implemented
 Review status: Not reviewed
 
 Harden every place that could log or persist plaintext credentials after Phase E.
@@ -55,15 +55,24 @@ Search all report/output surfaces after test runs.
 
 ## Todo List
 
-- [ ] Worker redacts sensitive variable names.
-- [ ] Bridge redacts `text` when marked sensitive.
-- [ ] Edge Function avoids credential logging.
-- [ ] Canary search test added.
+- [x] Worker redacts sensitive variable names.
+- [x] Bridge redacts `text` when marked sensitive.
+- [x] Edge Function avoids credential logging.
+- [x] Canary search test added.
 
 ## Success Criteria
 
 - Canary plaintext absent from DB rows, reports, artifacts, and logs.
 - Existing readiness scrub tests still pass.
+
+## Implementation Summary
+
+- Created `services/execution-worker/src/credential-redaction.ts` with `isSensitiveKey`, `redactSensitiveValues`, and `redactSensitiveJsonString`. Deny-by-default redaction for keys matching `password`, `secret`, `token`, `apiKey`, `serviceRole`, `accountPassword`. Allowed status keys (`secret_scrub_status`, `secretScrubStatus`, `redaction_status`, `redactionStatus`, `credential_policy_status`, `credentialPolicyStatus`) are preserved.
+- Applied `redactSensitiveValues` to `output_json` and `error_json` in `worker-step-store.ts` `persistRunStep()` (defense-in-depth on top of Phase E step-runner scrubbing).
+- Applied `redactSensitiveValues` to log artifact metadata in `worker-run-store.ts` `createLogArtifact()`, and wrapped both artifact-upload `console.error` calls with `redactSensitiveJsonString`.
+- Added `redact_sensitive_params` and `redact_error_message` to `services/mobile-mcp-bridge/src/bridge_server.py`; applied `redact_error_message` to all `str(exc)` error responses in `_handle_result`, `_execute_step`, and `_call_tool`.
+- Verified Edge Function `supabase/functions/credential-vault/index.ts` already has a catch-all generic error response and never logs plaintext, keys, or request bodies. No changes needed.
+- Added `services/execution-worker/src/credential-redaction.test.ts` with unit tests for all three functions plus 5 canary tests proving the `DO_NOT_PERSIST_PASSWORD_123` canary does not appear in redacted output.
 
 ## Risk Assessment
 

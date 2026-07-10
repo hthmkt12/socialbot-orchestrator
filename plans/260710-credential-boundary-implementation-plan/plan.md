@@ -38,7 +38,7 @@ Move from pilot-only browser encryption to a planned server-managed credential b
 | C - UI create/import server encryption | Completed | 3h | `phase-C-ui-create-import-server-encryption.md` |
 | D - `v2:` to `s3:` migration | Completed | 3h | `phase-D-v2-to-s3-migration.md` |
 | E - Worker decrypt path for login macros | Completed | 4h | `phase-E-worker-decrypt-login-path.md` |
-| F - Secret scrubbing and log hardening | Pending | 2h | `phase-F-secret-scrubbing-log-hardening.md` |
+| F - Secret scrubbing and log hardening | Completed | 2h | `phase-F-secret-scrubbing-log-hardening.md` |
 | G - Verification and runtime proof | Pending | 1h | `phase-G-verification-runtime-proof.md` |
 
 ## Gates
