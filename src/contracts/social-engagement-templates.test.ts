@@ -7,18 +7,24 @@ import {
   INSTAGRAM_MASS_LIKE_HASHTAGS,
   INSTAGRAM_MASS_FOLLOW,
   TIKTOK_LIKE_TRENDING,
+  INSTAGRAM_WARMUP,
+  INSTAGRAM_HASHTAG_ENGAGE,
+  TIKTOK_VIEW_BOT,
 } from './social-engagement-templates';
 
 describe('SOCIAL_TEMPLATES', () => {
-  it('exports all 6 templates', () => {
+  it('exports all 9 templates', () => {
     const keys = Object.keys(SOCIAL_TEMPLATES);
-    expect(keys).toHaveLength(6);
+    expect(keys).toHaveLength(9);
     expect(keys).toContain('instagram_pilot_open_capture');
     expect(keys).toContain('instagram_like_hashtag');
     expect(keys).toContain('instagram_follow_accounts');
     expect(keys).toContain('instagram_mass_like_hashtags');
     expect(keys).toContain('instagram_mass_follow');
     expect(keys).toContain('tiktok_like_trending');
+    expect(keys).toContain('instagram_warmup');
+    expect(keys).toContain('instagram_hashtag_engage');
+    expect(keys).toContain('tiktok_view_bot');
   });
 
   it('each template has required fields', () => {
@@ -149,5 +155,38 @@ describe('TIKTOK_LIKE_TRENDING', () => {
   it('has action budget type on like step', () => {
     const likeStep = TIKTOK_LIKE_TRENDING.definition.steps.find((s) => s.id === 'tap_like');
     expect(likeStep?.params.actionBudgetType).toBe('like');
+  });
+});
+
+describe('INSTAGRAM_WARMUP', () => {
+  it('has correct structure', () => {
+    expect(INSTAGRAM_WARMUP.platform).toBe('instagram');
+    expect(INSTAGRAM_WARMUP.definition.meta.key).toBe('instagram_warmup');
+    const loopStep = INSTAGRAM_WARMUP.definition.steps.find((s) => s.type === 'loop');
+    expect(loopStep).toBeDefined();
+    expect(loopStep?.params.count).toBe('{{scrollCount}}');
+  });
+});
+
+describe('INSTAGRAM_HASHTAG_ENGAGE', () => {
+  it('has correct structure', () => {
+    expect(INSTAGRAM_HASHTAG_ENGAGE.platform).toBe('instagram');
+    expect(INSTAGRAM_HASHTAG_ENGAGE.definition.meta.key).toBe('instagram_hashtag_engage');
+    const loopStep = INSTAGRAM_HASHTAG_ENGAGE.definition.steps.find((s) => s.type === 'loop');
+    expect(loopStep).toBeDefined();
+    const condStep = loopStep?.steps?.find((s) => s.type === 'conditional');
+    expect(condStep).toBeDefined();
+    expect(condStep?.params.left).toBe('{{commentText}}');
+    expect(condStep?.params.operator).toBe('not_equals');
+  });
+});
+
+describe('TIKTOK_VIEW_BOT', () => {
+  it('has correct structure', () => {
+    expect(TIKTOK_VIEW_BOT.platform).toBe('tiktok');
+    expect(TIKTOK_VIEW_BOT.definition.meta.key).toBe('tiktok_view_bot');
+    const loopStep = TIKTOK_VIEW_BOT.definition.steps.find((s) => s.type === 'loop');
+    expect(loopStep).toBeDefined();
+    expect(loopStep?.params.count).toBe('{{viewCount}}');
   });
 });

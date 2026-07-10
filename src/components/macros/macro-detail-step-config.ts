@@ -38,4 +38,8 @@ export const macroDetailStepTypeConfig: Record<string, { icon: typeof Timer; lab
   loop: { icon: Repeat, label: 'Loop', color: 'text-violet-600 bg-violet-50' },
   ai_task: { icon: Terminal, label: 'AI Task', color: 'text-emerald-600 bg-emerald-50' },
   stop: { icon: Octagon, label: 'Stop', color: 'text-red-600 bg-red-50' },
+  foreach: { icon: Repeat, label: 'For Each', color: 'text-violet-600 bg-violet-50' },
+  while_loop: { icon: Repeat, label: 'While Loop', color: 'text-violet-600 bg-violet-50' },
+  try_catch: { icon: ShieldCheck, label: 'Try Catch', color: 'text-amber-600 bg-amber-50' },
+  extract_var: { icon: Type, label: 'Extract Variable', color: 'text-teal-600 bg-teal-50' },
 };

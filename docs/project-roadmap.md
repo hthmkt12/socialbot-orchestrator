@@ -113,9 +113,9 @@ Status: Implemented for threshold policy and Supabase storage path; scale readin
 
 ### Phase 7: Concrete Social Bots (Q4 2027)
 
-Status: Partially implemented through templates; real-platform proof still required.
+Status: Implemented in code; starter templates verified via unit testing.
 
-- Concrete Instagram/TikTok macro templates: Implemented.
+- Concrete Instagram/TikTok macro templates: Implemented and registered (`instagram_warmup`, `instagram_hashtag_engage`, `tiktok_view_bot`).
 - `foreach` execution support: Implemented.
 - Anti-detection engine in worker: Implemented.
 

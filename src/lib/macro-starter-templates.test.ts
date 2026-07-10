@@ -69,5 +69,8 @@ describe('getStarterMacroTemplates', () => {
     expect(keys).toContain('instagram_like_hashtag');
     expect(keys).toContain('instagram_follow_accounts');
     expect(keys).toContain('tiktok_like_trending');
+    expect(keys).toContain('instagram_warmup');
+    expect(keys).toContain('instagram_hashtag_engage');
+    expect(keys).toContain('tiktok_view_bot');
   });
 });
