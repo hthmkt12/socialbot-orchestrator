@@ -10,7 +10,7 @@
 
 Date: 2026-07-10
 Priority: P1
-Implementation status: Pending
+Implementation status: Implemented
 Review status: Not reviewed
 
 Migrate existing pilot client-encrypted `v2:` payloads to server-managed `s3:` payloads.
@@ -56,10 +56,10 @@ Preferred:
 
 ## Todo List
 
-- [ ] Dry-run migration count.
-- [ ] Batch migration script.
-- [ ] Per-row success/failure report.
-- [ ] `v2:` compatibility retained.
+- [x] Dry-run migration count.
+- [x] Batch migration script.
+- [x] Per-row success/failure report.
+- [x] `v2:` compatibility retained.
 
 ## Success Criteria
 

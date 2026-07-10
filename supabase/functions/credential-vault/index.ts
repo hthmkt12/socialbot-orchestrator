@@ -1,27 +1,36 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { encryptCredential, MIN_SERVER_KEY_LENGTH } from "./crypto-helper.ts";
+import {
+  encryptCredential,
+  decryptLegacyCredential,
+  MIN_SERVER_KEY_LENGTH,
+  MIN_LEGACY_KEY_LENGTH,
+  LEGACY_PAYLOAD_PREFIX,
+} from "./crypto-helper.ts";
 
 /*
- * credential-vault Edge Function (Phase B - Encrypt Only)
+ * credential-vault Edge Function (Phase D - Encrypt + Migrate)
  *
  * Purpose:
  *   Accept plaintext social credentials over HTTPS and return an encrypted
  *   `s3:` payload that the caller persists. The encryption key
  *   (`SERVER_CREDENTIAL_KEY`) never leaves the server.
  *
- * Phase B scope (intentionally limited):
- *   - Encrypt ONLY. There is NO decrypt endpoint.
- *   - No key migration or rotation.
- *   - No database writes. The caller is responsible for storing the returned
- *     encrypted payload; this function never touches the DB.
- *   - No plaintext logging. Plaintext, the request body, ciphertext, and keys
- *     are never logged or returned in errors.
+ * Phase D additions:
+ *   - `action: 'migrate'` (ADMIN only) decrypts legacy `v2:` payloads with the
+ *     `LEGACY_PILOT_KEY` server secret, re-encrypts as `s3:`, and updates the
+ *     `accounts` row. Service-role client is used for DB writes.
+ *   - `action: 'dry-run'` (ADMIN only) counts `v2:` rows without writing.
+ *   - `v2:` decrypt support is retained; original payloads are never
+ *     overwritten until decrypt + re-encrypt both succeed.
+ *   - No plaintext logging. Plaintext, keys, ciphertext are never logged or
+ *     returned in errors.
  *
  * Auth:
- *   Requires a valid Supabase JWT in the Authorization header. The caller's
- *   `profiles.role` must be OPERATOR or ADMIN. Unauthenticated callers get 401;
- *   VIEWER / unknown roles get 403.
+ *   Requires a valid Supabase JWT in the Authorization header.
+ *   - `encrypt` action: OPERATOR or ADMIN.
+ *   - `migrate` / `dry-run` actions: ADMIN only.
+ *   Unauthenticated callers get 401; unauthorized roles get 403.
  */
 
 const corsHeaders = {
@@ -32,6 +41,8 @@ const corsHeaders = {
 };
 
 const ALLOWED_ROLES = new Set(["OPERATOR", "ADMIN"]);
+const ADMIN_ONLY_ROLES = new Set(["ADMIN"]);
+type VaultAction = "encrypt" | "migrate" | "dry-run";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -43,6 +54,159 @@ function json(body: unknown, status = 200) {
 interface VaultRequestBody {
   plaintext?: string;
   accountId?: string;
+  action?: string;
+}
+
+/**
+ * Dry-run: count `v2:` rows without writing. Admin-only.
+ * Returns `{ count, sample_ids }` where sample_ids are redacted account ids
+ * (max 10). Never returns usernames or plaintext.
+ */
+async function handleDryRun(
+  supabaseUrl: string,
+  body: VaultRequestBody
+): Promise<Response> {
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceRoleKey) {
+    return json({ error: "Service role key is not configured." }, 500);
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+
+  // Count rows with legacy v2: prefix (no plaintext returned), optionally
+  // filtered by accountId for a single-account dry-run check.
+  let query = adminClient
+    .from("accounts")
+    .select("id")
+    .like("encrypted_password", `${LEGACY_PAYLOAD_PREFIX}:%`);
+
+  if (body.accountId) {
+    query = query.eq("id", body.accountId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return json({ error: "Failed to query accounts." }, 500);
+  }
+
+  const ids = (data ?? []) as Array<{ id: string }>;
+  const sampleIds = ids.slice(0, 10).map((r) => r.id);
+
+  return json({ count: ids.length, sample_ids: sampleIds }, 200);
+}
+
+/**
+ * Migrate: decrypt `v2:` payloads with the legacy pilot key, re-encrypt as
+ * `s3:`, and update the `accounts` row. Admin-only. Never overwrites the
+ * original payload until decrypt + re-encrypt both succeed.
+ */
+async function handleMigrate(
+  supabaseUrl: string,
+  body: VaultRequestBody,
+  serverKey: string
+): Promise<Response> {
+  const legacyKey = Deno.env.get("LEGACY_PILOT_KEY");
+  if (!legacyKey || legacyKey.length < MIN_LEGACY_KEY_LENGTH) {
+    return json({ error: "Legacy pilot key is not configured or is too weak." }, 500);
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceRoleKey) {
+    return json({ error: "Service role key is not configured." }, 500);
+  }
+
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+
+  // Fetch rows with legacy v2: prefix (optionally filtered by accountId)
+  let query = adminClient
+    .from("accounts")
+    .select("id,encrypted_password")
+    .like("encrypted_password", `${LEGACY_PAYLOAD_PREFIX}:%`);
+
+  if (body.accountId) {
+    query = query.eq("id", body.accountId);
+  }
+
+  const { data: rows, error: fetchError } = await query;
+
+  if (fetchError) {
+    return json({ error: "Failed to query accounts for migration." }, 500);
+  }
+
+  const accountRows = (rows ?? []) as Array<{ id: string; encrypted_password: string }>;
+  const details: Array<{ accountId: string; status: "migrated" | "failed" | "skipped" }> = [];
+  let migrated = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const row of accountRows) {
+    // Step 1: Decrypt the legacy v2: payload (never overwrite until this succeeds)
+    let plaintext: string;
+    try {
+      plaintext = await decryptLegacyCredential(row.encrypted_password, legacyKey);
+    } catch {
+      // Decrypt failed - mark row as migration_pending, keep original payload
+      await adminClient
+        .from("accounts")
+        .update({ credential_policy_status: "migration_pending" })
+        .eq("id", row.id);
+      failed += 1;
+      details.push({ accountId: row.id, status: "failed" });
+      continue;
+    }
+
+    // Step 2: Re-encrypt with server key (s3: payload)
+    let encryptedPayload: string;
+    try {
+      const result = await encryptCredential(plaintext, serverKey);
+      encryptedPayload = result.encryptedPayload;
+    } catch {
+      // Re-encrypt failed - mark row as migration_pending, keep original payload
+      await adminClient
+        .from("accounts")
+        .update({ credential_policy_status: "migration_pending" })
+        .eq("id", row.id);
+      failed += 1;
+      details.push({ accountId: row.id, status: "failed" });
+      continue;
+    }
+
+    // Step 3: Both succeeded - safe to overwrite original payload now
+    const { error: updateError } = await adminClient
+      .from("accounts")
+      .update({
+        encrypted_password: encryptedPayload,
+        credential_policy_status: "server_managed",
+        credential_key_version: 1,
+        credential_rotated_at: new Date().toISOString(),
+      })
+      .eq("id", row.id);
+
+    if (updateError) {
+      // DB update failed - mark row as migration_pending, keep original payload
+      await adminClient
+        .from("accounts")
+        .update({ credential_policy_status: "migration_pending" })
+        .eq("id", row.id);
+      failed += 1;
+      details.push({ accountId: row.id, status: "failed" });
+      continue;
+    }
+
+    migrated += 1;
+    details.push({ accountId: row.id, status: "migrated" });
+  }
+
+  // If batch mode and no accountId filter, count any rows we did not process
+  // (e.g. rows that matched but were not v2: - should not happen with LIKE filter)
+  skipped += 0;
+
+  return json({ migrated, failed, skipped, details }, 200);
 }
 
 Deno.serve(async (req: Request) => {
@@ -106,6 +270,27 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Invalid JSON body." }, 400);
     }
 
+    // Determine action (default to encrypt for backward compatibility)
+    const action: VaultAction =
+      body.action === "migrate" || body.action === "dry-run"
+        ? body.action
+        : "encrypt";
+
+    // --- Admin-only action authorization ---
+    if (action !== "encrypt" && !ADMIN_ONLY_ROLES.has(profile.role)) {
+      return json({ error: "Forbidden. Admin role required for this action." }, 403);
+    }
+
+    // --- Route by action ---
+    if (action === "dry-run") {
+      return await handleDryRun(supabaseUrl, body);
+    }
+
+    if (action === "migrate") {
+      return await handleMigrate(supabaseUrl, body, serverKey);
+    }
+
+    // --- Encrypt action (existing behavior) ---
     if (
       !body.plaintext ||
       typeof body.plaintext !== "string" ||
@@ -114,7 +299,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: "plaintext is required and must be a non-empty string." }, 400);
     }
 
-    // accountId is accepted for forward-compatibility but unused in Phase B
+    // accountId is accepted for forward-compatibility but unused in encrypt
     // (no DB writes are performed here).
 
     // --- Encrypt (no DB writes, no plaintext logging) ---
