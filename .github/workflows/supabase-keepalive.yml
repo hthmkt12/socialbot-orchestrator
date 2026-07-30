@@ -1,0 +1,26 @@
+name: Supabase keep-alive
+
+on:
+  # Mon/Wed/Fri at 03:17 UTC. More than one request per week provides a buffer
+  # for delayed or failed scheduled workflow runs.
+  schedule:
+    - cron: '17 3 * * 1,3,5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Query Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/supabase-keepalive.mjs

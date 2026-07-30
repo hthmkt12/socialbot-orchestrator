@@ -28,6 +28,7 @@
     "verify:mobile-mcp:quick": "node scripts/verify-mobile-mcp-local.mjs --skip-ui",
     "verify:use-cases": "node scripts/verify-use-cases-real.mjs",
     "verify:first-social-pilot": "node scripts/verify-first-social-pilot.mjs",
+    "supabase:keepalive": "node scripts/supabase-keepalive.mjs",
     "dev:worker": "npm --prefix services/execution-worker run dev",
     "build:worker": "npm --prefix services/execution-worker run build",
     "doctor:adb": "npm --prefix services/execution-worker run doctor:adb",

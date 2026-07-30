@@ -158,6 +158,23 @@ Migrations are applied automatically through Supabase. The schema includes:
 3. **Support tables** -- artifacts, approvals, audit logs, device locks
 4. **Seed data** -- 4 sample devices, 2 device groups, execution profiles, and a compatibility `seed_demo_macros()` function
 
+### Supabase Free-plan keep-alive
+
+The repository includes a GitHub Actions workflow at `.github/workflows/supabase-keepalive.yml`. It performs a minimal authenticated read of the `profiles` table on Monday, Wednesday, and Friday at 03:17 UTC, plus it can be run manually from the Actions tab.
+
+In the GitHub repository's **Settings → Secrets and variables → Actions**, create these repository secrets:
+
+- `SUPABASE_URL` — the project URL, such as `https://your-project-ref.supabase.co`
+- `SUPABASE_SERVICE_ROLE_KEY` — the server-only `service_role` or `sb_secret_...` key
+
+To test it locally, set those variables in your shell and run:
+
+```bash
+npm run supabase:keepalive
+```
+
+Do not use a `VITE_` key or commit either value. Supabase may pause free projects with too little database activity in a seven-day period, and its guidance describes a few requests over the week as typical; the workflow therefore runs three times weekly rather than relying on exactly one request.
+
 ### 4. Start development
 
 ```bash
