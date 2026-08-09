@@ -1,6 +1,6 @@
 # Backend Capability Matrix
 
-Date: 2026-07-08
+Date: 2026-08-01
 
 Purpose: make pilot backend support explicit before adding more workflows.
 
@@ -16,7 +16,7 @@ Three backends available, configured via `DEVICE_BACKEND` env var on the worker:
 
 ## Pilot Default
 
-Mobile MCP is the current pilot validation backend. Current Level 1 proof is Android serial `97249fb5`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
+Mobile MCP is the current pilot validation backend. Historical Level 1 evidence used Android serial `97249fb5`, first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084`, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3`; July evidence is expired under the 14-day freshness rule and is not current readiness authority.
 
 Level 1 readiness evidence must include a valid `verified_at` timestamp and remains fresh for 14 days. Rerun verification before claiming readiness if evidence expires or if the pilot device, runtime backend, bridge auth mode, Supabase project, or proof workflow changes.
 
@@ -46,7 +46,7 @@ Level 1 readiness evidence must include a valid `verified_at` timestamp and rema
 | `wait` | Worker-local | Worker-local | Worker-local | Worker-local | Worker-local | No device dispatch required. |
 | `run_autox` | Not supported | Not supported | Not supported | Not supported | Backend-specific | Do not promise execution for AutoX scripts. |
 | Approval resume | Supported | Supported | Supported | Supported | Supported | Backend dispatch occurs after approval. |
-| Multi-target run | Supported sequentially | Supported sequentially | Supported sequentially | Supported sequentially | Supported sequentially | One worker claim executes targets sequentially. |
+| Multi-target run | Supported in bounded chunks | Supported in bounded chunks | Supported in bounded chunks | Supported in bounded chunks | Supported in bounded chunks | One worker claim dispatches targets in bounded chunks of 10; pilot validation remains capped at five Android devices. |
 | Device health | ADB/bridge status + expected serials | Portal date probe | ADB/bridge status + expected serials | Portal date probe | Gateway heartbeat/session checks | Use backend-specific diagnostics. |
 | Device discovery | ADB device list | Portal port scan (6643-6653) | ADB device list | Portal port scan (6643-6653) | Gateway sessions endpoint | |
 
@@ -76,9 +76,9 @@ The 512,000-byte limit is a UI inline-preview ceiling, not a full storage migrat
 
 ## Multi-Target Decision
 
-Current pilot decision: sequential multi-target execution is acceptable for small pilot validation.
+Current runtime dispatches targets concurrently in bounded chunks of 10. Pilot validation remains capped at five Android devices; this bounded concurrency is not a fleet-speed guarantee or per-device runtime SLA.
 
-Parallel execution should become a new feature only if pilot needs fleet-speed guarantees or strict per-device runtime SLA.
+Reassess concurrency only when pilot telemetry defines a fleet-speed or per-device runtime requirement.
 
 ## Operator Verification
 

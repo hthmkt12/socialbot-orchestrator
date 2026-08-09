@@ -2,7 +2,9 @@
 
 Date: 2026-07-10 (re-verified 2026-07-10T08:20:28Z)
 Verifier: `scripts/verify-credential-boundary.mjs` (version `phase-g-1`)
-Overall verdict: **full_verified**
+Overall verdict: **invalidated_historical_claim**
+
+> This historical report was invalidated by the Phase 3 remediation review. It is retained only as dated context and must not be used as release evidence; the current claim is `remediation_pending`.
 
 ## Phase Summary (A-G)
 
@@ -14,7 +16,7 @@ Overall verdict: **full_verified**
 | D | v2: to s3: migration | Completed |
 | E | Worker decrypt login path | Completed |
 | F | Secret scrubbing and log hardening | Completed |
-| G | Verification and runtime proof | Completed (full verified) |
+| G | Verification and runtime proof | Historical evidence invalidated |
 
 ## Non-Device Gate Results
 
@@ -42,7 +44,7 @@ All 5 non-device gates pass.
 
 ### Canary Search Results
 
-Canary string: `DO_NOT_PERSIST_PASSWORD_123`
+Canary string: `[REDACTED_CANARY — historical plaintext removed during Phase 3 remediation; only SHA-256 hash reported going forward]`
 
 Files containing the canary (all allowed):
 - `services/execution-worker/src/credential-redaction.test.ts` (test file)
@@ -64,7 +66,7 @@ The Edge Function `supabase/functions/credential-vault/index.ts` was statically 
 | Status | device_available |
 | Bridge URL | http://127.0.0.1:4321 |
 | Bridge health | 200 |
-| Production claim | runtime_proof_available |
+| Production claim | invalidated_historical_claim |
 | Device serial | 97249fb5 |
 
 The runtime device proof was re-run with `MOBILE_MCP_BRIDGE_URL=http://127.0.0.1:4321` and device `97249fb5` connected. The bridge health check returned 200 and the device was available, confirming the credential boundary holds at runtime.
@@ -81,8 +83,8 @@ The `credential-vault` Edge Function was deployed to remote Supabase project `gz
 
 ### Encrypt/Decrypt Round-Trip on Remote
 
-- **Encrypt test**: Input `{"plaintext":"DO_NOT_PERSIST_PASSWORD_123"}` returned `{"encryptedPayload":"s3:1:...","keyVersion":1}`. PASS.
-- **Decrypt test**: The encrypted `s3:` payload was sent back to the Edge Function decrypt action; it returned `{"plaintext":"DO_NOT_PERSIST_PASSWORD_123"}`, matching the original input. Round-trip PASS.
+- **Encrypt test**: Input `{"plaintext":"[REDACTED_CANARY]"}` returned `{"encryptedPayload":"s3:1:...","keyVersion":1}`. PASS.
+- **Decrypt test**: The encrypted `s3:` payload was sent back to the Edge Function decrypt action; it returned `{"plaintext":"[REDACTED_CANARY]"}`, matching the original input. Round-trip PASS.
 
 ### Dry-Run on Remote
 
@@ -92,13 +94,13 @@ The `credential-vault` Edge Function was deployed to remote Supabase project `gz
 
 - **`verify:mobile-mcp`**: Run `66abcf36-b04f-4b5d-a109-d8b124b25152` COMPLETED (4 steps) on device `97249fb5`. PASS.
 - **`verify:first-social-pilot`**: Instagram pilot run `2b1d2b2b-d586-4ebf-8606-34cafce2b298` COMPLETED; `secret_scrub_status` passed. PASS.
-- **`credential-boundary verify`**: overallVerdict `full_verified`, deviceAvailable `true`, bridge health `200`.
+- **`credential-boundary verify`**: historical verdict invalidated; bridge health `200` is not credential-login proof.
 
 ## Overall Verdict
 
-**full_verified**
+**remediation_pending**
 
-All non-device gates pass. The credential boundary is implemented and verified at the non-device level. The runtime device proof passed with device `97249fb5` connected via bridge `http://127.0.0.1:4321` (health 200). The production claim is `runtime_proof_available`.
+The recorded non-device gates passed, but the prior runtime evidence was only bridge health and is insufficient. The production claim remains `remediation_pending` until a controlled credential-login proof passes.
 
 ## Evidence Artifacts
 

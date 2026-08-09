@@ -33,7 +33,7 @@ Harden every place that could log or persist plaintext credentials after Phase E
 
 Use a test canary like:
 
-- `DO_NOT_PERSIST_PASSWORD_123`
+- `[REDACTED_CANARY — historical plaintext removed during Phase 3 remediation]`
 
 Search all report/output surfaces after test runs.
 
@@ -72,7 +72,7 @@ Search all report/output surfaces after test runs.
 - Applied `redactSensitiveValues` to log artifact metadata in `worker-run-store.ts` `createLogArtifact()`, and wrapped both artifact-upload `console.error` calls with `redactSensitiveJsonString`.
 - Added `redact_sensitive_params` and `redact_error_message` to `services/mobile-mcp-bridge/src/bridge_server.py`; applied `redact_error_message` to all `str(exc)` error responses in `_handle_result`, `_execute_step`, and `_call_tool`.
 - Verified Edge Function `supabase/functions/credential-vault/index.ts` already has a catch-all generic error response and never logs plaintext, keys, or request bodies. No changes needed.
-- Added `services/execution-worker/src/credential-redaction.test.ts` with unit tests for all three functions plus 5 canary tests proving the `DO_NOT_PERSIST_PASSWORD_123` canary does not appear in redacted output.
+- Added `services/execution-worker/src/credential-redaction.test.ts` with unit tests for all three functions plus 5 canary tests proving the `[REDACTED_CANARY]` canary does not appear in redacted output.
 
 ## Risk Assessment
 

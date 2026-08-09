@@ -2,13 +2,13 @@
 
 Source of truth for current product behavior and near-term MVP scope.
 
-Date: 2026-07-08
+Date: 2026-08-01
 
 ## Context
 
 Product: SocialBot Orchestrator, an internal Android device automation and social workflow pilot platform.
 
-Current strongest proof: Mobile MCP Android local runtime verified on real device `97249fb5` / model `25053RT47C`, with first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084` completing 4 steps, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified`.
+Historical strongest proof: Mobile MCP Android local runtime used real device `97249fb5` / model `25053RT47C`, with first social pilot run `a414e519-c1ac-44df-b287-e91e845f0084` completing 4 steps, screenshot artifact `c741ceb8-0cba-4096-ad02-b107878f4dbd`, and readiness report `76e0141b-2e23-475c-97ea-d4214d50d3d3` marked `pilot_verified` at capture time. July evidence is expired under the 14-day rule and is not current readiness authority.
 
 Readiness evidence is valid for 14 days from `verified_at`; rerun verification when it expires or when the pilot device, backend runtime, bridge auth mode, Supabase project, or proof workflow changes.
 
@@ -246,7 +246,7 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - La system worker, toi KHONG THE chay step tren device dang bi lock boi run khac.
 - La system worker, toi KHONG THE execute sensitive step truoc khi approval gate duoc approve.
 - La system worker, toi KHONG THE persist plaintext credential ra DB, logs, hoac artifacts - plaintext chi ton tai trong memory trong thoi gian step chay va duoc clear sau do.
-- La system worker, toi KHONG THE dam bao parallel fleet speed neu multi-target dang duoc quyet dinh la sequential pilot path.
+- La system worker, toi KHONG THE dam bao parallel fleet speed; runtime chi dispatch multi-target trong bounded chunks va pilot van gioi han toi da nam Android devices.
 - La system worker, toi KHONG THE execute backend step khong support nhu `run_autox` tren Mobile MCP V1.
 - La system worker, toi KHONG THE retry vo han; retry phai dung khi het max retries hoac max elapsed.
 - La system worker, toi KHONG THE che dau original target failure khi policy tiep tuc hoac dung cac target con lai.
@@ -328,13 +328,13 @@ Primary constraint: production-grade social account credential handling, Laixi l
 - Khong claim iOS readiness neu chua co Portal app + iproxy proof.
 - Khong scale artifact storage vo han trong DB rows; object storage can khi vuot nguong policy.
 - Khong co external customer sharing/export audit package trong MVP.
-- Khong co SLA fleet parallel speed; sequential multi-target la acceptable pilot decision.
+- Khong co SLA fleet parallel speed; runtime bounded concurrency khong thay the empirical fleet proof, va pilot gioi han toi da nam Android devices.
 - Khong co native mobile app; current UI la web app.
 - Khong co offline-first mode; Supabase/runtime/device connectivity la bat buoc.
 
 ## Da trien khai (truoc day la KHONG lam)
 
-- Production-grade credential vault cho social account password: DA TRIEN KHAI qua Supabase Edge Function credential-vault voi AES-GCM 256-bit, s3: payload, Phase B-G full verified tren device 97249fb5. Browser encryption key (VITE_ACCOUNT_PASSWORD_KEY) chi con dung cho v2: migration, khong con dung cho tao account moi.
+- Production-grade credential vault cho social account password: **full_verified trong pham vi controlled proof**. Supabase Edge Function credential-vault voi AES-GCM 256-bit, `s3:` payload, strict run binding, worker auth, redaction scan va real Android proof da pass ngay 2026-07-17. Production rollout van can operational sign-off va key rotation follow-up. Browser encryption key (VITE_ACCOUNT_PASSWORD_KEY) chi con dung cho v2: migration, khong con dung cho tao account moi.
 
 ## Review Checklist
 

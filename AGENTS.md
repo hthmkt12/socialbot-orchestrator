@@ -45,7 +45,7 @@ Repo-local instructions for OpenCode sessions. Keep this file compact: only pres
 - `VITE_RUN_CONTROL_MODE=auto` tries the `execute-run` Edge Function first; use `browser` for local Supabase projects where the function is not deployed.
 - `DEVICE_BACKEND=mobile-mcp` means `devices.laixi_device_id` stores the Android ADB serial.
 - Mobile MCP V1 supports `launch_app`, `input_text`, `tap`, `swipe`, `screenshot`, `get_current_app`, `adb`, and worker-local `wait`; it does not execute `run_autox`.
-- Multi-target runs are currently sequential inside one worker claim; do not promise parallel fleet execution.
+- Multi-target runs execute concurrently in bounded chunks of 10 inside one worker claim; pilot validation remains capped at five Android devices, and no fleet-speed SLA is promised.
 - Current pilot artifact strategy stores screenshot/text-log previews in artifact rows; Supabase Storage is a future decision.
 - Use `npm.cmd run env:mobile-mcp:user` or `npm.cmd run setup:mobile-mcp:local` to persist Windows User env values instead of writing secrets into repo files.
 

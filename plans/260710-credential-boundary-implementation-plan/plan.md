@@ -1,7 +1,7 @@
 ---
 title: "Production Credential Boundary Implementation"
 description: "Plan server-managed account credential storage using the Phase 08 Supabase Edge Function vault design."
-status: completed
+status: complete
 priority: P1
 effort: 18h
 branch: master
@@ -18,6 +18,12 @@ created: 2026-07-10
 - Account UI: `src/components/accounts/create-account-modal.tsx`, `src/pages/AccountsPage.tsx`, `src/components/accounts/csv-import-modal.tsx`
 - Account schema: `supabase/migrations/20260627000001_account_tables.sql`
 - Worker run context: `services/execution-worker/src/single-device-run-context.ts`
+
+## Review Status
+
+The original implementation conclusion was invalidated by P0/P1 findings: service-role callers could not pass the user/profile authorization branch, and the Mobile MCP response could persist submitted password text beneath `output.bridge`. Those findings were remediated and re-verified by `plans/260710-credential-boundary-remediation/plan.md` with a controlled runtime proof on 2026-07-17.
+
+Use the remediation plan's 2026-07-17 completion evidence for the controlled proof scope. Production rollout still requires operational sign-off and legacy key rotation.
 
 ## Goal
 
@@ -39,7 +45,7 @@ Move from pilot-only browser encryption to a planned server-managed credential b
 | D - `v2:` to `s3:` migration | Completed | 3h | `phase-D-v2-to-s3-migration.md` |
 | E - Worker decrypt path for login macros | Completed | 4h | `phase-E-worker-decrypt-login-path.md` |
 | F - Secret scrubbing and log hardening | Completed | 2h | `phase-F-secret-scrubbing-log-hardening.md` |
-| G - Verification and runtime proof | Completed (full verified) | 1h | `phase-G-verification-runtime-proof.md` |
+| G - Verification and runtime proof | Invalidated by post-implementation review | 1h | `phase-G-verification-runtime-proof.md` |
 
 ## Gates
 
@@ -47,6 +53,7 @@ Move from pilot-only browser encryption to a planned server-managed credential b
 - Code phases must run targeted unit tests plus `npm.cmd run lint` and `npm.cmd run typecheck`.
 - Worker/Edge Function phases must include negative auth tests.
 - Runtime proof requires no plaintext in `workflow_runs`, `run_steps`, readiness reports, artifacts, or logs.
+- The earlier report's `full_verified` verdict is not a release gate pass; remediation must replace it with a real credential-login proof.
 
 ## Open Questions
 

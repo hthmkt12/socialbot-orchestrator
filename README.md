@@ -17,9 +17,9 @@ The platform lets teams run **Android and iOS device automation** at scale:
 
 ## Social Media Automation
 
-The platform is designed for **social media automation teams** running 5-50 Android/iOS devices. Key differentiators:
+The product direction targets **social media automation teams** running 5-50 Android/iOS devices; current pilot validation is capped at five Android devices. Key differentiators:
 
-- **Anti-detection** — Random delays, scroll variance, and device fingerprinting to avoid bot detection on Instagram, TikTok, and Facebook
+- **Action pacing** — Random delays and scroll variance; no guarantee against platform detection
 - **Account lifecycle** — Track warm-up stages, daily action limits, cooldown enforcement, and block detection per account
 - **Macro templates** — Pre-built Instagram like/follow/comment, TikTok engagement, and Facebook page interaction workflows
 - **Device failover** — Auto-rotate accounts to healthy devices when a device or account gets blocked
@@ -250,7 +250,7 @@ npm run doctor:adb
 - Mobile MCP mode does not execute `run_autox` steps in V1; approval flow remains in the worker before backend dispatch
 - The **MCP Orchestrator** page can control multiple Android serials from one bridge: refresh fleet, select serials, launch an app, query foreground app, and collect screenshot grids
 - Approval checkpoints and approval-required steps now release ownership at `WAITING_APPROVAL` and resume from persisted `run_steps` after approval
-- Multi-target execution currently shares one worker claim and runs devices sequentially inside that claim
+- Multi-target execution currently shares one worker claim and dispatches devices concurrently in bounded chunks of 10; pilot validation remains capped at five Android devices and has no fleet-speed SLA
 - The Mobile MCP bridge keeps one lazy session and one mutex per Android serial, so separate serials are isolated and same-device calls are serialized
 - `npm run smoke:mobile-mcp` verifies worker-to-bridge execution against a real Android device with `launch_app`, `wait`, `get_current_app`, `swipe`, `tap`, `adb`, and `screenshot`
 - `npm run smoke:mobile-mcp:multi` verifies multiple Android serials through one bridge endpoint; pass comma-separated serials in `MOBILE_MCP_DEVICE_SERIALS`
