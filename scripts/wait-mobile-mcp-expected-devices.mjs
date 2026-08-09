@@ -33,7 +33,7 @@ const dotEnv = loadDotEnv(join(rootDir, '.env'));
 const env = { ...dotEnv, ...process.env };
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const bridgeToken = env.MOBILE_MCP_BRIDGE_TOKEN;
-const expectedSerials = parseCsv(dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS);
+const expectedSerials = parseCsv(process.env.MOBILE_MCP_EXPECTED_SERIALS ?? dotEnv.MOBILE_MCP_EXPECTED_SERIALS);
 const timeoutMs = Number(argValue('--timeout-ms', env.MOBILE_MCP_WAIT_TIMEOUT_MS ?? 60_000));
 const intervalMs = Number(argValue('--interval-ms', env.MOBILE_MCP_WAIT_INTERVAL_MS ?? 2_000));
 const recoverAdb = args.includes('--recover-adb') || env.MOBILE_MCP_WAIT_RECOVER_ADB === 'true';
