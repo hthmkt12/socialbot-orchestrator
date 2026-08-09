@@ -99,13 +99,16 @@ export async function ensureSmokeMacroVersion(supabase: SupabaseClient, profileI
 
 export async function createQueuedRun(supabase: SupabaseClient, macroVersionId: string, profileId: string, devices: Device[]) {
   const targetType = devices.length === 1 ? 'SINGLE_DEVICE' : 'MULTI_DEVICE';
+  const targetSelector = targetType === 'SINGLE_DEVICE'
+    ? { target_ids: [devices[0].id] }
+    : { deviceIds: devices.map((device) => device.id) };
   const { data, error } = await supabase
     .from('workflow_runs')
     .insert({
       macro_version_id: macroVersionId,
       triggered_by_user_id: profileId,
       target_type: targetType,
-      target_selector_json: { deviceIds: devices.map((device) => device.id) },
+      target_selector_json: targetSelector,
       input_variables_json: { appName: 'com.android.settings' },
       status: 'QUEUED',
       summary_json: { source: 'mobile-mcp-db-multi-smoke', targetType, serials: devices.map((device) => device.laixi_device_id) },
