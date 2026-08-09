@@ -37,7 +37,7 @@ function loadDotEnv(path) {
 const dotEnv = loadDotEnv(join(rootDir, '.env'));
 
 const hasServiceRoleKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
-const expectedSerials = (dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS ?? '')
+const expectedSerials = (process.env.MOBILE_MCP_EXPECTED_SERIALS ?? dotEnv.MOBILE_MCP_EXPECTED_SERIALS ?? '')
   .split(',')
   .map((serial) => serial.trim())
   .filter(Boolean);

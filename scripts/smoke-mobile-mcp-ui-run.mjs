@@ -38,7 +38,7 @@ const env = { ...loadDotEnv(join(rootDir, '.env')), ...process.env };
 const baseUrl = env.UI_SMOKE_BASE_URL ?? 'http://127.0.0.1:5173';
 const macroName = env.UI_SMOKE_MACRO_NAME ?? 'Mobile MCP DB Multi Smoke';
 const appName = env.UI_SMOKE_APP_NAME ?? 'com.android.settings';
-const expectedSerials = (loadDotEnv(join(rootDir, '.env')).MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS ?? '')
+const expectedSerials = (process.env.MOBILE_MCP_EXPECTED_SERIALS ?? loadDotEnv(join(rootDir, '.env')).MOBILE_MCP_EXPECTED_SERIALS ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
