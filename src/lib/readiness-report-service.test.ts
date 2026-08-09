@@ -200,6 +200,146 @@ describe('readiness report service', () => {
     })).toMatchObject({ valid: true, issues: [] });
   });
 
+  it('requires provenance for level 3 proof', () => {
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({ pilot_level: 'level_3' }),
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      'Auth mode evidence is required for scale proof',
+      'Supabase project evidence is required for scale proof',
+      'Workflow key evidence is required for scale proof',
+      'Workflow version evidence is required for scale proof',
+    ]));
+  });
+
+  it.each([
+    ['FAILED', 'Run must complete before scale proof'],
+    ['CANCELLED', 'Run must complete before scale proof'],
+    ['PARTIAL_SUCCESS', 'Run must complete before scale proof'],
+  ])('rejects %s as accepted level 3 proof', (runStatus, message) => {
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({
+        pilot_level: 'level_3',
+        auth_mode: 'operator_session',
+        supabase_project: 'pilot-project',
+        workflow_key: 'instagram_warmup',
+        workflow_version: 1,
+        run_status: runStatus,
+      }),
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toContain(message);
+  });
+
+  it('rejects level 3 proof with missing artifacts or non-matching serials', () => {
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({
+        pilot_level: 'level_3',
+        auth_mode: 'operator_session',
+        supabase_project: 'pilot-project',
+        workflow_key: 'instagram_warmup',
+        workflow_version: 1,
+        artifact_refs: [],
+        expected_serials: ['device-1', 'device-2'],
+        observed_serials: ['device-1', 'device-1'],
+      }),
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      'Scale proof artifact refs are required',
+      'Scale proof serials must be unique and match expected devices',
+    ]));
+  });
+
+  it('accepts complete level 3 proof while keeping level 1 compatibility', () => {
+    expect(validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({
+        pilot_level: 'level_3',
+        auth_mode: 'operator_session',
+        supabase_project: 'pilot-project',
+        workflow_key: 'instagram_warmup',
+        workflow_version: 1,
+        expected_serials: ['device-1', 'device-2'],
+        observed_serials: ['device-2', 'device-1'],
+      }),
+    })).toMatchObject({ valid: true, issues: [] });
+  });
+
+  it('blocks sequence proof when three-run evidence is incomplete', () => {
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({
+        pilot_level: 'level_3_sequence',
+        auth_mode: 'operator_session',
+        supabase_project: 'pilot-project',
+        workflow_key: 'instagram_warmup',
+        workflow_version: 1,
+        sequence_runs: [],
+      }),
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.scale.sequence', status: 'failed' }),
+    ]));
+  });
+
+  it('accepts sequence proof only when three runs pass the five-device validator', () => {
+    const serials = ['device-1', 'device-2', 'device-3', 'device-4', 'device-5'];
+    const sequenceRuns = [1, 2, 3].map((index) => ({
+      run_id: `run-${index}`,
+      run_status: 'COMPLETED',
+      backend_mode: 'mobile_mcp',
+      auth_mode: 'operator_session',
+      supabase_project: 'pilot-project',
+      workflow_key: 'instagram_warmup',
+      workflow_version: 1,
+      expected_serials: serials,
+      observed_serials: serials,
+      per_target_outcomes: serials.map((serial) => ({ serial, status: 'COMPLETED', artifact_refs: [`artifact-${index}-${serial}`] })),
+      artifact_refs: serials.map((serial) => `artifact-${index}-${serial}`),
+      secret_scrub_status: 'passed',
+      duplicate_execution: false,
+      duplicate_steps: false,
+      leaked_locks: false,
+      stale_ownership: false,
+      manual_db_repair: false,
+    }));
+
+    const result = validateReadinessEvidence({
+      backend: 'mobile_mcp',
+      decision: 'pilot_verified',
+      evidence: completeLevel1Evidence({
+        pilot_level: 'level_3_sequence',
+        auth_mode: 'operator_session',
+        supabase_project: 'pilot-project',
+        workflow_key: 'instagram_warmup',
+        workflow_version: 1,
+        expected_serials: serials,
+        observed_serials: serials,
+        sequence_runs: sequenceRuns,
+      }),
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.gates).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'verification.scale.sequence', status: 'passed' }),
+    ]));
+  });
+
   it('reports the level 1 readiness evidence checklist', () => {
     expect(getLevel1ReadinessEvidenceChecklist({
       pilot_level: 'level_1',
@@ -313,6 +453,7 @@ describe('readiness report service', () => {
     expect(validateReadinessEvidence({
       backend: 'mobile_mcp',
       decision: 'pilot_verified',
+      now,
       evidence: completeLevel1Evidence({
         verified_at: undefined,
         finished_at: '2026-07-07T00:00:00.000Z',

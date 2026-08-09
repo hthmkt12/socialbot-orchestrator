@@ -14,5 +14,5 @@ export function createDeviceStepBackend(config: WorkerConfig) {
     return new MobileMcpStepBackend(config.mobileMcpBridgeUrl, config.commandTimeoutMs, config.bridgeToken);
   }
 
-  return new LaixiStepBackend(new LaixiGatewayClient(config.gatewayBaseUrl, config.commandTimeoutMs));
+  return new LaixiStepBackend(new LaixiGatewayClient(config.gatewayBaseUrl, config.commandTimeoutMs, config.gatewayHttpToken));
 }

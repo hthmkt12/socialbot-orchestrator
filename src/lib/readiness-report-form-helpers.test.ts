@@ -36,6 +36,10 @@ describe('readiness report form helpers', () => {
       'secret_scrub_status',
       'verified_at',
       'claim_summary',
+      'authMode',
+      'supabaseProject',
+      'workflowKey',
+      'workflowVersion',
       'laixiLiveSessionProof',
       'iosPortalProof',
     ]);
@@ -89,6 +93,30 @@ describe('readiness report form helpers', () => {
       message: 'Analytics evidence is not production-grade yet',
       recoveryHint: 'Collect live analytics evidence.',
     }], true)).toBeNull();
+  });
+
+  it('includes non-secret provenance fields in initial evidence', () => {
+    const evidence = createInitialReadinessEvidence('mobile_mcp');
+
+    expect(evidence).toMatchObject({
+      authMode: '',
+      supabaseProject: '',
+      workflowKey: 'instagram_warmup',
+      workflowVersion: '1',
+    });
+  });
+
+  it('compacts expected and observed serials independently', () => {
+    const evidence = {
+      ...createInitialReadinessEvidence('mobile_mcp'),
+      deviceSerial: 'expected-device',
+      sessionId: 'observed-device',
+    };
+
+    expect(compactReadinessEvidence(evidence)).toMatchObject({
+      expected_serials: ['expected-device'],
+      observed_serials: ['observed-device'],
+    });
   });
 
   it('compacts evidence and converts comma-separated fields into arrays', () => {

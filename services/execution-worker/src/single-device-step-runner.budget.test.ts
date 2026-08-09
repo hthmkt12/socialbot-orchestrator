@@ -360,5 +360,7 @@ describe('single-device step runner account budgets', () => {
         nextRetryDelayMs: 0,
       }),
     }));
+    expect(supabase.historyInserts).toHaveLength(1);
+    expect(supabase.rpcCalls).toHaveLength(1);
   });
 });

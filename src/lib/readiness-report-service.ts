@@ -8,6 +8,7 @@ import {
   type ReadinessGateResult,
 } from './readiness-gates';
 import { canCreateReadinessReports, canReviewReadinessReports } from './role-access';
+import { validatePilotScaleSequence } from './pilot-scale-evidence-validation';
 import { supabase } from './supabase';
 import { isMissingSchemaError } from './supabase-errors';
 
@@ -84,6 +85,97 @@ const LEVEL_1_EVIDENCE: EvidenceKeyGroup[] = [
   { key: 'secret_scrub_status', label: 'Secret scrub status', aliases: ['secretScrubStatus'] },
   { key: 'claim_summary', label: 'Claim summary', aliases: ['claimSummary'] },
 ];
+const SCALE_PROOF_FIELDS: EvidenceKeyGroup[] = [
+  { key: 'auth_mode', label: 'Auth mode', aliases: ['authMode'] },
+  { key: 'supabase_project', label: 'Supabase project', aliases: ['supabaseProject', 'environment'] },
+  { key: 'workflow_key', label: 'Workflow key', aliases: ['workflowKey'] },
+  { key: 'workflow_version', label: 'Workflow version', aliases: ['workflowVersion'] },
+];
+const SCALE_PROOF_LEVELS = new Set(['level_3', 'scale', 'scale_proof', 'level_3_sequence']);
+const SEQUENCE_PROOF_LEVEL = 'level_3_sequence';
+const SCALE_PROOF_WORKFLOW = 'instagram_warmup';
+const SCALE_PROOF_VERSION = '1';
+const SCALE_PROOF_TERMINAL_STATUS = 'COMPLETED';
+const SCALE_PROOF_ISSUES = {
+  auth_mode: 'Auth mode evidence is required for scale proof',
+  supabase_project: 'Supabase project evidence is required for scale proof',
+  workflow_key: 'Workflow key evidence is required for scale proof',
+  workflow_version: 'Workflow version evidence is required for scale proof',
+};
+
+function isScaleProof(evidence: Record<string, unknown>) {
+  return SCALE_PROOF_LEVELS.has(String(getEvidenceValueByKey(evidence, 'pilot_level') ?? '').toLowerCase());
+}
+
+function buildSequenceProofGates(evidence: Record<string, unknown>) {
+  const validation = validatePilotScaleSequence(evidence.sequence_runs);
+  return [createReadinessGate({
+    key: 'verification.scale.sequence',
+    type: 'verification_blocker',
+    status: validation.valid ? 'passed' : 'failed',
+    message: validation.valid ? 'Three-run five-device sequence is valid' : validation.issues.join('; '),
+    recoveryHint: 'Attach three consecutive COMPLETED five-device runs with stable context and redacted artifacts.',
+  })];
+}
+
+function buildScaleProofGates(evidence: Record<string, unknown>) {
+  const gates: ReadinessGateResult[] = SCALE_PROOF_FIELDS.map((field) => {
+    const present = hasValue(getEvidenceValue(evidence, field));
+    return createReadinessGate({
+      key: `verification.scale.${field.key}`,
+      type: 'verification_blocker',
+      status: present ? 'passed' : 'failed',
+      message: present ? `${field.label} evidence is present` : SCALE_PROOF_ISSUES[field.key as keyof typeof SCALE_PROOF_ISSUES],
+      recoveryHint: `Attach ${field.label.toLowerCase()} evidence before scale verification.`,
+    });
+  });
+
+  const status = String(getEvidenceValueByKey(evidence, 'run_status') ?? '').toUpperCase();
+  gates.push(createReadinessGate({
+    key: 'verification.scale.completed',
+    type: 'verification_blocker',
+    status: status === SCALE_PROOF_TERMINAL_STATUS ? 'passed' : 'failed',
+    message: status === SCALE_PROOF_TERMINAL_STATUS ? 'Scale proof run completed' : 'Run must complete before scale proof',
+    recoveryHint: 'Rerun workflow and attach a COMPLETED result.',
+  }));
+
+  const artifacts = getEvidenceValueByKey(evidence, 'artifact_refs');
+  gates.push(createReadinessGate({
+    key: 'verification.scale.artifacts',
+    type: 'verification_blocker',
+    status: Array.isArray(artifacts) && artifacts.length > 0 ? 'passed' : 'failed',
+    message: Array.isArray(artifacts) && artifacts.length > 0 ? 'Scale proof artifacts are present' : 'Scale proof artifact refs are required',
+    recoveryHint: 'Attach artifact IDs or paths produced by the completed run.',
+  }));
+
+  const expected = getEvidenceValueByKey(evidence, 'expected_serials');
+  const observed = getEvidenceValueByKey(evidence, 'observed_serials');
+  const expectedSerials = Array.isArray(expected) ? expected.map(String) : [];
+  const observedSerials = Array.isArray(observed) ? observed.map(String) : [];
+  const uniqueObserved = new Set(observedSerials).size === observedSerials.length;
+  const sameDevices = expectedSerials.length > 0
+    && expectedSerials.length === observedSerials.length
+    && expectedSerials.every((serial) => observedSerials.includes(serial));
+  gates.push(createReadinessGate({
+    key: 'verification.scale.serials',
+    type: 'verification_blocker',
+    status: uniqueObserved && sameDevices ? 'passed' : 'failed',
+    message: uniqueObserved && sameDevices ? 'Scale proof serials match expected devices' : 'Scale proof serials must be unique and match expected devices',
+    recoveryHint: 'Attach independently observed serials for every expected device.',
+  }));
+
+  const workflowKey = String(getEvidenceValueByKey(evidence, 'workflow_key') ?? '');
+  const workflowVersion = String(getEvidenceValueByKey(evidence, 'workflow_version') ?? '');
+  gates.push(createReadinessGate({
+    key: 'verification.scale.workflow',
+    type: 'verification_blocker',
+    status: workflowKey === SCALE_PROOF_WORKFLOW && workflowVersion === SCALE_PROOF_VERSION ? 'passed' : 'failed',
+    message: workflowKey === SCALE_PROOF_WORKFLOW && workflowVersion === SCALE_PROOF_VERSION ? 'Scale proof workflow contract matches' : 'Scale proof workflow contract changed; rerun required',
+    recoveryHint: 'Use instagram_warmup version 1 for this proof contract.',
+  }));
+
+  return gates;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -173,8 +265,8 @@ export function getReadinessEvidenceFreshness(
   };
 }
 
-function buildEvidenceFreshnessGate(evidence: Record<string, unknown>) {
-  const freshness = getReadinessEvidenceFreshness(evidence);
+function buildEvidenceFreshnessGate(evidence: Record<string, unknown>, now = new Date()) {
+  const freshness = getReadinessEvidenceFreshness(evidence, now);
   const passed = freshness.status === 'fresh';
 
   return createReadinessGate({
@@ -226,6 +318,7 @@ export function validateReadinessEvidence(args: {
   backend: PilotReadinessBackend;
   evidence: Record<string, unknown>;
   decision: ReadinessReviewDecision;
+  now?: Date;
 }): EvidenceValidation {
   if (args.decision !== 'pilot_verified') {
     return {
@@ -252,7 +345,11 @@ export function validateReadinessEvidence(args: {
         : 'Evidence redaction passed',
       recoveryHint: 'Remove secret-like evidence fields and only attach artifacts with redaction_status not_needed or scrubbed.',
     }),
-    buildEvidenceFreshnessGate(evidence),
+    buildEvidenceFreshnessGate(evidence, args.now),
+    ...(isScaleProof(evidence) ? buildScaleProofGates(evidence) : []),
+    ...(String(getEvidenceValueByKey(evidence, 'pilot_level') ?? '').toLowerCase() === SEQUENCE_PROOF_LEVEL
+      ? buildSequenceProofGates(evidence)
+      : []),
     ...buildReadinessWarningGates(evidence),
   ];
   const issues = getBlockingGates(gates).map((gate) => gate.message);

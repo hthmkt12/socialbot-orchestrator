@@ -19,6 +19,7 @@ function workerConfig() {
     instanceId: 'test-worker',
     supabaseUrl: 'https://example.supabase.co',
     supabaseServiceRoleKey: 'service-role',
+    credentialVaultWorkerToken: 'test-worker-token',
     gatewayBaseUrl: 'http://127.0.0.1:3001',
     mobileMcpBridgeUrl: 'http://127.0.0.1:8765',
     deviceBackend: 'mobile-mcp' as const,

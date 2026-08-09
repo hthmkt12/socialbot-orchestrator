@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { readSmokeEnv } from './mobile-mcp-db-smoke-env';
+import { readWorkerConfig } from './mobile-mcp-db-smoke-env';
 import { 
   loadSmokeProfile, 
   upsertSmokeDevice, 
@@ -29,7 +29,7 @@ async function main() {
   process.env.DEVICE_BACKEND = 'laixi';
   process.env.GATEWAY_BASE_URL = 'http://127.0.0.1:8080';
   
-  const config = readSmokeEnv();
+  const config = readWorkerConfig();
   const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
   
   try {

@@ -121,6 +121,7 @@ export interface GatewayDeviceRegisterMessage {
   type: 'register';
   deviceId: string;
   deviceName: string;
+  enrollmentToken?: string;
 }
 
 export interface GatewayDeviceHeartbeatMessage {
@@ -146,6 +147,15 @@ export interface GatewayStepResultMessage {
   stepId: string;
   deviceId: string;
   result: StepResultPayload;
+}
+
+/** Opaque, end-to-end signed worker event. The gateway never parses `envelope`. */
+export interface GatewaySignedDeviceEventMessage {
+  type: 'signed_device_event';
+  protocolVersion: string;
+  eventId: string;
+  deviceId: string;
+  envelope: string;
 }
 
 export type GatewayDispatchOutcome =
@@ -202,6 +212,14 @@ export interface GatewayHeartbeatAckMessage {
   deviceId: string;
 }
 
+export interface GatewaySignedDeviceEventAckMessage {
+  type: 'signed_device_event_ack';
+  ok: true;
+  protocolVersion: string;
+  eventId: string;
+  deviceId: string;
+}
+
 export interface GatewayErrorMessage {
   type: 'error';
   ok: false;
@@ -213,11 +231,13 @@ export interface GatewayErrorMessage {
 export type GatewayDeviceToServerMessage =
   | GatewayDeviceRegisterMessage
   | GatewayDeviceHeartbeatMessage
-  | GatewayStepResultMessage;
+  | GatewayStepResultMessage
+  | GatewaySignedDeviceEventMessage;
 
 export type GatewayServerToDeviceMessage =
   | GatewayRegisterAckMessage
   | GatewayHeartbeatAckMessage
+  | GatewaySignedDeviceEventAckMessage
   | GatewayStepDispatchMessage
   | GatewayErrorMessage;
 
@@ -260,6 +280,26 @@ export function isGatewayStepResultMessage(
     typeof value.requestId === 'string' &&
     typeof value.result === 'object' &&
     value.result !== null
+  );
+}
+
+export function isGatewaySignedDeviceEventMessage(
+  value: unknown
+): value is GatewaySignedDeviceEventMessage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    'eventId' in value &&
+    'deviceId' in value &&
+    'envelope' in value &&
+    value.type === 'signed_device_event' &&
+    typeof value.eventId === 'string' &&
+    value.eventId.length > 0 &&
+    typeof value.deviceId === 'string' &&
+    typeof value.envelope === 'string' &&
+    value.envelope.length > 0 &&
+    (value as { protocolVersion?: unknown }).protocolVersion === GATEWAY_PROTOCOL_VERSION
   );
 }
 

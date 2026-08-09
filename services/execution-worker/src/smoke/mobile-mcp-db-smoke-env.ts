@@ -26,6 +26,7 @@ export function readWorkerConfig(): WorkerConfig {
     instanceId: `mobile-mcp-db-smoke-${process.pid}`,
     supabaseUrl,
     supabaseServiceRoleKey: readRequiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
+    credentialVaultWorkerToken: readRequiredEnv('CREDENTIAL_VAULT_WORKER_TOKEN'),
     gatewayBaseUrl: process.env.GATEWAY_BASE_URL ?? 'http://127.0.0.1:8080',
     mobileMcpBridgeUrl: process.env.MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321',
     deviceBackend: 'mobile-mcp',

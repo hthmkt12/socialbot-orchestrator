@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadMultiTargetRunContext } from './multi-target-run-context';
-import type { WorkerConfig } from './run-claim-coordinator';
+import { getCredentialVaultServiceRoleKey, type WorkerConfig } from './run-claim-coordinator';
 import { aggregateRunResults } from './worker-step-store';
 import { finalizeOwnedRun, isRunCancelled, markOwnedRunStatus } from './worker-run-store';
 import { executeOwnedDeviceRun, type OwnedDeviceRunResult } from './execute-owned-device-run.js';
@@ -62,6 +62,11 @@ async function executeDeviceRunInline(workerData: DeviceWorkerData): Promise<Own
       retryBackoffPolicy: workerData.retryBackoffPolicy,
       triggeredByUserId: workerData.triggeredByUserId,
       inputVariables: { ...workerData.inputVariables },
+      credentialVault: {
+        supabaseUrl: workerData.config.supabaseUrl,
+        supabaseServiceRoleKey: getCredentialVaultServiceRoleKey(workerData.config),
+        credentialVaultWorkerToken: workerData.config.credentialVaultWorkerToken,
+      },
     });
   } finally {
     await backend.disconnect().catch(() => undefined);

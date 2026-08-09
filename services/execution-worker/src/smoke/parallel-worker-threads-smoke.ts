@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { readSmokeEnv } from './mobile-mcp-db-smoke-env';
+import { readWorkerConfig } from './mobile-mcp-db-smoke-env';
 import { 
   loadSmokeProfile, 
   upsertSmokeDevice, 
@@ -13,7 +13,7 @@ import { MultiTargetRunExecutor } from '../multi-target-run-executor';
 async function main() {
   console.log('[smoke] Starting Parallel Worker Threads Smoke Test');
   
-  const config = readSmokeEnv();
+  const config = readWorkerConfig();
   const supabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey);
   
   // 1. Setup profile and 3 devices

@@ -106,6 +106,9 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
 
   if (d.version !== 1) errors.push('version must be 1');
   if (!d.meta || typeof d.meta !== 'object') errors.push('meta is required');
+  if (!d.inputs || typeof d.inputs !== 'object' || Array.isArray(d.inputs)) errors.push('inputs must be an object');
+  if (!d.target || typeof d.target !== 'object' || Array.isArray(d.target)) errors.push('target is required');
+  if (!d.execution || typeof d.execution !== 'object' || Array.isArray(d.execution)) errors.push('execution is required');
   if (!d.steps || !Array.isArray(d.steps)) errors.push('steps must be an array');
   if (d.steps && Array.isArray(d.steps) && d.steps.length === 0) errors.push('steps cannot be empty');
 
@@ -123,9 +126,16 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
     if (exec.maxRetries !== undefined && typeof exec.maxRetries !== 'number') {
       errors.push('execution.maxRetries must be a number');
     }
+    if (typeof exec.defaultTimeoutMs === 'number' && (!Number.isFinite(exec.defaultTimeoutMs) || exec.defaultTimeoutMs <= 0)) errors.push('execution.defaultTimeoutMs must be positive');
+    if (typeof exec.maxRetries === 'number' && (!Number.isInteger(exec.maxRetries) || exec.maxRetries < 0)) errors.push('execution.maxRetries must be a non-negative integer');
     if (exec.onError !== undefined && !['stop', 'continue', 'skip'].includes(exec.onError as string)) {
       errors.push('execution.onError must be stop, continue, or skip');
     }
+  }
+
+  if (d.target && typeof d.target === 'object') {
+    const target = d.target as Record<string, unknown>;
+    if (!['single_device', 'device_group', 'multi_device', 'all_devices'].includes(target.mode as string)) errors.push('target.mode is invalid');
   }
 
   const validStepTypes: StepType[] = [
@@ -147,6 +157,7 @@ export function validateMacroDefinition(def: unknown): { valid: boolean; errors:
         if (!step.type || !validStepTypes.includes(step.type as StepType)) {
           errors.push(`${sp}.type "${step.type}" is not valid`);
         }
+        if (!step.params || typeof step.params !== 'object' || Array.isArray(step.params)) errors.push(`${sp}.params must be an object`);
         if (step.targetApp !== undefined && !['instagram', 'tiktok', 'facebook'].includes(step.targetApp as string)) {
           errors.push(`${sp}.targetApp "${step.targetApp}" is not valid`);
         }

@@ -15,6 +15,10 @@ export type ReadinessEvidenceForm = {
   secret_scrub_status: string;
   verified_at: string;
   claim_summary: string;
+  authMode: string;
+  supabaseProject: string;
+  workflowKey: string;
+  workflowVersion: string;
   laixiLiveSessionProof: string;
   iosPortalProof: string;
 };
@@ -37,6 +41,10 @@ export function createInitialReadinessEvidence(
     secret_scrub_status: 'passed',
     verified_at: now.toISOString(),
     claim_summary: '',
+    authMode: '',
+    supabaseProject: '',
+    workflowKey: 'instagram_warmup',
+    workflowVersion: '1',
     laixiLiveSessionProof: '',
     iosPortalProof: '',
   };
@@ -60,6 +68,10 @@ export const readinessEvidenceFieldMeta: Record<keyof ReadinessEvidenceForm, { l
   secret_scrub_status: { label: 'Secret scrub status', placeholder: 'passed' },
   verified_at: { label: 'Verified at', placeholder: 'ISO timestamp' },
   claim_summary: { label: 'Claim summary', placeholder: 'Level 1 Mobile MCP proof only' },
+  authMode: { label: 'Auth mode', placeholder: 'operator session' },
+  supabaseProject: { label: 'Supabase project', placeholder: 'stable non-secret project label' },
+  workflowKey: { label: 'Workflow key', placeholder: 'instagram_warmup' },
+  workflowVersion: { label: 'Workflow version', placeholder: '1' },
   laixiLiveSessionProof: { label: 'LAIXI live proof', placeholder: 'required only for LAIXI' },
   iosPortalProof: { label: 'iOS Portal proof', placeholder: 'required only for iOS Portal' },
 };
@@ -95,5 +107,9 @@ export function compactReadinessEvidence(evidence: ReadinessEvidenceForm) {
     expected_serials: evidence.deviceSerial.split(',').map((serial) => serial.trim()).filter(Boolean),
     observed_serials: evidence.sessionId.split(',').map((serial) => serial.trim()).filter(Boolean),
     artifact_refs: evidence.artifact_refs.split(',').map((artifact) => artifact.trim()).filter(Boolean),
+    auth_mode: evidence.authMode,
+    supabase_project: evidence.supabaseProject,
+    workflow_key: evidence.workflowKey,
+    workflow_version: evidence.workflowVersion,
   };
 }
