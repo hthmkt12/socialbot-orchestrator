@@ -6,9 +6,9 @@ import RoleAccessNotice from '../components/ui/RoleAccessNotice';
 import Spinner from '../components/ui/Spinner';
 import MobileMcpDeviceCard from '../components/mobile-mcp/mobile-mcp-device-card';
 import {
-  executeMobileMcpStep,
-  loadMobileMcpFleet,
-  normalizeMobileMcpBridgeUrl,
+  executeMobileMcpStepViaProxy,
+  loadMobileMcpFleetViaProxy,
+  mobileMcpProxyUrl,
   type MobileMcpFleetSnapshot,
   type MobileMcpStepResult,
 } from '../lib/mobile-mcp-orchestrator';
@@ -16,12 +16,9 @@ import { canManageDevices, getRoleLabel } from '../lib/role-access';
 import { useAuthStore } from '../stores/auth';
 import { useUIStore } from '../stores/ui';
 
-const DEFAULT_BRIDGE_URL = import.meta.env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
-
 type ActionKind = 'launch_app' | 'get_current_app' | 'screenshot';
 
 export default function MobileMcpOrchestratorPage() {
-  const [bridgeUrl, setBridgeUrl] = useState(DEFAULT_BRIDGE_URL);
   const [appPackage, setAppPackage] = useState('com.brave.browser');
   const [snapshot, setSnapshot] = useState<MobileMcpFleetSnapshot | null>(null);
   const [selectedSerials, setSelectedSerials] = useState<string[]>([]);
@@ -38,7 +35,7 @@ export default function MobileMcpOrchestratorPage() {
   const refreshFleet = async () => {
     setLoading(true);
     try {
-      const nextSnapshot = await loadMobileMcpFleet(bridgeUrl);
+      const nextSnapshot = await loadMobileMcpFleetViaProxy();
       setSnapshot(nextSnapshot);
       setSelectedSerials((current) => current.filter((serial) => nextSnapshot.devices.some((device) => device.id === serial)));
       addToast(`Mobile MCP devices: ${nextSnapshot.devices.length}`, 'success');
@@ -76,7 +73,7 @@ export default function MobileMcpOrchestratorPage() {
           ? { description: 'mobile_mcp_orchestrator' }
           : {};
       const actionResults = await Promise.all(
-        selectedSerials.map((serial) => executeMobileMcpStep(bridgeUrl, serial, action, params))
+        selectedSerials.map((serial) => executeMobileMcpStepViaProxy(mobileMcpProxyUrl(), serial, action, params))
       );
       setResults((current) => ({
         ...current,
@@ -111,10 +108,6 @@ export default function MobileMcpOrchestratorPage() {
         <section className="rounded-2xl bg-white border border-gray-200 p-5">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <label className="space-y-1">
-              <span className="text-xs font-semibold text-gray-600">Mobile MCP bridge URL</span>
-              <input value={bridgeUrl} onChange={(event) => setBridgeUrl(event.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
-            </label>
-            <label className="space-y-1">
               <span className="text-xs font-semibold text-gray-600">Launch package</span>
               <input value={appPackage} onChange={(event) => setAppPackage(event.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500" />
             </label>
@@ -123,7 +116,7 @@ export default function MobileMcpOrchestratorPage() {
               <Badge variant={snapshot?.health.status === 'ok' ? 'green' : 'gray'}>{snapshot ? `${snapshot.devices.length} devices` : 'not checked'}</Badge>
             </div>
           </div>
-          <p className="mt-3 text-xs text-gray-500">Normalized bridge: {normalizeMobileMcpBridgeUrl(bridgeUrl)} · Selected: {selectedCount}</p>
+          <p className="mt-3 text-xs text-gray-500">Control plane proxy keeps the Mobile MCP bridge token server-side · Selected: {selectedCount}</p>
         </section>
 
         <section className="rounded-2xl bg-white border border-gray-200 p-5">

@@ -1,8 +1,8 @@
 import type { Device } from '../../lib/database.types';
 import { getDeviceHealthSummary } from '../../lib/device-health';
 import {
-  runMobileMcpSetupProbe,
-  runSetupProbe,
+  runMobileMcpSetupProbeViaProxy,
+  runSetupProbeViaProxy,
   type SetupProbeKind,
   type SetupProbeResult,
 } from '../../lib/device-setup';
@@ -23,19 +23,16 @@ export async function runDeviceSetupProbe(args: {
 }): Promise<SetupProbeResult> {
   const {
     activeProbeBackend,
-    gatewayBaseUrl,
     kind,
-    mobileMcpBridgeUrl,
     selectedDevice,
   } = args;
 
   return activeProbeBackend === 'mobile-mcp'
-    ? runMobileMcpSetupProbe(
-      mobileMcpBridgeUrl,
+    ? runMobileMcpSetupProbeViaProxy(
       selectedDevice.laixi_device_id,
       kind,
       selectedDevice.screen_width,
       selectedDevice.screen_height
     )
-    : runSetupProbe(gatewayBaseUrl, selectedDevice.laixi_device_id, kind);
+    : runSetupProbeViaProxy(selectedDevice.laixi_device_id, kind);
 }

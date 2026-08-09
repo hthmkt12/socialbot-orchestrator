@@ -12,7 +12,8 @@ export {
   fetchGatewayHealth,
   fetchMobileMcpBridgeHealth,
   fetchMobileMcpDevices,
+  fetchControlPlaneJson,
   fetchWorkerHealth,
 } from './device-setup-http';
-export { runMobileMcpSetupProbe, runSetupProbe } from './device-setup-probes';
+export { runMobileMcpSetupProbe, runMobileMcpSetupProbeViaProxy, runSetupProbe, runSetupProbeViaProxy } from './device-setup-probes';
 export { buildAutoJsInitScript, GATEWAY_PROTOCOL_EXAMPLE } from './device-setup-autojs';

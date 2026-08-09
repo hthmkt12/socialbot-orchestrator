@@ -7,11 +7,20 @@ import { WarmUpAdvancementPanel } from '../components/accounts/warmup-progressio
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
 import { getAdvancementEstimates } from '../lib/account-warmup-auto-advance';
+import { useWarmUpAdvancementState, useAdvanceAccounts } from '../hooks/use-warmup-auto-advance';
+import { canManageAccounts } from '../lib/role-access';
+import { useAuthStore } from '../stores/auth';
+import { useUIStore } from '../stores/ui';
 
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: account, isLoading: isLoadingAccount } = useAccount(id!);
+  const profile = useAuthStore((s) => s.profile);
+  const addToast = useUIStore((s) => s.addToast);
+  const advanceAccounts = useAdvanceAccounts();
+  const warmUpState = useWarmUpAdvancementState(account ? [account] : undefined);
+  const canEditAccount = canManageAccounts(profile?.role);
 
   if (isLoadingAccount) {
     return (
@@ -39,6 +48,26 @@ export default function AccountDetailPage() {
       />
     );
   }
+
+  const handleAdvance = async () => {
+    if (!canEditAccount) {
+      addToast('Only operators and admins can change account warm-up state', 'error');
+      return;
+    }
+
+    if (!warmUpState.readyAccounts.length) return;
+
+    try {
+      const results = await advanceAccounts.mutateAsync(warmUpState.readyAccounts);
+      const failed = results.filter((result) => !result.success).length;
+      addToast(
+        failed ? `Warm-up advancement failed for ${failed} account${failed === 1 ? '' : 's'}` : 'Warm-up advanced',
+        failed ? 'error' : 'success',
+      );
+    } catch {
+      addToast('Failed to advance warm-up', 'error');
+    }
+  };
 
   // Calculate the estimate for the single account if it's warming up
   const estimates = account.warm_up_stage < 5 && account.warm_up_started_at
@@ -133,10 +162,10 @@ export default function AccountDetailPage() {
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Warm-up Status</h2>
                 <WarmUpAdvancementPanel 
-                    readyAccounts={[]} 
+                    readyAccounts={canEditAccount ? warmUpState.readyAccounts : []}
                     estimates={estimates}
-                    onAdvance={() => {}} 
-                    isAdvancing={false} 
+                    onAdvance={() => { void handleAdvance(); }}
+                    isAdvancing={advanceAccounts.isPending}
                 />
                 </div>
              )}

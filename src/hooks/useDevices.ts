@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { getLaixiClient } from '../adapters/laixi/client';
 import { logAudit } from '../lib/audit';
 import { deleteAdminResource } from '../lib/admin-governance';
+import { loadMobileMcpFleetViaProxy } from '../lib/mobile-mcp-orchestrator';
 import type { Device, DeviceLock } from '../lib/database.types';
 
 export function useDevices() {
@@ -54,27 +55,31 @@ export function useSyncDevices() {
 
   return useMutation({
     mutationFn: async () => {
-      const client = getLaixiClient();
-      const devices = await client.getAllInfo();
+      const configuredBackend = import.meta.env.VITE_DEVICE_BACKEND ?? 'mobile-mcp';
+      const devices = configuredBackend === 'mobile-mcp'
+        ? (await loadMobileMcpFleetViaProxy()).devices
+          .filter((device) => device.platform === 'android')
+          .map((device) => ({ id: device.id, status: device.status, model: 'Android', brand: 'Android', androidVersion: 'unknown', screenWidth: 720, screenHeight: 1600, metadata: { source: 'mobile-mcp-ui-sync', bridgeStatus: device.status } }))
+        : (await getLaixiClient().getAllInfo()).map((device) => ({ id: device.deviceId, status: 'device', model: device.model, brand: device.brand, androidVersion: device.androidVersion, screenWidth: device.screenWidth, screenHeight: device.screenHeight, metadata: { source: 'laixi-local-development', batteryLevel: device.batteryLevel, isCharging: device.isCharging } }));
 
       for (const d of devices) {
         const { data: existing } = await supabase
           .from('devices')
           .select('id')
-          .eq('laixi_device_id', d.deviceId)
+          .eq('laixi_device_id', d.id)
           .maybeSingle();
 
         const payload = {
-          name: d.deviceName || d.model,
+          name: `${d.metadata.source === 'mobile-mcp-ui-sync' ? 'Mobile MCP' : 'Laixi'} ${d.id}`,
           model: d.model,
           brand: d.brand,
           android_version: d.androidVersion,
           screen_width: d.screenWidth,
           screen_height: d.screenHeight,
-          status: 'ONLINE' as const,
+          status: d.status === 'device' ? 'ONLINE' as const : 'OFFLINE' as const,
           last_seen_at: new Date().toISOString(),
-          heartbeat_freshness: 'fresh' as const,
-          metadata_json: { batteryLevel: d.batteryLevel, isCharging: d.isCharging },
+          heartbeat_freshness: d.status === 'device' ? 'fresh' as const : 'stale' as const,
+          metadata_json: { ...d.metadata, syncedAt: new Date().toISOString() },
         };
 
         if (existing) {
@@ -82,14 +87,14 @@ export function useSyncDevices() {
           if (error) throw error;
         } else {
           const { error } = await supabase.from('devices').insert({
-            laixi_device_id: d.deviceId,
+            laixi_device_id: d.id,
             ...payload,
           });
           if (error) throw error;
         }
       }
 
-      await logAudit('devices.sync', 'device', '*', { count: devices.length });
+      await logAudit('devices.sync', 'device', '*', { count: devices.length, source: devices.some((device) => device.metadata.source === 'mobile-mcp-ui-sync') ? 'mobile-mcp' : 'laixi' });
       return devices.length;
     },
     onSuccess: () => {

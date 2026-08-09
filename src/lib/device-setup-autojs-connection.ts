@@ -1,4 +1,6 @@
-﻿export const AUTOJS_CONNECTION_SCRIPT = `
+export const AUTOJS_CONNECTION_SCRIPT = `
+var pendingSignedDeviceEvents = {};
+
 function connect() {
   log("Connecting to Device Gateway...");
   ws = new WebSocket(GATEWAY_URL);
@@ -9,6 +11,9 @@ function connect() {
       type: "register",
       deviceId: DEVICE_ID,
       deviceName: DEVICE_NAME,
+      enrollmentToken: typeof globalThis.GATEWAY_DEVICE_ENROLLMENT_TOKEN === "string"
+        ? globalThis.GATEWAY_DEVICE_ENROLLMENT_TOKEN
+        : undefined,
     });
 
     heartbeatTimer = setInterval(function () {
@@ -41,6 +46,11 @@ function handleMessage(message) {
     return;
   }
 
+  if (message.type === "signed_device_event_ack") {
+    acknowledgeSignedDeviceEvent(message.eventId);
+    return;
+  }
+
   if (message.type === "error") {
     log("Gateway error: " + message.message);
     return;
@@ -61,5 +71,37 @@ function handleDispatchStep(message) {
   } catch (error) {
     sendStepResult(message, false, {}, String(error));
   }
+}
+
+function emitSignedDeviceEvent(eventId, envelope) {
+  if (typeof eventId !== "string" || !eventId || typeof envelope !== "string" || !envelope) {
+    throw new Error("Signed device event requires a non-empty event ID and envelope");
+  }
+
+  acknowledgeSignedDeviceEvent(eventId);
+  pendingSignedDeviceEvents[eventId] = { envelope: envelope };
+  sendSignedDeviceEvent(eventId);
+}
+
+function sendSignedDeviceEvent(eventId) {
+  var pending = pendingSignedDeviceEvents[eventId];
+  if (!pending) return;
+  send({
+    type: "signed_device_event",
+    protocolVersion: PROTOCOL_VERSION,
+    eventId: eventId,
+    deviceId: DEVICE_ID,
+    envelope: pending.envelope,
+  });
+  pending.retryTimer = setTimeout(function () {
+    sendSignedDeviceEvent(eventId);
+  }, 3000);
+}
+
+function acknowledgeSignedDeviceEvent(eventId) {
+  var pending = pendingSignedDeviceEvents[eventId];
+  if (!pending) return;
+  if (pending.retryTimer) clearTimeout(pending.retryTimer);
+  delete pendingSignedDeviceEvents[eventId];
 }
 `;

@@ -24,7 +24,6 @@ import {
 } from '../lib/device-locks';
 import { canDeleteAdminResources, canManageDevices, getRoleLabel } from '../lib/role-access';
 import { useAuthStore } from '../stores/auth';
-import { useLaixiStore } from '../stores/laixi';
 import { useUIStore } from '../stores/ui';
 import type { Device } from '../lib/database.types';
 import type { FilterStatus, RiskFilter } from '../components/devices/devices-page-types';
@@ -35,8 +34,6 @@ export default function DevicesPage() {
   const profile = useAuthStore((s) => s.profile);
   const syncDevices = useSyncDevices();
   const deleteDevice = useDeleteDevice();
-  const connectionState = useLaixiStore((s) => s.connectionState);
-  const connect = useLaixiStore((s) => s.connect);
   const addToast = useUIStore((s) => s.addToast);
   const canSyncDevices = canManageDevices(profile?.role);
   const canDeleteDevices = canDeleteAdminResources(profile?.role);
@@ -64,11 +61,6 @@ export default function DevicesPage() {
   const handleSync = async () => {
     if (!canSyncDevices) {
       addToast('Only operators and admins can sync devices', 'error');
-      return;
-    }
-    if (connectionState !== 'connected') {
-      connect();
-      addToast('Connecting to device bridge...', 'info');
       return;
     }
     try {

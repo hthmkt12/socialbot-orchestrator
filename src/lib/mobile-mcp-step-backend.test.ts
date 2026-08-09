@@ -6,6 +6,13 @@ import type { DeviceStepExecutionArgs } from '../../services/execution-worker/sr
 
 const fetchMock = vi.fn();
 
+// Mock anti-detection to skip delays in tests
+vi.mock('../../services/execution-worker/src/lib/anti-detection', () => ({
+  applyCoordinateVariance: (v: number) => v,
+  getRandomDelay: () => 0,
+  sleep: () => Promise.resolve(),
+}));
+
 function device(overrides: Partial<Device> = {}): Device {
   return {
     id: 'device-1',
@@ -91,5 +98,56 @@ describe('mobile mcp step backend bridge errors', () => {
     expect(result.success).toBe(false);
     expect(result.error).toContain('BRIDGE_SCREENSHOT_MISSING_ARTIFACT');
     expect(result.screenshotBase64).toBeUndefined();
+  });
+
+  // -- input_text plaintext containment tests --
+
+  const CANARY = 'DO_NOT_PERSIST_PASSWORD_123';
+
+  it('input_text success never embeds raw bridge output in persisted output', async () => {
+    // Simulate a bridge that echoes the text back (the old leaking behavior)
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        output: { text: CANARY, message: 'text input completed', accepted: true },
+      }),
+    });
+    const backend = new MobileMcpStepBackend('http://127.0.0.1:4321', 1000, 'token');
+
+    const result = await backend.executeStep(args('input_text', { text: CANARY }));
+
+    expect(result.success).toBe(true);
+    // The normalized output must not contain the canary
+    expect(JSON.stringify(result.output)).not.toContain(CANARY);
+    // The output should have a safe accepted field, not the echoed text
+    expect(result.output).toHaveProperty('accepted', true);
+    // The output must NOT have a bridge field (which could contain echoed text)
+    expect(result.output).not.toHaveProperty('bridge');
+    // The output must NOT have a text field
+    expect(result.output).not.toHaveProperty('text');
+  });
+
+  it('input_text failure never embeds raw bridge output in persisted output', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: false,
+        output: { text: CANARY, message: 'text input failed' },
+        error: `input failed for ${CANARY}`,
+      }),
+    });
+    const backend = new MobileMcpStepBackend('http://127.0.0.1:4321', 1000, 'token');
+
+    const result = await backend.executeStep(args('input_text', { text: CANARY }));
+
+    expect(result.success).toBe(false);
+    // The error message may contain safe diagnostics but NOT the canary
+    // (the bridge no longer echoes text, so the error should be safe)
+    expect(JSON.stringify(result.output)).not.toContain(CANARY);
+    expect(result.output).not.toHaveProperty('bridge');
+    expect(result.output).not.toHaveProperty('text');
   });
 });

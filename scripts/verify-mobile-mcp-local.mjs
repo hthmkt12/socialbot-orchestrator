@@ -105,6 +105,32 @@ function tryParseJson(text) {
   }
 }
 
+function readEvidenceFile(path) {
+  if (!path) return null;
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function getObservedSerials(evidence) {
+  const serials = [
+    ...(evidence?.devices ?? []).map((device) => device.laixi_device_id ?? device.serial),
+    ...(evidence?.currentAppSteps ?? []).map((step) => step.deviceSerial),
+  ].filter(Boolean).map(String);
+  return [...new Set(serials)];
+}
+
+function getSupabaseProjectLabel(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.endsWith('.supabase.co') ? hostname.split('.')[0] : hostname;
+  } catch {
+    return '';
+  }
+}
+
 function runStep(step) {
   const startedAt = Date.now();
   print(`\n== ${step.name} ==`);
@@ -167,6 +193,8 @@ const report = {
 
 const uiResult = results.find((result) => result.name === 'ui.smoke');
 const uiEvidence = tryParseJson(uiResult?.stdout);
+const uiEvidenceFile = readEvidenceFile(uiEvidence?.evidencePath);
+const observedSerials = getObservedSerials(uiEvidenceFile);
 const runtimePassed = results.find((result) => result.name === 'runtime.check')?.exitCode === 0;
 const preflightPassed = results.find((result) => result.name === 'preflight')?.exitCode === 0;
 const workerPassed = runtimePassed && preflightPassed;
@@ -178,12 +206,16 @@ report.readinessEvidence = {
   worker_health: workerPassed ? 'ok' : 'failed',
   supabase_health: preflightPassed ? 'ok' : 'failed',
   expected_serials: expectedSerials,
-  observed_serials: expectedSerials,
-  run_id: uiEvidence?.runId ?? null,
-  run_status: uiEvidence?.status ?? (skipUi ? 'not_run_quick_verify' : null),
+  ...(observedSerials.length ? { observed_serials: observedSerials } : {}),
+  run_id: uiEvidence?.runId ?? uiEvidenceFile?.run?.id ?? null,
+  run_status: uiEvidence?.status ?? uiEvidenceFile?.run?.status ?? (skipUi ? 'not_run_quick_verify' : null),
   artifact_refs: uiEvidence?.evidencePath ? [uiEvidence.evidencePath] : [],
   secret_scrub_status: 'passed',
   verified_at: report.finishedAt,
+  auth_mode: skipUi ? 'local_preflight' : 'operator_session',
+  supabase_project: getSupabaseProjectLabel(dotEnv.VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL ?? ''),
+  workflow_key: dotEnv.UI_SMOKE_MACRO_KEY ?? process.env.UI_SMOKE_MACRO_KEY ?? null,
+  workflow_version: dotEnv.UI_SMOKE_MACRO_VERSION ?? process.env.UI_SMOKE_MACRO_VERSION ?? null,
   claim_summary: skipUi
     ? 'Level 1 quick Mobile MCP readiness check; UI smoke skipped.'
     : 'Level 1 Mobile MCP Android readiness proof with UI smoke evidence.',

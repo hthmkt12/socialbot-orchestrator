@@ -168,12 +168,29 @@ describe('TIKTOK_LIKE_TRENDING', () => {
 });
 
 describe('INSTAGRAM_WARMUP', () => {
-  it('has correct structure', () => {
+  it('freezes the single-device version-one pilot contract', () => {
     expect(INSTAGRAM_WARMUP.platform).toBe('instagram');
+    expect(INSTAGRAM_WARMUP.definition.version).toBe(1);
     expect(INSTAGRAM_WARMUP.definition.meta.key).toBe('instagram_warmup');
+    expect(INSTAGRAM_WARMUP.definition.target.mode).toBe('single_device');
+    expect(INSTAGRAM_WARMUP.definition.execution.onError).toBe('continue');
+  });
+
+  it('uses bounded input, budgeted like, and screenshot proof', () => {
     const loopStep = INSTAGRAM_WARMUP.definition.steps.find((s) => s.type === 'loop');
-    expect(loopStep).toBeDefined();
+    const loopBody = loopStep?.steps ?? [];
+    const conditionalLike = loopBody.find((s) => s.id === 'conditional_like');
+    const likeStep = conditionalLike?.then?.find((s) => s.id === 'like_post');
+    const screenshotStep = INSTAGRAM_WARMUP.definition.steps.find((s) => s.id === 'screenshot_proof');
+
     expect(loopStep?.params.count).toBe('{{scrollCount}}');
+    expect(INSTAGRAM_WARMUP.definition.inputs.scrollCount).toMatchObject({
+      type: 'number',
+      required: true,
+      default: 5,
+    });
+    expect(likeStep?.params.actionBudgetType).toBe('like');
+    expect(screenshotStep?.type).toBe('screenshot');
   });
 });
 

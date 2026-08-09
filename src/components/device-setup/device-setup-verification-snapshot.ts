@@ -1,8 +1,6 @@
 import type { Device, DeviceLock } from '../../lib/database.types';
 import {
-  fetchGatewayHealth,
-  fetchMobileMcpBridgeHealth,
-  fetchMobileMcpDevices,
+  fetchControlPlaneJson,
   fetchWorkerHealth,
   type GatewayHealthView,
   type MobileMcpBridgeHealthView,
@@ -58,8 +56,6 @@ function readSupabaseError(
 }
 
 export async function fetchDeviceSetupVerificationSnapshot({
-  gatewayBaseUrl,
-  mobileMcpBridgeUrl,
   workerBaseUrl,
 }: {
   gatewayBaseUrl: string;
@@ -67,10 +63,10 @@ export async function fetchDeviceSetupVerificationSnapshot({
   workerBaseUrl: string;
 }): Promise<VerificationSnapshot> {
   const [gatewayResult, workerResult, mobileMcpResult, mobileMcpDevicesResult, devicesResult, deviceLocksResult] = await Promise.allSettled([
-    fetchGatewayHealth(gatewayBaseUrl),
+    fetchControlPlaneJson<GatewayHealthView>(workerBaseUrl, '/control/gateway/health'),
     fetchWorkerHealth(workerBaseUrl),
-    fetchMobileMcpBridgeHealth(mobileMcpBridgeUrl),
-    fetchMobileMcpDevices(mobileMcpBridgeUrl),
+    fetchControlPlaneJson<MobileMcpBridgeHealthView>(workerBaseUrl, '/control/mobile-mcp/health'),
+    fetchControlPlaneJson<{ success?: boolean; output?: { devices?: MobileMcpDeviceView[] } }>(workerBaseUrl, '/control/mobile-mcp/devices').then((result) => result.output?.devices ?? []),
     supabase.from('devices').select('*').order('updated_at', { ascending: false }),
     supabase.from('device_locks').select('*').order('expires_at', { ascending: false }),
   ]);

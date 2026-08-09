@@ -4,7 +4,7 @@ import type { Account, AccountActionHistory, AccountPlatform, AccountActionType,
 import { canManageAccounts } from './role-access';
 import { isMissingSchemaError } from './supabase-errors';
 
-const ENCRYPTED_PASSWORD_PREFIX = 'v2:';
+const ENCRYPTED_PASSWORD_PREFIXES = ['v2:', 's3:'] as const;
 const VALID_PLATFORMS = new Set<AccountPlatform>(['instagram', 'tiktok', 'facebook']);
 
 type AccountMutationProfile = {
@@ -35,7 +35,7 @@ function validateAccountCreateInput(input: {
 }) {
   if (!input.username.trim()) throw new Error('Username is required');
   if (!VALID_PLATFORMS.has(input.platform)) throw new Error('Invalid account platform');
-  if (!input.encrypted_password.startsWith(ENCRYPTED_PASSWORD_PREFIX)) {
+  if (!ENCRYPTED_PASSWORD_PREFIXES.some((prefix) => input.encrypted_password.startsWith(prefix))) {
     throw new Error('Account password must be encrypted before saving');
   }
   if (input.daily_action_limit != null && (!Number.isInteger(input.daily_action_limit) || input.daily_action_limit < 1)) {

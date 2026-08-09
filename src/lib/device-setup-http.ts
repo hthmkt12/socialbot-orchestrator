@@ -5,6 +5,7 @@ import type {
   MobileMcpDeviceView,
   WorkerHealthView,
 } from './device-setup-types';
+import { supabase } from './supabase';
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
@@ -55,4 +56,11 @@ export async function fetchMobileMcpDevices(baseUrl: string) {
       status: String(device.status ?? 'unknown'),
     };
   });
+}
+
+export async function fetchControlPlaneJson<T>(workerBaseUrl: string, path: string) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Authentication required.');
+  return fetchJson<T>(`${trimTrailingSlash(workerBaseUrl)}${path}`, { headers: { authorization: `Bearer ${token}` } });
 }

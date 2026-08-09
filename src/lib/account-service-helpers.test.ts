@@ -35,6 +35,7 @@ const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 const mockMaybeSingle = vi.fn();
 const ENCRYPTED_PASSWORD = 'v2:iv:ciphertext';
+const SERVER_ENCRYPTED_PASSWORD = 's3:1:iv:ciphertext';
 
 function createThenable<T>(resolvedValue: T, methods: object = {}) {
   return {
@@ -193,6 +194,22 @@ describe('account-service-helpers', () => {
       })).rejects.toThrow('Account password must be encrypted before saving');
 
       expect(mockFrom).not.toHaveBeenCalledWith('accounts');
+    });
+
+    it('accepts server-vault s3 payloads', async () => {
+      const profileMaybeSingle = vi.fn().mockResolvedValue({ data: { user_id: 'user-1', role: 'OPERATOR' }, error: null });
+      const accountMaybeSingle = vi.fn().mockResolvedValue({ data: { id: 'new-s3', username: 'server_vault_user', platform: 'instagram' }, error: null });
+      const accountSelect = vi.fn().mockReturnValue({ maybeSingle: accountMaybeSingle });
+      mockInsert.mockReturnValue({ select: accountSelect });
+      mockFrom.mockImplementation((table: string) => table === 'profiles'
+        ? { select: vi.fn().mockReturnValue({ maybeSingle: profileMaybeSingle }) }
+        : { insert: mockInsert });
+
+      await expect(createAccount({
+        username: 'server_vault_user',
+        encrypted_password: SERVER_ENCRYPTED_PASSWORD,
+        platform: 'instagram',
+      })).resolves.toMatchObject({ id: 'new-s3' });
     });
 
     it('throws when profile lookup query fails', async () => {
@@ -506,7 +523,7 @@ describe('account-service-helpers', () => {
 
       const result = await createAccountsBatch([
         { username: 'u1', encrypted_password: ENCRYPTED_PASSWORD, platform: 'instagram' },
-        { username: 'u2', encrypted_password: ENCRYPTED_PASSWORD, platform: 'instagram' },
+        { username: 'u2', encrypted_password: SERVER_ENCRYPTED_PASSWORD, platform: 'instagram' },
       ]);
 
       expect(mockInsert).toHaveBeenCalledWith(expect.arrayContaining([

@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { executeMobileMcpStep, normalizeMobileMcpBridgeUrl } from './mobile-mcp-orchestrator';
+import { executeMobileMcpStep, mobileMcpProxyUrl, normalizeMobileMcpBridgeUrl } from './mobile-mcp-orchestrator';
 
 describe('mobile mcp orchestrator', () => {
   it('normalizes bridge URLs', () => {
     expect(normalizeMobileMcpBridgeUrl(' http://127.0.0.1:4321/ ')).toBe('http://127.0.0.1:4321');
     expect(normalizeMobileMcpBridgeUrl('')).toBe('http://127.0.0.1:4321');
+  });
+
+  it('builds the worker control-plane URL without exposing bridge credentials', () => {
+    expect(mobileMcpProxyUrl(' http://worker:4310/ ')).toBe('http://worker:4310/control/mobile-mcp');
   });
 
   it('OP-NO-008 blocks run_autox before calling the Mobile MCP V1 bridge', async () => {
