@@ -100,7 +100,7 @@ Secret inventory records names, consumers, and owners only. Never copy values in
 | Secret name | Allowed consumers | Boundary |
 |-------------|-------------------|----------|
 | `SUPABASE_SERVICE_ROLE_KEY` | Worker, gateway, Edge Functions | Server/service network only |
-| `CREDENTIAL_BOUNDARY_SERVICE_ROLE_KEY` | Credential-vault Edge Function | Credential boundary only |
+| `CREDENTIAL_BOUNDARY_SERVICE_ROLE_KEY` | Worker, credential-vault Edge Function | Dedicated credential decrypt boundary; keep separate from the worker database key |
 | `CREDENTIAL_VAULT_WORKER_TOKEN` | Worker, credential-vault Edge Function | Dedicated worker decrypt channel |
 | `MOBILE_MCP_BRIDGE_TOKEN` | Worker, Mobile MCP bridge | Dedicated bridge channel |
 | `GATEWAY_HTTP_TOKEN` | Worker, Laixi gateway | HTTP dispatch channel |
