@@ -7,23 +7,31 @@ import {
   type RunControlAction,
   type WorkflowRunControlStore,
 } from "../../../packages/shared/src/workflow-run-control.ts";
+import {
+  assertRunControlAuthorized,
+  assertRunControlRole,
+  RunControlAuthorizationError,
+} from "../../../packages/shared/src/run-control-authorization.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+function corsHeaders(origin: string | null) {
+  const trustedOrigin = Deno.env.get("EXECUTE_RUN_ALLOWED_ORIGIN") ?? "http://localhost:5173";
+  return {
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+    Vary: "Origin",
+    ...(origin === null || origin === trustedOrigin ? { "Access-Control-Allow-Origin": trustedOrigin } : {}),
+  };
+}
 
 interface RunPayload {
   runId: string;
   action: RunControlAction;
 }
 
-function json(body: unknown, status = 200) {
+function json(body: unknown, status: number, origin: string | null) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -37,12 +45,35 @@ function assertNoError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
+function readBearer(req: Request) {
+  const value = req.headers.get("Authorization") ?? "";
+  return value.startsWith("Bearer ") ? value.slice(7).trim() : "";
+}
+
+async function authenticate(req: Request, adminClient: ReturnType<typeof createClient>) {
+  const token = readBearer(req);
+  if (!token) throw new RunControlAuthorizationError(401, "Authentication required.");
+  const userClient = createClient(readRequiredEnv("SUPABASE_URL"), readRequiredEnv("SUPABASE_ANON_KEY"), {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await userClient.auth.getUser();
+  if (error || !data.user) throw new RunControlAuthorizationError(401, "Authentication required.");
+  const { data: profile, error: profileError } = await adminClient
+    .from("profiles")
+    .select("id, role")
+    .eq("user_id", data.user.id)
+    .maybeSingle();
+  assertNoError(profileError);
+  if (!profile?.id) throw new RunControlAuthorizationError(403, "Run control is not allowed for this profile.");
+  return { userId: profile.id as string, role: profile.role as string | undefined };
+}
+
 function createControlStore(supabase: ReturnType<typeof createClient>): WorkflowRunControlStore {
   return {
     async getRun(runId: string) {
       const { data, error } = await supabase
         .from("workflow_runs")
-        .select("id, status, summary_json")
+        .select("id, status, summary_json, triggered_by_user_id")
         .eq("id", runId)
         .maybeSingle();
       assertNoError(error);
@@ -51,6 +82,7 @@ function createControlStore(supabase: ReturnType<typeof createClient>): Workflow
         id: data.id,
         status: data.status,
         summaryJson: (data.summary_json as Record<string, unknown> | null) ?? null,
+        triggeredByUserId: data.triggered_by_user_id,
       } satisfies ControlRunRecord;
     },
     async queuePendingRun(runId: string, summaryJson: Record<string, unknown>) {
@@ -59,10 +91,10 @@ function createControlStore(supabase: ReturnType<typeof createClient>): Workflow
         .update({ status: "QUEUED", summary_json: summaryJson })
         .eq("id", runId)
         .eq("status", "PENDING")
-        .select("id, status, summary_json")
+        .select("id, status, summary_json, triggered_by_user_id")
         .maybeSingle();
       assertNoError(error);
-      return data ? { id: data.id, status: data.status, summaryJson: (data.summary_json as Record<string, unknown> | null) ?? null } : null;
+      return data ? { id: data.id, status: data.status, summaryJson: (data.summary_json as Record<string, unknown> | null) ?? null, triggeredByUserId: data.triggered_by_user_id } : null;
     },
     async updateRunSummary(runId: string, summaryJson: Record<string, unknown>) {
       const { error } = await supabase.from("workflow_runs").update({ summary_json: summaryJson }).eq("id", runId);
@@ -83,10 +115,10 @@ function createControlStore(supabase: ReturnType<typeof createClient>): Workflow
         })
         .eq("id", runId)
         .in("status", ["PENDING", "QUEUED", "RUNNING", "WAITING_APPROVAL"])
-        .select("id, status, summary_json")
+        .select("id, status, summary_json, triggered_by_user_id")
         .maybeSingle();
       assertNoError(error);
-      return data ? { id: data.id, status: data.status, summaryJson: (data.summary_json as Record<string, unknown> | null) ?? null } : null;
+      return data ? { id: data.id, status: data.status, summaryJson: (data.summary_json as Record<string, unknown> | null) ?? null, triggeredByUserId: data.triggered_by_user_id } : null;
     },
     async cleanupCancelledRun(runId: string, now: string) {
       const { data: pending, error: pendingError } = await supabase
@@ -112,7 +144,9 @@ function createControlStore(supabase: ReturnType<typeof createClient>): Workflow
   };
 }
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
+  const origin = req.headers.get("Origin");
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin) });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
 
   try {
     const supabase = createClient(
@@ -120,21 +154,28 @@ Deno.serve(async (req: Request) => {
       readRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"),
     );
 
-    const payload = await req.json() as RunPayload;
-    if (!payload.runId) return json({ error: "runId is required" }, 400);
+    const actor = await authenticate(req, supabase);
+    assertRunControlRole(actor.role);
+    let payload: RunPayload;
+    try {
+      payload = await req.json() as RunPayload;
+    } catch {
+      return json({ error: "Invalid JSON body." }, 400, origin);
+    }
+    if (!payload.runId) return json({ error: "runId is required" }, 400, origin);
     if (payload.action !== "start" && payload.action !== "cancel") {
-      return json({ error: "Invalid action. Supported: 'start' or 'cancel'" }, 400);
+      return json({ error: "Invalid action. Supported: 'start' or 'cancel'" }, 400, origin);
     }
 
     const store = createControlStore(supabase);
     const run = await store.getRun(payload.runId);
-    if (!run) return json({ error: "Run not found" }, 404);
+    assertRunControlAuthorized({ userId: actor.userId, role: actor.role, runExists: !!run, runOwnerId: run?.triggeredByUserId });
 
     return payload.action === "start"
-      ? json(await handleStartControlAction(store, run))
-      : json(await handleCancelControlAction(store, run));
+      ? json(await handleStartControlAction(store, run!), 200, origin)
+      : json(await handleCancelControlAction(store, run!), 200, origin);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return json({ error: message }, 500);
+    if (err instanceof RunControlAuthorizationError) return json({ error: err.message }, err.status, origin);
+    return json({ error: "Run control failed." }, 500, origin);
   }
 });

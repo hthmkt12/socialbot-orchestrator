@@ -4,17 +4,20 @@ import {
   buildGatewayErrorMessage,
   isGatewayHeartbeatMessage,
   isGatewayRegisterMessage,
+  isGatewaySignedDeviceEventMessage,
   isGatewayStepResultMessage,
   resolveDeviceLifecycle,
   type GatewayDeviceToServerMessage,
   type GatewayDispatchRequest,
   type GatewayDispatchResponse,
+  type GatewaySignedDeviceEventMessage,
   type GatewaySessionSnapshot,
   type GatewayStepDispatchMessage,
   type GatewayStepResultMessage,
   type LaixiCommandResponse,
 } from '../../../packages/shared/src';
 import { GatewayDeviceStateStore } from './gateway-device-state-store';
+import { timingSafeEqual } from 'node:crypto';
 
 interface DeviceSession {
   socket: WebSocket;
@@ -27,6 +30,12 @@ interface PendingDispatch {
   resolve: (response: GatewayDispatchResponse) => void;
   timer: ReturnType<typeof setTimeout>;
 }
+
+export type GatewayDeviceEventForwarder = (event: {
+  deviceId: string;
+  eventId: string;
+  envelope: string;
+}) => Promise<boolean>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -59,13 +68,20 @@ export class GatewaySessionManager {
   private readonly pendingDispatches = new Map<string, PendingDispatch>();
   private requestCounter = 0;
   private freshnessIntervalId: ReturnType<typeof setInterval> | null = null;
+  private readonly registrationTimers = new Map<WebSocket, ReturnType<typeof setTimeout>>();
 
   constructor(
     private readonly protocolVersion: string,
-    private readonly deviceStateStore?: GatewayDeviceStateStore
+    private readonly deviceStateStore?: GatewayDeviceStateStore,
+    private readonly enrollmentToken?: string,
+    private readonly eventForwarder?: GatewayDeviceEventForwarder,
+    private readonly eventForwardingAttempts = 3
   ) {}
 
   attachSocket(socket: WebSocket) {
+    this.registrationTimers.set(socket, setTimeout(() => {
+      if (!this.socketToDeviceId.has(socket)) socket.close(4003, 'Registration required');
+    }, 10_000));
     socket.on('message', (raw) => this.handleMessage(socket, raw.toString()));
     socket.on('close', () => this.handleSocketClose(socket, 'Device session closed'));
     socket.on('error', (error) =>
@@ -175,15 +191,21 @@ export class GatewaySessionManager {
     try {
       const payload = JSON.parse(raw) as GatewayDeviceToServerMessage;
       if (isGatewayRegisterMessage(payload)) {
-        this.handleRegister(socket, payload.deviceId, payload.deviceName || payload.deviceId);
+        this.handleRegister(socket, payload.deviceId, payload.deviceName || payload.deviceId, payload.enrollmentToken);
         return;
       }
       if (isGatewayHeartbeatMessage(payload)) {
-        this.handleHeartbeat(payload.deviceId);
+        const deviceId = this.socketToDeviceId.get(socket);
+        if (!deviceId || deviceId !== payload.deviceId) return this.rejectUnauthenticated(socket);
+        this.handleHeartbeat(socket, deviceId);
         return;
       }
       if (isGatewayStepResultMessage(payload)) {
-        this.handleStepResult(payload);
+        this.handleStepResult(socket, payload);
+        return;
+      }
+      if (isGatewaySignedDeviceEventMessage(payload)) {
+        void this.handleSignedDeviceEvent(socket, payload);
         return;
       }
       socket.send(JSON.stringify(buildGatewayErrorMessage('Unsupported gateway message type')));
@@ -192,7 +214,12 @@ export class GatewaySessionManager {
     }
   }
 
-  private handleRegister(socket: WebSocket, deviceId: string, deviceName: string) {
+  private handleRegister(socket: WebSocket, deviceId: string, deviceName: string, enrollmentToken?: string) {
+    if (this.enrollmentToken && !this.constantTimeTokenMatch(enrollmentToken, this.enrollmentToken)) {
+      socket.send(JSON.stringify(buildGatewayErrorMessage('Device enrollment rejected')));
+      socket.close(4003, 'Enrollment rejected');
+      return;
+    }
     const existing = this.sessions.get(deviceId);
     if (existing && existing.socket !== socket) {
       existing.socket.close(4000, 'Replaced by newer device session');
@@ -200,6 +227,9 @@ export class GatewaySessionManager {
     }
 
     this.socketToDeviceId.set(socket, deviceId);
+    const timer = this.registrationTimers.get(socket);
+    if (timer) clearTimeout(timer);
+    this.registrationTimers.delete(socket);
     this.sessions.set(deviceId, {
       socket,
       snapshot: {
@@ -217,17 +247,18 @@ export class GatewaySessionManager {
     socket.send(JSON.stringify({ type: 'register_ack', ok: true, protocolVersion: this.protocolVersion, deviceId }));
   }
 
-  private handleHeartbeat(deviceId: string) {
+  private handleHeartbeat(socket: WebSocket, deviceId: string) {
     const session = this.sessions.get(deviceId);
-    if (!session) return;
+    if (!session || session.socket !== socket) return this.rejectUnauthenticated(socket);
     session.snapshot.lastHeartbeatAt = new Date().toISOString();
     void this.persistSessionHealth(deviceId);
     session.socket.send(JSON.stringify({ type: 'heartbeat_ack', ok: true, protocolVersion: this.protocolVersion, deviceId }));
   }
 
-  private handleStepResult(payload: GatewayStepResultMessage) {
+  private handleStepResult(socket: WebSocket, payload: GatewayStepResultMessage) {
     const pending = this.pendingDispatches.get(payload.requestId);
     if (!pending) return;
+    if (this.socketToDeviceId.get(socket) !== pending.deviceId || payload.deviceId !== pending.deviceId) return;
 
     clearTimeout(pending.timer);
     this.pendingDispatches.delete(payload.requestId);
@@ -256,7 +287,44 @@ export class GatewaySessionManager {
     });
   }
 
+  private async handleSignedDeviceEvent(socket: WebSocket, payload: GatewaySignedDeviceEventMessage) {
+    const deviceId = this.socketToDeviceId.get(socket);
+    if (!deviceId || deviceId !== payload.deviceId) {
+      this.rejectUnauthenticated(socket);
+      return;
+    }
+    if (!this.eventForwarder) {
+      socket.send(JSON.stringify(buildGatewayErrorMessage('Signed device event callback is unavailable')));
+      return;
+    }
+
+    for (let attempt = 0; attempt < this.eventForwardingAttempts; attempt += 1) {
+      try {
+        const acknowledged = await this.eventForwarder({
+          deviceId,
+          eventId: payload.eventId,
+          envelope: payload.envelope,
+        });
+        if (!acknowledged) continue;
+        socket.send(JSON.stringify({
+          type: 'signed_device_event_ack',
+          ok: true,
+          protocolVersion: this.protocolVersion,
+          eventId: payload.eventId,
+          deviceId,
+        }));
+        return;
+      } catch {
+        // No acknowledgement means the device may safely retry the same event.
+      }
+    }
+    socket.send(JSON.stringify(buildGatewayErrorMessage('Signed device event callback was not acknowledged')));
+  }
+
   private handleSocketClose(socket: WebSocket, reason: string) {
+    const registrationTimer = this.registrationTimers.get(socket);
+    if (registrationTimer) clearTimeout(registrationTimer);
+    this.registrationTimers.delete(socket);
     const deviceId = this.socketToDeviceId.get(socket);
     if (!deviceId) return;
 
@@ -267,6 +335,18 @@ export class GatewaySessionManager {
     this.sessions.delete(deviceId);
     void this.persistOfflineSessionHealth(session);
     this.rejectPendingForDevice(deviceId, 'connection_closed', reason);
+  }
+
+  private rejectUnauthenticated(socket: WebSocket) {
+    socket.send(JSON.stringify(buildGatewayErrorMessage('Device registration required')));
+    socket.close(4003, 'Registration required');
+  }
+
+  private constantTimeTokenMatch(candidate: string | undefined, expected: string) {
+    if (typeof candidate !== 'string') return false;
+    const left = Buffer.from(candidate);
+    const right = Buffer.from(expected);
+    return left.length === right.length && timingSafeEqual(left, right);
   }
 
   private rejectPendingForDevice(deviceId: string, outcome: GatewayDispatchResponse['outcome'], error: string) {

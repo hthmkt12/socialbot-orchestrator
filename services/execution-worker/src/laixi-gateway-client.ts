@@ -9,7 +9,8 @@ import type { DeviceCommandClient, DeviceDispatchContext } from './device-comman
 export class LaixiGatewayClient implements DeviceCommandClient {
   constructor(
     private readonly baseUrl: string,
-    private readonly commandTimeoutMs: number
+    private readonly commandTimeoutMs: number,
+    private readonly gatewayHttpToken?: string
   ) {}
 
   async connect() {
@@ -39,7 +40,10 @@ export class LaixiGatewayClient implements DeviceCommandClient {
     try {
       const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/dispatch-step`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          ...(this.gatewayHttpToken ? { authorization: `Bearer ${this.gatewayHttpToken}` } : {}),
+        },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });

@@ -19,6 +19,7 @@ export interface ControlRunRecord {
   id: string;
   status: string;
   summaryJson: Record<string, unknown> | null;
+  triggeredByUserId?: string | null;
 }
 
 export interface WorkflowRunControlStore {
