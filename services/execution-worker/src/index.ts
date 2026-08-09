@@ -4,6 +4,7 @@ import { MultiTargetRunExecutor } from './multi-target-run-executor';
 import { RunClaimCoordinator, type WorkerConfig } from './run-claim-coordinator';
 import { SingleDeviceRunExecutor } from './single-device-run-executor';
 import { WorkflowScheduleTrigger } from './workflow-schedule-trigger';
+import { handleControlPlaneProxy } from './control-plane-proxy';
 
 function readRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -27,7 +28,12 @@ function readConfig(): WorkerConfig {
     instanceId: process.env.WORKER_INSTANCE_ID ?? `execution-worker-${process.pid}`,
     supabaseUrl: readRequiredEnv('SUPABASE_URL'),
     supabaseServiceRoleKey: readRequiredEnv('SUPABASE_SERVICE_ROLE_KEY'),
+    credentialVaultServiceRoleKey: process.env.CREDENTIAL_BOUNDARY_SERVICE_ROLE_KEY || undefined,
+    credentialVaultWorkerToken: readRequiredEnv('CREDENTIAL_VAULT_WORKER_TOKEN'),
     gatewayBaseUrl: process.env.GATEWAY_BASE_URL ?? 'http://127.0.0.1:8080',
+    gatewayHttpToken: deviceBackend === 'laixi'
+      ? readRequiredEnv('GATEWAY_HTTP_TOKEN')
+      : process.env.GATEWAY_HTTP_TOKEN || undefined,
     mobileMcpBridgeUrl: process.env.MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321',
     deviceBackend,
     commandTimeoutMs: Number(process.env.DEVICE_COMMAND_TIMEOUT_MS ?? process.env.GATEWAY_COMMAND_TIMEOUT_MS ?? 15000),
@@ -40,18 +46,28 @@ const WORKER_CORS_ORIGIN = process.env.WORKER_CORS_ORIGIN ?? 'http://localhost:5
 function corsHeaders() {
   return {
     'access-control-allow-origin': WORKER_CORS_ORIGIN,
-    'access-control-allow-methods': 'GET,OPTIONS',
-    'access-control-allow-headers': 'content-type',
+    'access-control-allow-methods': 'GET,POST,OPTIONS',
+    'access-control-allow-headers': 'content-type, authorization',
   };
 }
 
 function startHealthServer(config: WorkerConfig, coordinator: RunClaimCoordinator) {
-  const server = createServer((req, res) => {
+  const server = createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
       res.writeHead(204, corsHeaders());
       res.end();
       return;
     }
+
+    if (await handleControlPlaneProxy(req, res, {
+      supabaseUrl: config.supabaseUrl,
+      supabaseServiceRoleKey: config.supabaseServiceRoleKey,
+      mobileMcpBridgeUrl: config.mobileMcpBridgeUrl,
+      mobileMcpBridgeToken: config.bridgeToken,
+      gatewayBaseUrl: config.gatewayBaseUrl,
+      gatewayHttpToken: config.gatewayHttpToken,
+      corsOrigin: WORKER_CORS_ORIGIN,
+    })) return;
 
     if (req.url === '/health') {
       res.writeHead(200, { 'content-type': 'application/json', ...corsHeaders() });

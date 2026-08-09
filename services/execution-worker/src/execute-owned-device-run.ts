@@ -13,6 +13,7 @@ export interface OwnedDeviceRunResult {
 
 export async function executeOwnedDeviceRun(params: RunnerParams): Promise<OwnedDeviceRunResult> {
   let lockRenewTimer: ReturnType<typeof setInterval> | null = null;
+  let ownsDeviceLock = false;
 
   try {
     const lockResult = await acquireDeviceLock(params.supabase, params.device.id, params.runId);
@@ -26,6 +27,7 @@ export async function executeOwnedDeviceRun(params: RunnerParams): Promise<Owned
       };
     }
 
+    ownsDeviceLock = true;
     lockRenewTimer = setInterval(() => {
       void renewDeviceLock(params.supabase, params.device.id, params.runId);
     }, LOCK_RENEW_INTERVAL_MS);
@@ -54,10 +56,12 @@ export async function executeOwnedDeviceRun(params: RunnerParams): Promise<Owned
     };
   } finally {
     if (lockRenewTimer) clearInterval(lockRenewTimer);
-    try {
-      await releaseDeviceLock(params.supabase, params.device.id, params.runId);
-    } catch {
-      // Best-effort cleanup; cancel path also removes locks.
+    if (ownsDeviceLock) {
+      try {
+        await releaseDeviceLock(params.supabase, params.device.id, params.runId);
+      } catch {
+        // Best-effort cleanup; cancel path also removes locks.
+      }
     }
   }
 }

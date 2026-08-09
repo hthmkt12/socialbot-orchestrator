@@ -2,6 +2,7 @@ import { parentPort, workerData } from 'node:worker_threads';
 import { createClient } from '@supabase/supabase-js';
 import { executeOwnedDeviceRun } from './execute-owned-device-run.js';
 import { createDeviceStepBackend } from './device-step-backend-factory.js';
+import { getCredentialVaultServiceRoleKey } from './run-claim-coordinator.js';
 
 async function main() {
   if (!parentPort) {
@@ -23,6 +24,11 @@ async function main() {
       definition,
       triggeredByUserId,
       inputVariables: inputVariables ?? {},
+      credentialVault: {
+        supabaseUrl: config.supabaseUrl,
+        supabaseServiceRoleKey: getCredentialVaultServiceRoleKey(config),
+        credentialVaultWorkerToken: config.credentialVaultWorkerToken,
+      },
     });
     
     parentPort.postMessage({ type: 'DONE', result });

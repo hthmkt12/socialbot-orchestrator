@@ -3,6 +3,7 @@ import {
   isSensitiveKey,
   redactSensitiveValues,
   redactSensitiveJsonString,
+  redactSensitiveText,
 } from './credential-redaction';
 
 const CANARY = 'DO_NOT_PERSIST_PASSWORD_123';
@@ -43,6 +44,32 @@ describe('isSensitiveKey', () => {
 });
 
 describe('redactSensitiveValues', () => {
+  it('fails closed when sensitive values occur beyond the maximum depth', () => {
+    const input: Record<string, unknown> = {};
+    let cursor = input;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const nested: Record<string, unknown> = {};
+      cursor.child = nested;
+      cursor = nested;
+    }
+    cursor.password = CANARY;
+
+    const result = redactSensitiveValues(input);
+
+    expect(JSON.stringify(result)).not.toContain(CANARY);
+    expect(JSON.stringify(result)).toContain('max_depth_exceeded');
+  });
+
+  it('terminates and fails closed for circular records', () => {
+    const input: Record<string, unknown> = { label: 'root' };
+    input.self = input;
+
+    const result = redactSensitiveValues(input);
+
+    expect(() => JSON.stringify(result)).not.toThrow();
+    expect(JSON.stringify(result)).toContain('max_depth_exceeded');
+  });
+
   it('redacts password, secret, token, and apiKey values to [REDACTED]', () => {
     const input = {
       password: 'hunter2',
@@ -152,6 +179,112 @@ describe('redactSensitiveJsonString', () => {
   it('returns non-string inputs unchanged', () => {
     expect(redactSensitiveJsonString(null as unknown as string)).toBe(null);
     expect(redactSensitiveJsonString(undefined as unknown as string)).toBe(undefined);
+  });
+});
+
+describe('redactSensitiveText — literal value redaction', () => {
+  const CANARY = 'DO_NOT_PERSIST_PASSWORD_123';
+
+  it('redacts a bare sensitive value in a string', () => {
+    const result = redactSensitiveText(`Error: ${CANARY} was rejected`, [CANARY]);
+    expect(result).toBe('Error: [REDACTED] was rejected');
+  });
+
+  it('redacts sensitive value under a non-sensitive key (text)', () => {
+    const result = redactSensitiveText({ text: CANARY, backend: 'mobile-mcp' }, [CANARY]);
+    expect((result as Record<string, unknown>).text).toBe('[REDACTED]');
+    expect((result as Record<string, unknown>).backend).toBe('mobile-mcp');
+  });
+
+  it('redacts sensitive value nested inside output.bridge', () => {
+    const input = {
+      output: {
+        bridge: { text: CANARY, message: 'ok' },
+        backend: 'mobile-mcp',
+      },
+    };
+    const result = redactSensitiveText(input, [CANARY]) as Record<string, unknown>;
+    const output = result.output as Record<string, unknown>;
+    const bridge = output.bridge as Record<string, unknown>;
+    expect(bridge.text).toBe('[REDACTED]');
+    expect(bridge.message).toBe('ok');
+    expect(JSON.stringify(result)).not.toContain(CANARY);
+  });
+
+  it('redacts sensitive values in arrays', () => {
+    const input = { steps: [CANARY, 'safe-text', CANARY] };
+    const result = redactSensitiveText(input, [CANARY]) as Record<string, unknown>;
+    const steps = result.steps as unknown[];
+    expect(steps[0]).toBe('[REDACTED]');
+    expect(steps[1]).toBe('safe-text');
+    expect(steps[2]).toBe('[REDACTED]');
+  });
+
+  it('redacts sensitive values in nested arrays of objects', () => {
+    const input = {
+      items: [
+        { label: 'a', error: `failed: ${CANARY}` },
+        { label: 'b', error: 'clean' },
+      ],
+    };
+    const result = redactSensitiveText(input, [CANARY]);
+    expect(JSON.stringify(result)).not.toContain(CANARY);
+  });
+
+  it('handles non-JSON strings containing the canary', () => {
+    const input = `Step failed with input ${CANARY} at line 42`;
+    const result = redactSensitiveText(input, [CANARY]);
+    expect(result).toBe('Step failed with input [REDACTED] at line 42');
+  });
+
+  it('returns input unchanged when no sensitive values provided', () => {
+    const input = { text: 'hello', data: [1, 2] };
+    const result = redactSensitiveText(input, []);
+    expect(result).toBe(input);
+  });
+
+  it('filters out __DECRYPT_FAILED__ and empty strings from sensitive values', () => {
+    const input = { text: 'hello', error: '__DECRYPT_FAILED__' };
+    const result = redactSensitiveText(input, ['', '__DECRYPT_FAILED__', 'hello']);
+    expect((result as Record<string, unknown>).text).toBe('[REDACTED]');
+    // __DECRYPT_FAILED__ should NOT be redacted (it is a safe placeholder)
+    expect((result as Record<string, unknown>).error).toBe('__DECRYPT_FAILED__');
+  });
+
+  it('redacts multiple sensitive values simultaneously', () => {
+    const result = redactSensitiveText(
+      `password1=secret1, password2=secret2`,
+      ['secret1', 'secret2']
+    );
+    expect(result).toBe('password1=[REDACTED], password2=[REDACTED]');
+  });
+
+  it('does not mutate the original object', () => {
+    const input = { text: CANARY, nested: { value: CANARY } };
+    const result = redactSensitiveText(input, [CANARY]);
+    expect(input.text).toBe(CANARY);
+    expect(input.nested.value).toBe(CANARY);
+    expect(result).not.toBe(input);
+  });
+
+  it('fails closed for circular and deeply nested literal inputs', () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const deep: Record<string, unknown> = {};
+    let cursor = deep;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const nested: Record<string, unknown> = {};
+      cursor.child = nested;
+      cursor = nested;
+    }
+    cursor.value = CANARY;
+
+    const circularResult = redactSensitiveText(circular, [CANARY]);
+    const deepResult = redactSensitiveText(deep, [CANARY]);
+
+    expect(JSON.stringify(circularResult)).toContain('cycle_detected');
+    expect(JSON.stringify(deepResult)).not.toContain(CANARY);
+    expect(JSON.stringify(deepResult)).toContain('max_depth_exceeded');
   });
 });
 

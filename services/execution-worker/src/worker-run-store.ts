@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition } from '../../../src/contracts/macro';
 import type { Device } from '../../../src/lib/database.types';
-import { redactSensitiveValues, redactSensitiveJsonString } from './credential-redaction.js';
+import { redactSensitiveValues, redactSensitiveJsonString, redactSensitiveText } from './credential-redaction.js';
 
 export interface SingleDeviceRunContext {
   runId: string;
@@ -51,7 +51,8 @@ function mergeSummary(summaryJson: unknown, patch: Record<string, unknown>) {
 
 async function createArtifactRecord(
   supabase: SupabaseClient,
-  artifact: ArtifactRecordInput
+  artifact: ArtifactRecordInput,
+  sensitiveValues: string[] = []
 ) {
   const prepared = prepareArtifactForStorage(artifact);
   artifact.metadata_json = prepared.metadata_json;
@@ -66,19 +67,21 @@ async function createArtifactRecord(
         });
 
       if (uploadError) {
-        console.error('[execution-worker] Artifact storage upload failed:', redactSensitiveJsonString(String(uploadError?.message ?? uploadError)));
+        const safeUploadError = redactSensitiveText(String(uploadError?.message ?? uploadError), sensitiveValues) as string;
+        console.error('[execution-worker] Artifact storage upload failed:', redactSensitiveJsonString(safeUploadError));
         artifact.metadata_json.storage_mode = 'omitted';
         artifact.metadata_json.storage_status = 'upload_failed';
-        artifact.metadata_json.storage_error = uploadError.message ?? 'Artifact storage upload failed';
+        artifact.metadata_json.storage_error = safeUploadError;
       } else {
         artifact.metadata_json.storage_mode = 'object_storage';
         artifact.metadata_json.storage_status = 'uploaded';
       }
     } catch (e) {
-      console.error('[execution-worker] Artifact storage upload exception:', redactSensitiveJsonString(String(e instanceof Error ? e.message : e)));
+      const safeUploadError = redactSensitiveText(String(e instanceof Error ? e.message : e), sensitiveValues) as string;
+      console.error('[execution-worker] Artifact storage upload exception:', redactSensitiveJsonString(safeUploadError));
       artifact.metadata_json.storage_mode = 'omitted';
       artifact.metadata_json.storage_status = 'upload_failed';
-      artifact.metadata_json.storage_error = e instanceof Error ? e.message : 'Artifact storage upload failed';
+      artifact.metadata_json.storage_error = safeUploadError;
     }
   }
 
@@ -309,17 +312,19 @@ export async function createLogArtifact(
   deviceId: string,
   stepId: string,
   text: string,
-  metadata: Record<string, unknown> = {}
+  metadata: Record<string, unknown> = {},
+  sensitiveValues: string[] = []
 ) {
-  // Defense-in-depth: scrub any sensitive key values from the log artifact
-  // metadata before persistence. The text field is preserved for debugging
-  // unless it is carried under a sensitive key.
-  const safeMetadata = redactSensitiveValues({
-    stepId,
-    text,
-    timestamp: new Date().toISOString(),
+  // Defense-in-depth: scrub sensitive key values from the log artifact
+  // metadata before persistence. Also apply pattern-based redaction to the
+  // text field to catch sensitive key=value patterns in non-JSON strings.
+  const safeText = redactSensitiveJsonString(redactSensitiveText(text, sensitiveValues) as string);
+  const safeMetadata = redactSensitiveValues(redactSensitiveText({
     ...metadata,
-  });
+    stepId,
+    text: safeText,
+    timestamp: new Date().toISOString(),
+  }, sensitiveValues) as Record<string, unknown>);
 
   return createArtifactRecord(supabase, {
     workflow_run_id: runId,
@@ -327,9 +332,9 @@ export async function createLogArtifact(
     type: 'LOG_BLOB',
     storage_key: `logs/${runId}/${deviceId}/${stepId}_${Date.now()}.txt`,
     content_type: 'text/plain',
-    size: text.length,
+    size: safeText.length,
     metadata_json: safeMetadata,
-  });
+  }, sensitiveValues);
 }
 
 export async function finalizeOwnedRun(

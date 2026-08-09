@@ -1,42 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(),
+vi.mock('node:crypto', () => ({
+  randomUUID: vi.fn(() => 'test-uuid'),
 }));
 
-import { fetchAndDecryptCredential } from './credential-decrypt-client';
+import { fetchAndDecryptCredential, type DecryptClientParams } from './credential-decrypt-client';
 
-/**
- * Minimal mock of the SupabaseClient surface used by the decrypt client.
- * Chaining methods return themselves so `.from().select().eq().maybeSingle()`
- * works as a fluent chain.
- */
-function makeSupabaseMock(args: {
-  accountData?: { encrypted_password: string } | null;
-  accountError?: unknown;
-  invokeData?: { plaintext?: string } | null;
-  invokeError?: unknown;
+const DEFAULT_PARAMS: DecryptClientParams = {
+  supabaseUrl: 'https://test.supabase.co',
+  supabaseServiceRoleKey: 'test-service-role-key',
+  credentialVaultWorkerToken: 'test-worker-token',
+};
+
+function makeFetchMock(opts: {
+  ok?: boolean;
+  status?: number;
+  json?: { plaintext?: string; error?: string };
+  shouldThrow?: boolean;
 }) {
-  const fromChain = {
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({
-      data: args.accountData ?? null,
-      error: args.accountError ?? null,
-    }),
-  };
-
-  const supabase = {
-    from: vi.fn().mockReturnValue(fromChain),
-    functions: {
-      invoke: vi.fn().mockResolvedValue({
-        data: args.invokeData ?? null,
-        error: args.invokeError ?? null,
-      }),
-    },
-  };
-
-  return { supabase, fromChain };
+  const mockFetch = vi.fn();
+  if (opts.shouldThrow) {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  } else {
+    mockFetch.mockResolvedValueOnce({
+      ok: opts.ok ?? true,
+      status: opts.status ?? 200,
+      json: async () => opts.json ?? { plaintext: 'my-secret-password' },
+    });
+  }
+  return mockFetch;
 }
 
 describe('credential-decrypt-client', () => {
@@ -44,87 +36,97 @@ describe('credential-decrypt-client', () => {
     vi.clearAllMocks();
   });
 
-  it('returns plaintext on successful decrypt of an s3: payload', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountData: { encrypted_password: 's3:1:abc:def' },
-      invokeData: { plaintext: 'my-secret-password' },
-    });
+  it('returns plaintext on successful bound decrypt', async () => {
+    const mockFetch = makeFetchMock({ json: { plaintext: 'my-secret-password' } });
+    vi.stubGlobal('fetch', mockFetch);
 
-    const result = await fetchAndDecryptCredential(supabase as never, 'account-1');
+    const result = await fetchAndDecryptCredential(
+      DEFAULT_PARAMS,
+      'run-1',
+      'claim-1',
+      'account-1'
+    );
 
     expect(result.plaintext).toBe('my-secret-password');
-    expect(supabase.from).toHaveBeenCalledWith('accounts');
-    expect(supabase.functions.invoke).toHaveBeenCalledWith(
-      'credential-vault',
-      { body: { action: 'decrypt', encryptedPayload: 's3:1:abc:def' } }
-    );
+
+    // Verify the request was sent with correct headers and body
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toBe('https://test.supabase.co/functions/v1/credential-vault');
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer test-service-role-key');
+    expect(init.headers['X-Credential-Vault-Worker-Token']).toBe('test-worker-token');
+    expect(JSON.parse(init.body)).toEqual({
+      action: 'decrypt',
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      accountId: 'account-1',
+    });
   });
 
-  it('throws safe error when account is not found', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountData: null,
-    });
+  it('throws safe error when response is not ok', async () => {
+    const mockFetch = makeFetchMock({ ok: false, status: 401 });
+    vi.stubGlobal('fetch', mockFetch);
 
-    await expect(fetchAndDecryptCredential(supabase as never, 'missing-account')).rejects.toThrow(
-      'Account credential not found or empty.'
-    );
+    await expect(
+      fetchAndDecryptCredential(DEFAULT_PARAMS, 'run-1', 'claim-1', 'account-1')
+    ).rejects.toThrow('Credential decrypt failed.');
   });
 
-  it('throws safe error when encrypted_password is empty', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountData: { encrypted_password: '' },
-    });
+  it('throws safe error when response has no plaintext field', async () => {
+    const mockFetch = makeFetchMock({ json: { error: 'Invalid request.' } });
+    vi.stubGlobal('fetch', mockFetch);
 
-    await expect(fetchAndDecryptCredential(supabase as never, 'account-1')).rejects.toThrow(
-      'Account credential not found or empty.'
-    );
+    await expect(
+      fetchAndDecryptCredential(DEFAULT_PARAMS, 'run-1', 'claim-1', 'account-1')
+    ).rejects.toThrow('Credential decrypt failed.');
   });
 
-  it('throws safe error when invoke returns an error', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountData: { encrypted_password: 's3:1:abc:def' },
-      invokeError: { message: 'Decrypt failed.' },
-    });
+  it('throws safe error when plaintext is empty string', async () => {
+    const mockFetch = makeFetchMock({ json: { plaintext: '' } });
+    vi.stubGlobal('fetch', mockFetch);
 
-    await expect(fetchAndDecryptCredential(supabase as never, 'account-1')).rejects.toThrow(
-      'Credential decrypt failed.'
-    );
+    await expect(
+      fetchAndDecryptCredential(DEFAULT_PARAMS, 'run-1', 'claim-1', 'account-1')
+    ).rejects.toThrow('Credential decrypt failed.');
   });
 
-  it('throws safe error when invoke returns no plaintext field', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountData: { encrypted_password: 's3:1:abc:def' },
-      invokeData: { error: 'Decrypt failed.' },
-    });
+  it('throws safe error on network failure', async () => {
+    const mockFetch = makeFetchMock({ shouldThrow: true });
+    vi.stubGlobal('fetch', mockFetch);
 
-    await expect(fetchAndDecryptCredential(supabase as never, 'account-1')).rejects.toThrow(
-      'Credential decrypt failed.'
-    );
-  });
-
-  it('throws safe error when DB query returns an error', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountError: { message: 'DB connection failed' },
-    });
-
-    await expect(fetchAndDecryptCredential(supabase as never, 'account-1')).rejects.toThrow(
-      'Credential decrypt failed.'
-    );
+    await expect(
+      fetchAndDecryptCredential(DEFAULT_PARAMS, 'run-1', 'claim-1', 'account-1')
+    ).rejects.toThrow('Credential decrypt failed.');
   });
 
   it('never includes plaintext in error messages', async () => {
-    const { supabase } = makeSupabaseMock({
-      accountData: { encrypted_password: 's3:1:abc:def' },
-      invokeError: { message: 'Decrypt failed with secret-password-leaked' },
+    const mockFetch = makeFetchMock({
+      ok: false,
+      status: 400,
+      json: { error: 'Decrypt failed with leaked-password-in-error' },
     });
+    vi.stubGlobal('fetch', mockFetch);
 
     try {
-      await fetchAndDecryptCredential(supabase as never, 'account-1');
+      await fetchAndDecryptCredential(DEFAULT_PARAMS, 'run-1', 'claim-1', 'account-1');
       expect.fail('Should have thrown');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      // Error message must be a generic safe message, not contain any invoke detail
       expect(message).toBe('Credential decrypt failed.');
+      expect(message).not.toContain('leaked-password');
     }
+  });
+
+  it('does not send encryptedPayload in the request body', async () => {
+    const mockFetch = makeFetchMock({ json: { plaintext: 'secret' } });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await fetchAndDecryptCredential(DEFAULT_PARAMS, 'run-1', 'claim-1', 'account-1');
+
+    const init = mockFetch.mock.calls[0][1];
+    const body = JSON.parse(init.body);
+    expect(body.encryptedPayload).toBeUndefined();
+    expect(body.action).toBe('decrypt');
   });
 });

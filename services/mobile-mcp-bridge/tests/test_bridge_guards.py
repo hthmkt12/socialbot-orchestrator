@@ -26,6 +26,7 @@ sys.modules.setdefault("mobilerun_core_cli", mobilerun_core_cli)
 sys.modules.setdefault("mobilerun_core_cli.portal", portal)
 
 from android_session_manager import (  # noqa: E402
+    _handle_input_text,
     _handle_screenshot,
     is_valid_base64,
     validate_android_package_name,
@@ -124,6 +125,81 @@ class BridgeGuardTests(unittest.TestCase):
         self.assertEqual(status, 404)
         self.assertEqual(body["code"], "DEVICE_SESSION_UNAVAILABLE")
         self.assertIn("serial offline", body["error"])
+
+    # -- input_text plaintext containment tests --
+
+    CANARY = "DO_NOT_PERSIST_PASSWORD_123"
+
+    def test_input_text_success_does_not_echo_text(self):
+        """Bridge input_text success response must never contain the submitted text."""
+        class Driver:
+            async def input_text(self, text, clear=False):
+                return True
+
+        class Session:
+            identifier = "serial-1"
+            driver = Driver()
+
+            def _run(self, coro):
+                try:
+                    return coro.send(None)
+                except StopIteration as exc:
+                    return exc.value
+
+        result = _handle_input_text(Session(), {"text": self.CANARY, "clear": False}, {})
+
+        self.assertTrue(result["success"])
+        self.assertTrue(result.get("accepted"))
+        # The canary must not appear anywhere in the response
+        self.assertNotIn(self.CANARY, str(result))
+        # The old "text" echo field must be absent
+        self.assertNotIn("text", result)
+
+    def test_input_text_failure_does_not_echo_text(self):
+        """Bridge input_text failure response must never contain the submitted text."""
+        class Driver:
+            async def input_text(self, text, clear=False):
+                return False
+
+        class Session:
+            identifier = "serial-1"
+            driver = Driver()
+
+            def _run(self, coro):
+                try:
+                    return coro.send(None)
+                except StopIteration as exc:
+                    return exc.value
+
+        result = _handle_input_text(Session(), {"text": self.CANARY, "clear": False}, {})
+
+        self.assertFalse(result["success"])
+        self.assertNotIn(self.CANARY, str(result))
+        self.assertNotIn("text", result)
+
+    def test_input_text_driver_exception_does_not_leak_canary(self):
+        """Driver exception containing the canary must be caught and mapped to a fixed safe error."""
+        class Driver:
+            async def input_text(self, text, clear=False):
+                raise RuntimeError(f"Driver error processing text: {text}")
+
+        class Session:
+            identifier = "serial-1"
+            driver = Driver()
+
+            def _run(self, coro):
+                try:
+                    return coro.send(None)
+                except StopIteration as exc:
+                    return exc.value
+
+        result = _handle_input_text(Session(), {"text": self.CANARY, "clear": False}, {})
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["code"], "INPUT_TEXT_FAILED")
+        self.assertEqual(result["message"], "input_text failed")
+        # The canary must not appear anywhere in the response
+        self.assertNotIn(self.CANARY, str(result))
 
 
 if __name__ == "__main__":

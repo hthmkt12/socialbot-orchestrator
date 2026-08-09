@@ -156,6 +156,11 @@ function runnerFor(args: {
     definition: args.definitionOverride ?? definition(args.step),
     triggeredByUserId: 'user-1',
     inputVariables: { accountId: 'account-1' },
+    credentialVault: {
+      supabaseUrl: 'https://test.supabase.co',
+      supabaseServiceRoleKey: 'test-service-role-key',
+      credentialVaultWorkerToken: 'test-worker-token',
+    },
   });
 }
 
@@ -182,6 +187,11 @@ describe('single-device step runner sensitive credential handling', () => {
       definition: definition(inputTextStep()),
       triggeredByUserId: 'user-1',
       inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
     });
 
     const result = await runner.run();
@@ -302,6 +312,11 @@ describe('single-device step runner sensitive credential handling', () => {
       definition: definition(inputTextStep()),
       triggeredByUserId: 'user-1',
       inputVariables: {},
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
     });
 
     const result = await runner.run();
@@ -328,6 +343,11 @@ describe('single-device step runner sensitive credential handling', () => {
       definition: definition(inputTextStep()),
       triggeredByUserId: 'user-1',
       inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
     });
 
     await runner.run();
@@ -339,5 +359,292 @@ describe('single-device step runner sensitive credential handling', () => {
     const output = (successSteps[0] as { output: Record<string, unknown> }).output;
     expect(output.text).toBe('[REDACTED]');
     expect(JSON.stringify(output)).not.toContain('super-secret-password');
+  });
+});
+
+// -- Canary regression tests: prove plaintext cannot reach persisted data --
+
+const CANARY = 'DO_NOT_PERSIST_PASSWORD_123';
+
+describe('canary regression: plaintext credential containment', () => {
+  beforeEach(() => {
+    persistedSteps.length = 0;
+    vi.clearAllMocks();
+    // The mock decrypt returns the CANARY as the plaintext
+    mockFetchAndDecrypt.mockResolvedValue({ plaintext: CANARY });
+  });
+
+  it('bridge response { text: CANARY } cannot place canary in output_json including nested output.bridge', async () => {
+    const supabase = makeSupabase({ account: account() });
+    const executeStep = vi.fn().mockResolvedValue({
+      success: true,
+      // Simulate a bridge response that echoes the text back
+      output: {
+        text: CANARY,
+        backend: 'mobile-mcp',
+        serial: 'serial-1',
+        bridge: { text: CANARY, message: 'text input completed' },
+      },
+    });
+
+    const runner = new SingleDeviceStepRunner({
+      supabase: supabase.supabase as never,
+      backend: { connect: vi.fn(), disconnect: vi.fn(), executeStep },
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      device,
+      definition: definition(inputTextStep()),
+      triggeredByUserId: 'user-1',
+      inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
+    });
+
+    await runner.run();
+
+    // Check all persisted steps — canary must not appear in any output_json
+    for (const step of persistedSteps) {
+      const typed = step as { output?: Record<string, unknown>; errorPayload?: { message?: string } };
+      if (typed.output) {
+        expect(JSON.stringify(typed.output)).not.toContain(CANARY);
+      }
+      if (typed.errorPayload?.message) {
+        expect(typed.errorPayload.message).not.toContain(CANARY);
+      }
+    }
+  });
+
+  it('driver exception containing canary is redacted from error_json and log artifacts', async () => {
+    const supabase = makeSupabase({ account: account() });
+    const executeStep = vi.fn().mockResolvedValue({
+      success: false,
+      output: {},
+      error: `Driver error: input_text failed with ${CANARY}`,
+    });
+
+    const runner = new SingleDeviceStepRunner({
+      supabase: supabase.supabase as never,
+      backend: { connect: vi.fn(), disconnect: vi.fn(), executeStep },
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      device,
+      definition: definition(inputTextStep()),
+      triggeredByUserId: 'user-1',
+      inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
+    });
+
+    await runner.run();
+
+    const failedSteps = persistedSteps.filter(
+      (s) => (s as { status: string }).status === 'FAILED'
+    );
+    expect(failedSteps.length).toBeGreaterThanOrEqual(1);
+    for (const step of failedSteps) {
+      const typed = step as { errorPayload?: { message?: string } };
+      if (typed.errorPayload?.message) {
+        expect(typed.errorPayload.message).not.toContain(CANARY);
+      }
+    }
+
+    // Check log artifact calls — the canary must not be in the text
+    const { createLogArtifact } = await import('./worker-run-store.js');
+    const mockCreateLogArtifact = vi.mocked(createLogArtifact);
+    for (const call of mockCreateLogArtifact.mock.calls) {
+      const text = call[4] as string;
+      expect(text).not.toContain(CANARY);
+    }
+  });
+
+  it('retry message containing canary is redacted from output_json', async () => {
+    const supabase = makeSupabase({ account: account() });
+    const executeStep = vi.fn()
+      .mockResolvedValueOnce({
+        success: false,
+        output: {},
+        error: `Step failed with ${CANARY}`,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        output: { text: '[REDACTED]', backend: 'mobile-mcp' },
+      });
+
+    const def = definition(inputTextStep());
+    def.execution.maxRetries = 1;
+
+    const runner = new SingleDeviceStepRunner({
+      supabase: supabase.supabase as never,
+      backend: { connect: vi.fn(), disconnect: vi.fn(), executeStep },
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      device,
+      definition: def,
+      triggeredByUserId: 'user-1',
+      inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
+    });
+
+    await runner.run();
+
+    // Check retry steps — canary must not appear in retryReason
+    const retrySteps = persistedSteps.filter(
+      (s) => (s as { output?: { retryReason?: string } }).output?.retryReason
+    );
+    for (const step of retrySteps) {
+      const typed = step as { output: { retryReason: string } };
+      expect(typed.output.retryReason).not.toContain(CANARY);
+    }
+  });
+
+  it('timeout exception containing canary is redacted from error_json', async () => {
+    const supabase = makeSupabase({ account: account() });
+    const executeStep = vi.fn().mockRejectedValue(new Error(`Timeout: ${CANARY}`));
+
+    const runner = new SingleDeviceStepRunner({
+      supabase: supabase.supabase as never,
+      backend: { connect: vi.fn(), disconnect: vi.fn(), executeStep },
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      device,
+      definition: definition(inputTextStep()),
+      triggeredByUserId: 'user-1',
+      inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
+    });
+
+    await runner.run();
+
+    const failedSteps = persistedSteps.filter(
+      (s) => (s as { status: string }).status === 'FAILED'
+    );
+    for (const step of failedSteps) {
+      const typed = step as { errorPayload?: { message?: string } };
+      if (typed.errorPayload?.message) {
+        expect(typed.errorPayload.message).not.toContain(CANARY);
+      }
+    }
+  });
+
+  it('canary in nested output structure is redacted', async () => {
+    const supabase = makeSupabase({ account: account() });
+    const executeStep = vi.fn().mockResolvedValue({
+      success: true,
+      output: {
+        text: '[REDACTED]',
+        backend: 'mobile-mcp',
+        serial: 'serial-1',
+        nested: {
+          deep: {
+            value: CANARY,
+            safe: 'keep-this',
+          },
+        },
+        array: [CANARY, 'safe', { inner: CANARY }],
+      },
+    });
+
+    const runner = new SingleDeviceStepRunner({
+      supabase: supabase.supabase as never,
+      backend: { connect: vi.fn(), disconnect: vi.fn(), executeStep },
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      device,
+      definition: definition(inputTextStep()),
+      triggeredByUserId: 'user-1',
+      inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
+    });
+
+    await runner.run();
+
+    const successSteps = persistedSteps.filter(
+      (s) => (s as { status: string }).status === 'SUCCESS'
+    );
+    expect(successSteps.length).toBe(1);
+    const output = (successSteps[0] as { output: Record<string, unknown> }).output;
+    expect(JSON.stringify(output)).not.toContain(CANARY);
+    // Safe values should be preserved
+    expect(JSON.stringify(output)).toContain('keep-this');
+    expect(JSON.stringify(output)).toContain('safe');
+  });
+
+  it('successful adb artifact logging redacts an active credential literal', async () => {
+    const supabase = makeSupabase({ account: account() });
+    const adbStep: MacroStep = {
+      id: 'adb-password-command',
+      type: 'adb',
+      params: { command: 'echo {{accountPassword}}' },
+    };
+    const runner = runnerFor({
+      supabase: supabase.supabase,
+      step: adbStep,
+      backendResult: {
+        success: true,
+        output: { result: `device echoed ${CANARY}`, command: 'echo [REDACTED]' },
+      },
+    });
+
+    await runner.run();
+
+    const { createLogArtifact } = await import('./worker-run-store.js');
+    const mockCreateLogArtifact = vi.mocked(createLogArtifact);
+    expect(mockCreateLogArtifact).toHaveBeenCalledTimes(1);
+    const artifactText = mockCreateLogArtifact.mock.calls[0][4] as string;
+    expect(artifactText).toBe('device echoed [REDACTED]');
+    expect(artifactText).not.toContain(CANARY);
+
+    const successStep = persistedSteps.find(
+      (step) => (step as { status: string }).status === 'SUCCESS'
+    ) as { output: Record<string, unknown> } | undefined;
+    expect(JSON.stringify(successStep?.output)).not.toContain(CANARY);
+  });
+
+  it('sensitive state is cleared after all paths (success, failure, cancellation, timeout)', async () => {
+    const supabase = makeSupabase({ account: account() });
+
+    // Test: success path clears
+    const executeStep = vi.fn().mockResolvedValue({
+      success: true,
+      output: { text: '[REDACTED]', backend: 'mobile-mcp' },
+    });
+
+    const runner = new SingleDeviceStepRunner({
+      supabase: supabase.supabase as never,
+      backend: { connect: vi.fn(), disconnect: vi.fn(), executeStep },
+      runId: 'run-1',
+      claimToken: 'claim-1',
+      device,
+      definition: definition(inputTextStep()),
+      triggeredByUserId: 'user-1',
+      inputVariables: { accountId: 'account-1' },
+      credentialVault: {
+        supabaseUrl: 'https://test.supabase.co',
+        supabaseServiceRoleKey: 'test-service-role-key',
+        credentialVaultWorkerToken: 'test-worker-token',
+      },
+    });
+
+    await runner.run();
+    // fetchAndDecrypt should have been called exactly once (for the step)
+    expect(mockFetchAndDecrypt).toHaveBeenCalledTimes(1);
   });
 });

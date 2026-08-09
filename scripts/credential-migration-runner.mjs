@@ -4,24 +4,21 @@
  * Edge Function.
  *
  * Usage:
- *   node scripts/credential-migration-runner.mjs              # batch migrate
- *   node scripts/credential-migration-runner.mjs --dry-run    # count v2: rows
- *   node scripts/credential-migration-runner.mjs --account-id <uuid>  # single account
+ *   CREDENTIAL_MIGRATION_ADMIN_TOKEN=<JWT> node scripts/credential-migration-runner.mjs             # batch migrate
+ *   CREDENTIAL_MIGRATION_ADMIN_TOKEN=<JWT> node scripts/credential-migration-runner.mjs --dry-run   # count v2: rows
+ *   CREDENTIAL_MIGRATION_ADMIN_TOKEN=<JWT> node scripts/credential-migration-runner.mjs --account-id <uuid>  # single account
  *
  * Env vars:
  *   SUPABASE_URL              - Supabase project URL
- *   SUPABASE_SERVICE_ROLE_KEY - Service role key for admin auth
- *
- * Output:
- *   JSON report to stdout and saved to
- *   plans/260710-credential-boundary-implementation-plan/reports/credential-migration-<timestamp>.json
  *
  * Security:
+ *   Requires a short-lived ADMIN user access token (not the service-role key).
+ *   Read only from the process environment so it is not exposed through CLI
+ *   arguments, reports, or .env files.
  *   NEVER prints plaintext passwords, keys, or decrypted values.
  *   Only structural metadata (counts, account ids, statuses) is reported.
  */
 
-import { createClient } from '@supabase/supabase-js';
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -76,46 +73,59 @@ async function main() {
   const env = { ...dotEnv, ...process.env };
 
   const supabaseUrl = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL;
-  const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!supabaseUrl) {
     console.error(
-      JSON.stringify({
-        error: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing',
-      })
+      JSON.stringify({ error: 'SUPABASE_URL is missing' })
     );
     process.exit(1);
   }
 
   const args = parseArgs(process.argv);
-  const action = args.dryRun ? 'dry-run' : 'migrate';
 
-  // Use service-role client to invoke the Edge Function with admin privileges.
-  // The Edge Function still checks the JWT role, so we pass the service role
-  // key as the bearer token (service role bypasses RLS and carries admin
-  // privileges in Supabase).
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
+  // Deliberately read from process.env only: loadDotEnv() above is for the
+  // project URL, but an ADMIN token must never be stored in a .env file.
+  const adminToken = process.env.CREDENTIAL_MIGRATION_ADMIN_TOKEN;
+  if (!adminToken) {
+    console.error(
+      JSON.stringify({
+        error: 'A short-lived ADMIN user access token is required in CREDENTIAL_MIGRATION_ADMIN_TOKEN. Do not use the service-role key or command-line arguments.',
+      })
+    );
+    process.exit(1);
+  }
+
+  const action = args.dryRun ? 'dry-run' : 'migrate';
+  const vaultUrl = `${supabaseUrl}/functions/v1/credential-vault`;
 
   const requestBody = { action };
   if (args.accountId) {
     requestBody.accountId = args.accountId;
   }
 
-  const { data, error } = await supabase.functions.invoke('credential-vault', {
-    body: requestBody,
+  // Call the Edge Function with the ADMIN user token as bearer.
+  // The handler validates it via auth.getUser() and checks ADMIN role.
+  const response = await fetch(vaultUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
+    },
+    body: JSON.stringify(requestBody),
   });
+
+  const data = await response.json().catch(() => null);
 
   const report = {
     action,
     accountId: args.accountId ?? null,
     invokedAt: new Date().toISOString(),
+    httpStatus: response.status,
     result: data ?? null,
-    error: error ? { message: error.message } : null,
+    error: response.ok ? null : (data?.error ?? `HTTP ${response.status}`),
   };
 
-  // Output JSON report to stdout (never includes plaintext or keys)
+  // Output JSON report to stdout (never includes plaintext, keys, or tokens)
   const reportJson = JSON.stringify(report, null, 2);
   console.log(reportJson);
 
@@ -136,7 +146,7 @@ async function main() {
   writeFileSync(reportPath, reportJson, 'utf8');
   console.error(`Report saved to ${reportPath}`);
 
-  if (error) {
+  if (!response.ok) {
     process.exit(1);
   }
 }

@@ -24,6 +24,7 @@ import { loadPersistedRunSteps, persistRunStep, type StoredRunStepRecord } from 
 import { budgetCheckForStep, recordStepAction } from './account-action-policy.js';
 import { persistStepArtifacts } from './step-artifact-policy.js';
 import { isRecord } from './step-dispatch-results.js';
+import { redactSensitiveText } from './credential-redaction.js';
 
 export interface RunnerParams {
   supabase: SupabaseClient;
@@ -35,6 +36,12 @@ export interface RunnerParams {
   retryBackoffPolicy?: RetryBackoffPolicy;
   triggeredByUserId: string;
   inputVariables: Record<string, unknown>;
+  /** Credential vault connection params for decrypt */
+  credentialVault?: {
+    supabaseUrl: string;
+    supabaseServiceRoleKey: string;
+    credentialVaultWorkerToken: string;
+  };
 }
 
 type StepExecutionStatus = 'SUCCESS' | 'SKIPPED' | 'FAILED' | 'CANCELLED' | 'WAITING_APPROVAL';
@@ -562,7 +569,13 @@ export class SingleDeviceStepRunner {
 
     try {
       const { fetchAndDecryptCredential } = await import('./credential-decrypt-client.js');
-      const result = await fetchAndDecryptCredential(this.params.supabase, accountId);
+      if (!this.params.credentialVault) throw new Error('Credential vault is not configured');
+      const result = await fetchAndDecryptCredential(
+        this.params.credentialVault,
+        this.params.runId,
+        this.params.claimToken,
+        accountId
+      );
       this.sensitiveInputVariables.set('accountPassword', result.plaintext);
     } catch {
       // Mark as failed so the step produces a safe error; don't throw here
@@ -573,19 +586,49 @@ export class SingleDeviceStepRunner {
   /**
    * Remove sensitive values (e.g. plaintext passwords) from step output
    * before persistence. For input_text steps, redact the 'text' field.
+   * Also applies literal-value redaction for any active sensitive variables.
    */
   private scrubSensitiveOutput(
     output: Record<string, unknown>,
     stepType: string
   ): Record<string, unknown> {
+    let scrubbed = { ...output };
     if (stepType === 'input_text') {
-      const scrubbed = { ...output };
       if ('text' in scrubbed) {
         scrubbed.text = '[REDACTED]';
       }
-      return scrubbed;
     }
-    return output;
+    // Apply literal-value redaction for any active sensitive variables
+    const sensitiveValues = this.getActiveSensitiveValues();
+    if (sensitiveValues.length > 0) {
+      scrubbed = redactSensitiveText(scrubbed, sensitiveValues) as Record<string, unknown>;
+    }
+    return scrubbed;
+  }
+
+  /** Get the array of currently active sensitive literal values (excluding placeholders). */
+  private getActiveSensitiveValues(): string[] {
+    const values: string[] = [];
+    for (const value of this.sensitiveInputVariables.values()) {
+      if (value && value !== '__DECRYPT_FAILED__' && value.length > 0) {
+        values.push(value);
+      }
+    }
+    return values;
+  }
+
+  /** Redact a string using active sensitive literals. */
+  private redactSensitiveString(text: string): string {
+    const sensitiveValues = this.getActiveSensitiveValues();
+    if (sensitiveValues.length === 0) return text;
+    return redactSensitiveText(text, sensitiveValues) as string;
+  }
+
+  /** Redact an object using active sensitive literals. */
+  private redactSensitiveObject<T>(obj: T): T {
+    const sensitiveValues = this.getActiveSensitiveValues();
+    if (sensitiveValues.length === 0) return obj;
+    return redactSensitiveText(obj, sensitiveValues) as T;
   }
 
   private async executeDeviceStepWithRetry(step: MacroStep, stepIndex: number): Promise<{ status: StepExecutionStatus }> {
@@ -687,17 +730,28 @@ export class SingleDeviceStepRunner {
         );
 
         if (result.success) {
-          const screenshotArtifactId = await persistStepArtifacts(
-            this.params.supabase,
-            this.params.runId,
-            this.params.device.id,
-            step.id,
-            step.type,
-            result
-          );
-
-          // Scrub sensitive values from output before persistence
+          // Redact before artifact persistence as well as run-step persistence.
+          // adb/run_autox inline logs are extracted from result.output.
           const safeOutput = this.scrubSensitiveOutput(result.output, step.type);
+          const activeSensitiveValues = this.getActiveSensitiveValues();
+          const screenshotArtifactId = activeSensitiveValues.length > 0
+            ? await persistStepArtifacts(
+              this.params.supabase,
+              this.params.runId,
+              this.params.device.id,
+              step.id,
+              step.type,
+              { ...result, output: safeOutput },
+              activeSensitiveValues
+            )
+            : await persistStepArtifacts(
+              this.params.supabase,
+              this.params.runId,
+              this.params.device.id,
+              step.id,
+              step.type,
+              { ...result, output: safeOutput }
+            );
 
           await this.saveStep({
             runId: this.params.runId,
@@ -727,12 +781,12 @@ export class SingleDeviceStepRunner {
             stepIndex,
             status: 'RETRYING',
             retryCount: attempt + 1,
-            output: {
+            output: this.redactSensitiveObject({
               retryAttempt: attempt + 1,
               retryReason: result.error ?? `Step ${step.id} failed`,
               nextRetryDelayMs: nextDelayMs,
               elapsedMs: Date.now() - startedAtMs,
-            },
+            }),
           });
           await new Promise((resolve) => setTimeout(resolve, nextDelayMs));
           continue;
@@ -740,15 +794,22 @@ export class SingleDeviceStepRunner {
 
         const cancelled = result.error?.startsWith('Cancelled') ?? false;
         if (!cancelled) {
-          await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, result.error ?? `Step ${step.id} failed`, {
+          const safeErrorText = this.redactSensitiveString(result.error ?? `Step ${step.id} failed`);
+          const activeSensitiveValues = this.getActiveSensitiveValues();
+          const logMetadata = {
             stepType: step.type,
             source: 'step-error',
-          });
+          };
+          if (activeSensitiveValues.length > 0) {
+            await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, safeErrorText, logMetadata, activeSensitiveValues);
+          } else {
+            await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, safeErrorText, logMetadata);
+          }
 
-          // Block detection
+          // Block detection — pass redacted text to avoid persisting sensitive literals
           const accountId = this.params.inputVariables?.accountId as string | undefined;
           if (accountId && result.error) {
-            await handlePotentialBlock(this.params.supabase, accountId, result.error);
+            await handlePotentialBlock(this.params.supabase, accountId, safeErrorText);
           }
         }
         await this.saveStep({
@@ -758,18 +819,19 @@ export class SingleDeviceStepRunner {
           stepIndex,
           status: cancelled ? 'CANCELLED' : 'FAILED',
           retryCount: attempt,
-          errorPayload: cancelled ? null : {
+          errorPayload: cancelled ? null : this.redactSensitiveObject({
             code: 'STEP_FAILED',
             message: result.error ?? `Step ${step.id} failed`,
             retryAttempt: attempt,
             terminalFailureReason: 'Retry policy exhausted or elapsed budget reached',
             timestamp: new Date().toISOString(),
-          },
+          }),
         });
         return { status: cancelled ? 'CANCELLED' : 'FAILED' };
       } catch (error) {
         const code = error instanceof StepTimeoutError ? 'STEP_TIMEOUT' : 'STEP_EXCEPTION';
-        const message = error instanceof Error ? error.message : String(error);
+        const rawMessage = error instanceof Error ? error.message : String(error);
+        const message = this.redactSensitiveString(rawMessage);
         const nextDelayMs = getRetryDelayMs(retryPolicy, attempt);
         if (!(error instanceof StepTimeoutError) && shouldRetryWithBackoff({
           attempt,
@@ -784,24 +846,30 @@ export class SingleDeviceStepRunner {
             stepIndex,
             status: 'RETRYING',
             retryCount: attempt + 1,
-            output: {
+            output: this.redactSensitiveObject({
               retryAttempt: attempt + 1,
               retryReason: message,
               nextRetryDelayMs: nextDelayMs,
               elapsedMs: Date.now() - startedAtMs,
-            },
+            }),
           });
           await new Promise((resolve) => setTimeout(resolve, nextDelayMs));
           continue;
         }
 
-        await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, message, {
+        const activeSensitiveValues = this.getActiveSensitiveValues();
+        const logMetadata = {
           stepType: step.type,
           source: 'step-exception',
           code,
-        });
+        };
+        if (activeSensitiveValues.length > 0) {
+          await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, message, logMetadata, activeSensitiveValues);
+        } else {
+          await createLogArtifact(this.params.supabase, this.params.runId, this.params.device.id, step.id, message, logMetadata);
+        }
 
-        // Block detection on exception message
+        // Block detection on exception message — use redacted text
         const accountId = this.params.inputVariables?.accountId as string | undefined;
         if (accountId && message) {
           await handlePotentialBlock(this.params.supabase, accountId, message);
@@ -813,7 +881,7 @@ export class SingleDeviceStepRunner {
           stepIndex,
           status: 'FAILED',
           retryCount: attempt,
-          errorPayload: {
+          errorPayload: this.redactSensitiveObject({
             code,
             message,
             retryAttempt: attempt,
@@ -821,7 +889,7 @@ export class SingleDeviceStepRunner {
               ? 'Step timeout is not retried'
               : 'Retry policy exhausted or elapsed budget reached',
             timestamp: new Date().toISOString(),
-          },
+          }),
         });
         return { status: 'FAILED' as const };
       }

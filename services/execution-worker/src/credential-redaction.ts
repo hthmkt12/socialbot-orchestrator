@@ -41,7 +41,9 @@ export function redactSensitiveValues<T extends Record<string, unknown>>(
   input: T,
   depth = 0
 ): T {
-  if (depth > 10) return input; // Prevent infinite recursion
+  if (depth > 10) {
+    return { redaction_status: 'blocked', redaction_reason: 'max_depth_exceeded' } as unknown as T;
+  }
   if (!input || typeof input !== 'object') return input;
 
   if (Array.isArray(input)) {
@@ -101,6 +103,70 @@ export function redactSensitiveJsonString(input: string): string {
     '$1=[REDACTED]'
   );
   return redacted;
+}
+
+/**
+ * Redact specific sensitive literal values from any string, object, or array.
+ * Unlike redactSensitiveValues (which redacts by KEY name), this redacts by
+ * VALUE — it replaces actual known sensitive strings (e.g. a decrypted
+ * password) wherever they appear, regardless of the key name.
+ *
+ * This is the narrow literal redaction that catches a bare password in a
+ * `text` field, an error message, or nested inside `output.bridge`.
+ */
+export function redactSensitiveText(
+  input: unknown,
+  sensitiveValues: string[]
+): unknown {
+  if (sensitiveValues.length === 0) return input;
+  // Filter out empty/placeholder values
+  const values = sensitiveValues.filter((v) => v.length > 0 && v !== '__DECRYPT_FAILED__');
+  if (values.length === 0) return input;
+
+  return redactSensitiveTextInternal(input, values, 0, new WeakSet<object>());
+}
+
+function redactSensitiveTextInternal(
+  input: unknown,
+  values: string[],
+  depth: number,
+  active: WeakSet<object>
+): unknown {
+  if (depth > 10) {
+    return { redaction_status: 'blocked', redaction_reason: 'max_depth_exceeded' };
+  }
+  if (typeof input === 'string') {
+    return redactStringLiterals(input, values);
+  }
+  if (Array.isArray(input)) {
+    if (active.has(input)) return { redaction_status: 'blocked', redaction_reason: 'cycle_detected' };
+    active.add(input);
+    const result = input.map((item) => redactSensitiveTextInternal(item, values, depth + 1, active));
+    active.delete(input);
+    return result;
+  }
+  if (isRecord(input)) {
+    if (active.has(input)) return { redaction_status: 'blocked', redaction_reason: 'cycle_detected' };
+    active.add(input);
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input)) {
+      result[key] = redactSensitiveTextInternal(value, values, depth + 1, active);
+    }
+    active.delete(input);
+    return result;
+  }
+  return input;
+}
+
+/** Replace all occurrences of each sensitive literal in a string with [REDACTED]. */
+function redactStringLiterals(text: string, values: string[]): string {
+  let result = text;
+  for (const value of values) {
+    // Escape regex special characters in the value
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(escaped, 'g'), '[REDACTED]');
+  }
+  return result;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -10,11 +10,22 @@ export interface WorkerConfig {
   instanceId: string;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
+  /** Dedicated key accepted by credential-vault; falls back to the worker service key. */
+  credentialVaultServiceRoleKey?: string;
+  /** Internal token for credential-vault decrypt auth. Server-only. */
+  credentialVaultWorkerToken: string;
   gatewayBaseUrl: string;
+  gatewayHttpToken?: string;
   mobileMcpBridgeUrl: string;
   deviceBackend: 'laixi' | 'mobile-mcp' | 'mobilerun';
   commandTimeoutMs: number;
   bridgeToken?: string;
+}
+
+export function getCredentialVaultServiceRoleKey(
+  config: Pick<WorkerConfig, 'supabaseServiceRoleKey' | 'credentialVaultServiceRoleKey'>
+): string {
+  return config.credentialVaultServiceRoleKey ?? config.supabaseServiceRoleKey;
 }
 
 interface ClaimedWorkflowRun {
@@ -101,7 +112,6 @@ export class RunClaimCoordinator {
       activeClaimCount: this.activeClaims.size,
       activeClaims: Array.from(this.activeClaims.entries()).map(([runId, claim]) => ({
         runId,
-        claimToken: claim.claimToken,
         claimedAt: claim.claimedAt,
         leaseExpiresAt: claim.leaseExpiresAt,
       })),

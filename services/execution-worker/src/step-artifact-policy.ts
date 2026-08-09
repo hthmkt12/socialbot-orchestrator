@@ -15,7 +15,8 @@ export async function persistStepArtifacts(
   deviceId: string,
   stepId: string,
   stepType: string,
-  result: { screenshotBase64?: string | null; output: Record<string, unknown> }
+  result: { screenshotBase64?: string | null; output: Record<string, unknown> },
+  sensitiveValues: string[] = []
 ): Promise<string | null> {
   const screenshotArtifactId = result.screenshotBase64
     ? await createScreenshotArtifact(supabase, runId, deviceId, stepId, result.screenshotBase64)
@@ -26,7 +27,7 @@ export async function persistStepArtifacts(
     await createLogArtifact(supabase, runId, deviceId, stepId, inlineLog, {
       stepType,
       source: 'step-output',
-    });
+    }, sensitiveValues);
   }
 
   return screenshotArtifactId;

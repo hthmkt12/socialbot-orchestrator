@@ -139,8 +139,18 @@ def _handle_swipe(session, params, device):
 def _handle_input_text(session, params, _device):
     text = str(params.get("text", ""))
     clear = bool(params.get("clear", False))
-    ok = session._run(session.driver.input_text(text, clear=clear))
-    return {"success": ok, "message": "text input completed" if ok else "text input failed", "text": text}
+    try:
+        ok = session._run(session.driver.input_text(text, clear=clear))
+    except Exception:
+        # Never let driver exception text (which may contain the submitted
+        # plaintext) cross the bridge boundary or enter bridge logs.
+        return {
+            "success": False,
+            "code": "INPUT_TEXT_FAILED",
+            "message": "input_text failed",
+        }
+    # Never echo the submitted text back in the response.
+    return {"success": bool(ok), "accepted": bool(ok)}
 
 
 def _handle_screenshot(session, params, _device):
