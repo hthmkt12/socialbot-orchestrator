@@ -1,0 +1,7 @@
+# Supabase CLI configuration
+# Only credential-vault disables gateway JWT verification.
+# The handler authenticates every action internally (handler-owned auth).
+# All other Edge Functions retain default gateway JWT verification.
+
+[functions.credential-vault]
+verify_jwt = false

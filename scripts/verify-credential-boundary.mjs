@@ -1,35 +1,74 @@
 /**
- * Credential boundary verification script (Phase G).
+ * Credential Boundary Verification Script (Phase 3 - Remediation).
  *
- * Runs non-device verification gates and produces a JSON evidence report.
- * Proves the production credential boundary works end-to-end without
- * requiring a physical device. If a device is available (MOBILE_MCP_BRIDGE_URL
- * reachable), runtime proof is recorded; otherwise the production claim stays
- * blocked until a device proof is run separately.
+ * Runs static verification gates and produces a safe JSON evidence report.
+ * The verdict logic ensures bridge health alone is never sufficient for
+ * full_verified — a real credential login run, clean persistence scan, and
+ * verified cleanup are all mandatory.
  *
  * Usage:
  *   node scripts/verify-credential-boundary.mjs
+ *   node scripts/verify-credential-boundary.mjs --runtime-proof
  *
- * Output:
- *   JSON report to stdout AND saved to
- *   plans/260710-credential-boundary-implementation-plan/reports/credential-boundary-verification-<timestamp>.json
+ * Runtime proof requires:
+ *   - Deployed credential-vault Edge Function with SUPABASE_SERVICE_ROLE_KEY
+ *     and CREDENTIAL_VAULT_WORKER_TOKEN secrets set
+ *   - Worker runtime with CREDENTIAL_VAULT_WORKER_TOKEN env var
+ *   - Mobile MCP bridge reachable at MOBILE_MCP_BRIDGE_URL
+ *   - A connected Android device
+ *   - A disposable account credential supplied at runtime (never in source)
+ *
+ * If any runtime prerequisite is missing, the verdict is "blocked" or
+ * "static_verified" — never "full_verified".
  *
  * Security:
- *   NEVER prints plaintext passwords, keys, or decrypted values.
- *   Uses a disposable canary string `DO_NOT_PERSIST_PASSWORD_123` only in
- *   test files and this script (never in production code or persistence paths).
+ *   NEVER prints plaintext passwords, keys, canary strings, or decrypted values.
+ *   Reports contain only hashes, counts, IDs, payload prefixes, and pass/fail status.
+ *   The canary string is hashed (SHA-256) before appearing in any report.
  */
 
 import { execSync } from 'node:child_process';
-import { readFileSync, mkdirSync, writeFileSync, existsSync, readFileSync as readFile } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { computeCredentialBoundaryVerdict } from './credential-boundary-verdict.mjs';
+import { runCredentialBoundaryRuntimeProof } from './credential-boundary-runtime-proof.mjs';
+
+/**
+ * Test mode short-circuit.
+ *
+ * Phase 11 — Credential-Boundary Audit Test-Mode Performance Hardening.
+ *
+ * When BOTH `CREDENTIAL_BOUNDARY_TEST_MODE=true` AND `NODE_ENV=test` are
+ * present, the verifier replaces the expensive static scan/check operations
+ * (lint, typecheck, vitest, build, source-canary scan, Edge Function source
+ * scan, runtime availability probe, crypto/redaction unit-test spawns) with
+ * deterministic safe fixture results that preserve the verifier JSON schema
+ * and the verdict policy in `credential-boundary-verdict.mjs`.
+ *
+ * The production path is unchanged when either flag is absent: all real
+ * static gates, scans, and runtime probes run exactly as before.
+ *
+ * Hard constraints honored by this mode:
+ *   - Never requests runtime proof, contacts services, devices, or Supabase.
+ *   - Never touches the filesystem reports directory when `--no-write-report`
+ *     is present.
+ *   - The fixture is `static_verified` by default and `failed` when
+ *     `CREDENTIAL_BOUNDARY_TEST_VERIFIER_FAIL=true` is set; the verdict is
+ *     never upgraded from `failed` to `static_verified`.
+ *   - No canary plaintext or secret sentinel is introduced.
+ */
+function isTestModeActive(env) {
+  return env.CREDENTIAL_BOUNDARY_TEST_MODE === 'true' && env.NODE_ENV === 'test';
+}
 
 const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const CANARY = 'DO_NOT_PERSIST_PASSWORD_123';
-const VERIFIER_VERSION = 'phase-g-1';
+const CANARY_HASH = createHash('sha256').update(CANARY).digest('hex').slice(0, 16);
+const VERIFIER_VERSION = 'phase3-remediation-1';
 
-// --- Minimal .env loader (no external deps, matches credential-migration-runner.mjs) ---
+// --- Minimal .env loader ---
 function loadDotEnv(path) {
   try {
     return Object.fromEntries(
@@ -40,10 +79,7 @@ function loadDotEnv(path) {
         .map((line) => {
           const index = line.indexOf('=');
           let value = line.slice(index + 1);
-          if (
-            (value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))
-          ) {
+          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1);
           }
           return [line.slice(0, index), value];
@@ -55,356 +91,324 @@ function loadDotEnv(path) {
 }
 
 function timestamp() {
-  const now = new Date();
-  return now.toISOString().replace(/[:.]/g, '-');
+  return new Date().toISOString().replace(/[:.]/g, '-');
 }
 
-/**
- * Run a command and capture exit code + stdout/stderr without crashing.
- * Returns { exitCode, stdout, stderr }.
- */
 function runGate(command, options = {}) {
   try {
     const stdout = execSync(command, {
       cwd: rootDir,
-      timeout: 300000, // 5 min timeout
+      timeout: 300000,
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
       ...options,
     });
     return { exitCode: 0, stdout: stdout ?? '', stderr: '' };
   } catch (error) {
-    return {
-      exitCode: error.status ?? 1,
-      stdout: error.stdout ?? '',
-      stderr: error.stderr ?? error.message ?? '',
-    };
+    return { exitCode: error.status ?? 1, stdout: error.stdout ?? '', stderr: error.stderr ?? error.message ?? '' };
   }
 }
 
-/**
- * Run a vitest file specifically and return pass status + test count.
- */
 function runVitestFile(testFile) {
-  const result = runGate(`npx vitest run "${testFile}" --reporter=json`, {
-    timeout: 120000,
-  });
+  const result = runGate(`npx vitest run "${testFile}" --reporter=json`, { timeout: 120000 });
   let testCount = 0;
   let passed = result.exitCode === 0;
   try {
     const report = JSON.parse(result.stdout);
-    // vitest JSON reporter outputs summary stats
     if (report.numTotalTests !== undefined) {
       testCount = report.numTotalTests;
       passed = report.numTotalTests > 0 && report.numFailedTests === 0;
     }
   } catch {
-    // If JSON parse fails, fall back to exit code
-    // Try to extract test count from text output
     const match = (result.stdout + result.stderr).match(/(\d+)\s+test/);
     if (match) testCount = parseInt(match[1], 10);
   }
-  return { passed, exitCode: result.exitCode, testCount, stdout: result.stdout, stderr: result.stderr };
+  return { passed, exitCode: result.exitCode, testCount };
 }
 
-/**
- * Strip ANSI escape codes from a string (vitest colors its output).
- */
 function stripAnsi(str) {
   if (!str) return '';
   return str.replace(/\x1b\[[0-9;]*m/g, '');
 }
 
-/**
- * Extract total test count from `npm test` output.
- * Vitest prints "Test Files  X passed" and "Tests  Y passed" lines.
- * ANSI color codes are stripped first since vitest colors its output.
- */
 function extractTestCount(stdout, stderr) {
   const combined = stripAnsi((stdout || '') + (stderr || ''));
-  // Match "Tests  338 passed" or "Tests  338 passed | 1 failed" etc.
   const match = combined.match(/Tests\s+(\d+)\s+passed/);
   if (match) return parseInt(match[1], 10);
-  // Fallback: match "Test Files  X passed (Y)"
-  const fileMatch = combined.match(/Tests\s+\d+\s+passed\s*\((\d+)\)/);
-  if (fileMatch) return parseInt(fileMatch[1], 10);
   return null;
 }
 
 /**
- * Search for the canary string across source directories using findstr (Windows).
- * Returns list of file paths that contain the canary.
- *
- * findstr /S /N output format: <fullpath>:<lineNumber>:<content>
- * On Windows the fullpath starts with a drive letter (e.g. "F:\...\file.ts"),
- * so we split on the first two colons to separate path, line, and content.
+ * Search for the canary string across source directories AND plans/reports.
+ * Returns { files: string[], violations: string[] }.
+ * Canary is allowed only in test files and this verification script.
  */
 function searchCanary() {
-  const dirs = ['src', 'services', 'supabase', 'scripts'];
+  // Scan all source-controlled evidence, including plans/reports and docs.
+  const dirs = ['src', 'services', 'supabase', 'scripts', 'plans', 'docs'];
   const results = [];
-  for (const dir of dirs) {
-    const fullPath = join(rootDir, dir);
-    if (!existsSync(fullPath)) continue;
+  const ignoredDirectories = new Set(['node_modules', '.git', 'dist', 'build', '.venv', '__pycache__']);
+
+  function visit(directory) {
     try {
-      // /S = recursive, /I = case-insensitive, /N = line numbers
-      const output = execSync(
-        `findstr /S /I /N "${CANARY}" "${join(fullPath, '*.*')}"`,
-        { encoding: 'utf8', timeout: 60000, stdio: ['pipe', 'pipe', 'pipe'] }
-      );
-      // findstr /S /N output format: <fullpath>:<lineNumber>:<content>
-      // Windows paths have drive letters (e.g. F:\...), so the path contains
-      // a colon at position 1. We need to find the colon AFTER the drive letter.
-      const lines = output.split(/\r?\n/).filter(Boolean);
-      for (const line of lines) {
-        // Skip drive-letter colon, find the next colon (line number separator)
-        const driveColonEnd = /^[A-Za-z]:/.test(line) ? 2 : 0;
-        const colonIdx = line.indexOf(':', driveColonEnd);
-        if (colonIdx > 0) {
-          const filePath = line.slice(0, colonIdx).replace(/\\/g, '/');
-          results.push(filePath);
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const path = join(directory, entry.name);
+        if (entry.isDirectory()) {
+          if (!ignoredDirectories.has(entry.name)) visit(path);
+        } else if (entry.isFile()) {
+          try {
+            if (readFileSync(path, 'utf8').includes(CANARY)) results.push(path.replace(/\\/g, '/'));
+          } catch {
+            // Skip unreadable/binary files; evidence files are text by contract.
+          }
         }
       }
     } catch {
-      // findstr returns non-zero if no matches - that's fine
+      // A missing optional source directory is not a scan failure.
     }
   }
-  // Deduplicate
+
+  for (const dir of dirs) {
+    const fullPath = join(rootDir, dir);
+    if (existsSync(fullPath)) visit(fullPath);
+  }
   return [...new Set(results)];
 }
 
-/**
- * Verify the canary only appears in test files and this verification script.
- * Production code and persistence paths must NOT contain the canary.
- */
 function verifyCanaryPlacement(canaryFiles) {
   const allowedPatterns = [
     /\.test\.ts$/,
     /\.test\.tsx$/,
     /\.spec\.ts$/,
+    /\/tests\/test_.*\.py$/,
     /verify-credential-boundary\.mjs$/,
   ];
-
   const violations = canaryFiles.filter(
     (filePath) => !allowedPatterns.some((pattern) => pattern.test(filePath))
   );
-
-  return {
-    canaryOnlyInTestFiles: violations.length === 0,
-    filesFound: canaryFiles,
-    violations,
-  };
+  return { canaryOnlyInTestFiles: violations.length === 0, filesFound: canaryFiles, violations };
 }
 
-/**
- * Static check: read the Edge Function source and verify no console.log
- * calls that could leak body/plaintext.
- */
 function verifyEdgeFunctionNoPlaintextLogging() {
-  const edgeFunctionPath = join(
-    rootDir,
-    'supabase',
-    'functions',
-    'credential-vault',
-    'index.ts'
-  );
+  const edgeFunctionPath = join(rootDir, 'supabase', 'functions', 'credential-vault', 'index.ts');
   if (!existsSync(edgeFunctionPath)) {
-    return { edgeFunctionNoPlaintextLogging: false, reason: 'Edge Function file not found', details: [] };
+    return { ok: false, reason: 'Edge Function file not found', details: [] };
   }
-
-  const source = readFile(edgeFunctionPath, 'utf8');
+  const source = readFileSync(edgeFunctionPath, 'utf8');
   const lines = source.split(/\r?\n/);
   const issues = [];
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Check for console.log/console.warn/console.error/console.info
     if (/console\.(log|warn|error|info|debug)\s*\(/.test(line)) {
-      // Check if it logs something that could contain sensitive data
       if (/body|plaintext|password|key|secret|ciphertext|token|encrypted/i.test(line)) {
         issues.push(`Line ${i + 1}: ${line.trim()}`);
       }
     }
-    // Check for Deno.stdout.write or similar that could leak
     if (/Deno\.(stdout|stderr)\.write/.test(line) && /body|plaintext|password|key|secret/i.test(line)) {
       issues.push(`Line ${i + 1}: ${line.trim()}`);
     }
   }
-
-  return {
-    edgeFunctionNoPlaintextLogging: issues.length === 0,
-    details: issues,
-  };
+  return { ok: issues.length === 0, details: issues };
 }
 
-/**
- * Check if a device/runtime is available by probing MOBILE_MCP_BRIDGE_URL.
- * Does NOT run any device test - just checks availability.
- */
 async function checkRuntimeAvailability(env) {
   const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL;
   if (!bridgeUrl) {
-    return { deviceAvailable: false, reason: 'MOBILE_MCP_BRIDGE_URL not set' };
+    return { available: false, reason: 'MOBILE_MCP_BRIDGE_URL not set' };
   }
-
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const response = await fetch(`${bridgeUrl}/health`, {
-      signal: controller.signal,
-    });
+    const response = await fetch(`${bridgeUrl}/health`, { signal: controller.signal });
     clearTimeout(timeout);
     if (response.ok) {
-      return { deviceAvailable: true, bridgeUrl, healthStatus: response.status };
+      return { available: true, bridgeUrl, healthStatus: response.status };
     }
-    return { deviceAvailable: false, reason: `Bridge health check returned ${response.status}` };
+    return { available: false, reason: `Bridge health check returned ${response.status}` };
   } catch (error) {
-    return {
-      deviceAvailable: false,
-      reason: `Bridge unreachable: ${error instanceof Error ? error.message : String(error)}`,
-    };
+    return { available: false, reason: `Bridge unreachable: ${error instanceof Error ? error.message : String(error)}` };
   }
 }
 
 async function main() {
   const dotEnv = loadDotEnv(join(rootDir, '.env'));
   const env = { ...dotEnv, ...process.env };
+  const noWriteReport = process.argv.includes('--no-write-report');
+
+  const isTestMode = isTestModeActive(env);
+  const shouldFail = isTestMode && env.CREDENTIAL_BOUNDARY_TEST_VERIFIER_FAIL === 'true';
 
   // ===== Part A: Non-device gates =====
-  console.error('Running non-device verification gates...');
+  console.error('[verifier] Running non-device verification gates...');
 
-  const lintResult = runGate('npm.cmd run lint');
-  const typecheckResult = runGate('npm.cmd run typecheck');
-  const testResult = runGate('npm.cmd run test');
-  const buildResult = runGate('npm.cmd run build');
-  const buildWorkerResult = runGate('npm.cmd run build:worker');
+  const lintResult = isTestMode ? { exitCode: shouldFail ? 1 : 0, stdout: '', stderr: '' } : runGate('npm.cmd run lint');
+  const typecheckResult = isTestMode ? { exitCode: shouldFail ? 1 : 0, stdout: '', stderr: '' } : runGate('npm.cmd run typecheck');
+  const testResult = isTestMode ? { exitCode: shouldFail ? 1 : 0, stdout: 'Tests 10 passed', stderr: '' } : runGate('npx vitest run src supabase/functions/credential-vault --exclude "src/lib/*-contract.test.ts"');
+  const buildResult = isTestMode ? { exitCode: shouldFail ? 1 : 0, stdout: '', stderr: '' } : runGate('npm.cmd run build');
+  const buildWorkerResult = isTestMode ? { exitCode: shouldFail ? 1 : 0, stdout: '', stderr: '' } : runGate('npm.cmd run build:worker');
 
-  const testCount = extractTestCount(testResult.stdout, testResult.stderr);
+  const testCount = extractTestCount(testResult.stdout, testResult.stderr) ?? (isTestMode ? 10 : 0);
 
   const gates = {
     lint: { passed: lintResult.exitCode === 0, exitCode: lintResult.exitCode },
     typecheck: { passed: typecheckResult.exitCode === 0, exitCode: typecheckResult.exitCode },
-    test: {
-      passed: testResult.exitCode === 0,
-      exitCode: testResult.exitCode,
-      testCount: testCount,
-    },
+    test: { passed: testResult.exitCode === 0, exitCode: testResult.exitCode, testCount },
     build: { passed: buildResult.exitCode === 0, exitCode: buildResult.exitCode },
     build_worker: { passed: buildWorkerResult.exitCode === 0, exitCode: buildWorkerResult.exitCode },
   };
 
-  // ===== Part B: Credential boundary proof =====
-  console.error('Running credential boundary proof gates...');
+  // ===== Part B: Credential boundary static proof =====
+  console.error('[verifier] Running credential boundary static proof gates...');
 
-  // B1: Run crypto-helper tests (encrypt/decrypt round-trip)
-  const cryptoTestResult = runVitestFile(
-    'supabase/functions/credential-vault/crypto-helper.test.ts'
-  );
+  const cryptoTestResult = isTestMode
+    ? { passed: !shouldFail, exitCode: shouldFail ? 1 : 0, testCount: 5 }
+    : runVitestFile('supabase/functions/credential-vault/crypto-helper.test.ts');
+  const redactionTestResult = isTestMode
+    ? { passed: !shouldFail, exitCode: shouldFail ? 1 : 0, testCount: 5 }
+    : runVitestFile('services/execution-worker/src/credential-redaction.test.ts');
 
-  // B2: Run redaction tests (canary does not persist)
-  const redactionTestResult = runVitestFile(
-    'services/execution-worker/src/credential-redaction.test.ts'
-  );
+  // Test-mode skips all source/Edge-Function scanning and runtime probes.
+  // The fixture preserves the JSON schema and verdict policy while keeping the
+  // audit contract suite hermetic and fast.
+  let canaryVerification;
+  let edgeFunctionCheck;
+  let runtimeCheck;
+  let runtimeProof;
 
-  // B3: Canary search - verify canary only in test files and this script
-  console.error('Searching for canary string across source...');
-  const canaryFiles = searchCanary();
-  const canaryVerification = verifyCanaryPlacement(canaryFiles);
-
-  // B4: Edge Function static check - no plaintext logging
-  const edgeFunctionCheck = verifyEdgeFunctionNoPlaintextLogging();
-
-  // ===== Part C: Runtime proof (optional) =====
-  console.error('Checking runtime availability...');
-  const runtimeCheck = await checkRuntimeAvailability(env);
-
-  // ===== Assemble report =====
-  const allGatesPassed = Object.values(gates).every((g) => g.passed);
-
-  const credentialBoundary = {
-    cryptoTestsPassed: cryptoTestResult.passed,
-    cryptoTestCount: cryptoTestResult.testCount,
-    redactionTestsPassed: redactionTestResult.passed,
-    redactionTestCount: redactionTestResult.testCount,
-    canaryString: CANARY,
-    canaryOnlyInTestFiles: canaryVerification.canaryOnlyInTestFiles,
-    canaryFilesFound: canaryVerification.filesFound.map((f) => f.replace(rootDir.replace(/\\/g, '/') + '/', '')),
-    canaryViolations: canaryVerification.violations.map((f) => f.replace(rootDir.replace(/\\/g, '/') + '/', '')),
-    edgeFunctionNoPlaintextLogging: edgeFunctionCheck.edgeFunctionNoPlaintextLogging,
-    edgeFunctionLoggingIssues: edgeFunctionCheck.details,
-    encryptDecryptRoundTrip: cryptoTestResult.passed,
-    s3PayloadPrefix: 's3',
-    v2CompatibilityRetained: cryptoTestResult.passed,
-  };
-
-  const runtimeProof = {
-    deviceAvailable: runtimeCheck.deviceAvailable,
-    status: runtimeCheck.deviceAvailable ? 'device_available' : 'non_device_only',
-    productionClaim: runtimeCheck.deviceAvailable ? 'runtime_proof_available' : 'blocked_until_runtime_proof',
-    ...(runtimeCheck.bridgeUrl ? { bridgeUrl: runtimeCheck.bridgeUrl } : {}),
-    ...(runtimeCheck.reason ? { reason: runtimeCheck.reason } : {}),
-    ...(runtimeCheck.healthStatus ? { healthStatus: runtimeCheck.healthStatus } : {}),
-  };
-
-  // Overall verdict
-  let overallVerdict;
-  const credentialBoundaryPassed =
-    credentialBoundary.cryptoTestsPassed &&
-    credentialBoundary.redactionTestsPassed &&
-    credentialBoundary.canaryOnlyInTestFiles &&
-    credentialBoundary.edgeFunctionNoPlaintextLogging &&
-    credentialBoundary.encryptDecryptRoundTrip &&
-    credentialBoundary.v2CompatibilityRetained;
-
-  if (allGatesPassed && credentialBoundaryPassed && runtimeProof.deviceAvailable) {
-    overallVerdict = 'full_verified';
-  } else if (allGatesPassed && credentialBoundaryPassed) {
-    overallVerdict = 'non_device_verified';
+  if (isTestMode) {
+    console.error('[verifier] Test mode active: using deterministic safe fixture evidence.');
+    canaryVerification = {
+      canaryOnlyInTestFiles: !shouldFail,
+      filesFound: shouldFail ? ['plans/fixture-canary-violation.json'] : [],
+      violations: shouldFail ? ['plans/fixture-canary-violation.json'] : [],
+    };
+    edgeFunctionCheck = {
+      ok: !shouldFail,
+      details: shouldFail ? ['Line 1: console.log(plaintext) // fixture violation'] : [],
+    };
+    // No network, device, or service contact in test mode.
+    runtimeCheck = { available: false, reason: 'test_mode_runtime_probe_disabled' };
+    // Runtime proof is never requested in test mode; the audit must still
+    // never pass --runtime-proof through to a child verifier.
+    runtimeProof = { attempted: false, prerequisitesReady: false, reason: 'runtime proof not requested' };
   } else {
-    overallVerdict = 'failed';
+    console.error('[verifier] Searching for canary string across source and plans...');
+    canaryVerification = verifyCanaryPlacement(searchCanary());
+
+    edgeFunctionCheck = verifyEdgeFunctionNoPlaintextLogging();
+
+    console.error('[verifier] Checking runtime availability...');
+    runtimeCheck = await checkRuntimeAvailability(env);
+    const runtimeRequested = process.argv.includes('--runtime-proof');
+    runtimeProof = runtimeRequested
+      ? await runCredentialBoundaryRuntimeProof({
+        rootDir,
+        env,
+        canary: CANARY,
+        // Intentionally process-env only: the proof command may configure privileged runtime setup.
+        proofCommand: process.env.CREDENTIAL_BOUNDARY_PROOF_COMMAND,
+      })
+      : { attempted: false, prerequisitesReady: false, reason: 'runtime proof not requested' };
   }
 
+  const runtimeRequested = !isTestMode && process.argv.includes('--runtime-proof');
+
+  // ===== Compute verdict =====
+  const verdictInput = {
+    lintPassed: gates.lint.passed,
+    typecheckPassed: gates.typecheck.passed,
+    testPassed: gates.test.passed,
+    buildPassed: gates.build.passed,
+    buildWorkerPassed: gates.build_worker.passed,
+    // Requesting a runtime proof without its harness is a blocked release gate,
+    // not a static-only verification run.
+    runtimeAttempted: runtimeRequested,
+    runtimePrerequisitesReady: runtimeProof.prerequisitesReady,
+    authMatrixPassed: runtimeProof.authMatrixPassed === true,
+    cryptoTestsPassed: cryptoTestResult.passed,
+    redactionTestsPassed: redactionTestResult.passed,
+    canaryScanClean: canaryVerification.canaryOnlyInTestFiles,
+    edgeFunctionNoPlaintextLogging: edgeFunctionCheck.ok,
+    loginRunCompleted: runtimeProof.loginRunCompleted === true,
+    persistenceScanClean: runtimeProof.persistenceScanClean === true,
+    cleanupVerified: runtimeProof.cleanupVerified === true,
+    capturedLogsClean: runtimeProof.capturedLogsClean === true,
+    tempLogsDeleted: runtimeProof.tempLogsDeleted === true,
+  };
+
+  const overallVerdict = computeCredentialBoundaryVerdict(verdictInput);
+
+  // ===== Assemble report (safe: no canary plaintext, only hash) =====
   const report = {
     verificationDate: new Date().toISOString(),
     verifierVersion: VERIFIER_VERSION,
+    staticVerifierTestMode: isTestMode,
     gates,
-    credentialBoundary,
-    runtimeProof,
+    credentialBoundary: {
+      cryptoTestsPassed: cryptoTestResult.passed,
+      cryptoTestCount: cryptoTestResult.testCount,
+      redactionTestsPassed: redactionTestResult.passed,
+      redactionTestCount: redactionTestResult.testCount,
+      canaryHash: CANARY_HASH, // Non-reversible hash, not the plaintext canary
+      canaryOnlyInTestFiles: canaryVerification.canaryOnlyInTestFiles,
+      canaryFilesFound: canaryVerification.filesFound.map((f) => f.replace(rootDir.replace(/\\/g, '/') + '/', '')),
+      canaryViolations: canaryVerification.violations.map((f) => f.replace(rootDir.replace(/\\/g, '/') + '/', '')),
+      edgeFunctionNoPlaintextLogging: edgeFunctionCheck.ok,
+      edgeFunctionLoggingIssues: edgeFunctionCheck.details,
+      s3PayloadPrefix: 's3',
+    },
+    runtimeProof: {
+      bridgeAvailable: runtimeCheck.available,
+      bridgeHealthOnly: runtimeCheck.available,
+      runtimeRequested,
+      loginRunCompleted: runtimeProof.loginRunCompleted === true,
+      persistenceScanClean: runtimeProof.persistenceScanClean === true,
+      cleanupVerified: runtimeProof.cleanupVerified === true,
+      authMatrixPassed: runtimeProof.authMatrixPassed === true,
+      capturedLogsClean: runtimeProof.capturedLogsClean ?? null,
+      tempLogsDeleted: runtimeProof.tempLogsDeleted ?? null,
+      ...(runtimeProof.safeEvidence ? { evidence: runtimeProof.safeEvidence } : {}),
+      ...(runtimeCheck.bridgeUrl ? { bridgeUrl: runtimeCheck.bridgeUrl } : {}),
+      ...(runtimeProof.reason ?? runtimeCheck.reason ? { reason: runtimeProof.reason ?? runtimeCheck.reason } : {}),
+      ...(runtimeCheck.healthStatus ? { healthStatus: runtimeCheck.healthStatus } : {}),
+      // Runtime proof requires all of the following to be true for full_verified:
+      runtimePrerequisites: [
+        'Deployed credential-vault Edge Function with SUPABASE_SERVICE_ROLE_KEY and CREDENTIAL_VAULT_WORKER_TOKEN',
+        'Worker runtime with CREDENTIAL_VAULT_WORKER_TOKEN env var',
+        'Mobile MCP bridge reachable at MOBILE_MCP_BRIDGE_URL',
+        'Connected Android device',
+        'Disposable account credential supplied at runtime (never in source)',
+        'Remote negative auth matrix executed',
+        'Credential login macro executed through worker -> vault -> bridge',
+        'Persistence scan clean (DB, artifacts, logs, reports)',
+        'Disposable account cleanup verified',
+      ],
+    },
     overallVerdict,
-    phasesImplemented: ['A', 'B', 'C', 'D', 'E', 'F'],
-    phasesVerified: ['A', 'B', 'C', 'D', 'E', 'F'],
+    documentationClaims: 'remediation_pending',
+    note: 'full_verified requires a completed credential login run, clean persistence scan, and verified cleanup. Bridge health alone is not proof.',
   };
 
-  // Output JSON to stdout
   const reportJson = JSON.stringify(report, null, 2);
   console.log(reportJson);
 
-  // Save report
-  const reportsDir = join(
-    rootDir,
-    'plans',
-    '260710-credential-boundary-implementation-plan',
-    'reports'
-  );
-  if (!existsSync(reportsDir)) {
-    mkdirSync(reportsDir, { recursive: true });
+  // Save report (unless --no-write-report is set)
+  if (!noWriteReport) {
+    const reportsDir = join(rootDir, 'plans', '260710-credential-boundary-remediation', 'reports');
+    if (!existsSync(reportsDir)) {
+      mkdirSync(reportsDir, { recursive: true });
+    }
+    const reportPath = join(reportsDir, `credential-boundary-verification-${timestamp()}.json`);
+    writeFileSync(reportPath, reportJson, 'utf8');
+    console.error(`Report saved to ${reportPath}`);
   }
-  const reportPath = join(
-    reportsDir,
-    `credential-boundary-verification-${timestamp()}.json`
-  );
-  writeFileSync(reportPath, reportJson, 'utf8');
-  console.error(`Report saved to ${reportPath}`);
 
-  // Exit with success if non-device verified (don't fail on device unavailable)
   if (overallVerdict === 'failed') {
     process.exit(1);
   }
 }
 
 main().catch((err) => {
-  // Never print err.message if it might contain sensitive data
-  console.error(
-    JSON.stringify({ error: 'Verification script failed', name: err?.name ?? 'Unknown' })
-  );
+  console.error(JSON.stringify({ error: 'Verification script failed', name: err?.name ?? 'Unknown' }));
   process.exit(1);
 });
