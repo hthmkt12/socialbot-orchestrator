@@ -3,9 +3,9 @@ services:
     build:
       context: .
       args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-        VITE_ACCOUNT_PASSWORD_KEY: ${VITE_ACCOUNT_PASSWORD_KEY}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://localhost:54321}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-dev-anon-key}
+        VITE_ACCOUNT_PASSWORD_KEY: ${VITE_ACCOUNT_PASSWORD_KEY:-dev-account-password-key}
     ports:
       - "3000:80"
     restart: unless-stopped
@@ -18,16 +18,16 @@ services:
       context: .
       dockerfile: services/execution-worker/Dockerfile
     environment:
-      SUPABASE_URL: ${SUPABASE_URL}
-      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      SUPABASE_URL: ${SUPABASE_URL:-http://localhost:54321}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-dev-service-role-key}
       CREDENTIAL_BOUNDARY_SERVICE_ROLE_KEY: ${CREDENTIAL_BOUNDARY_SERVICE_ROLE_KEY:-}
-      CREDENTIAL_VAULT_WORKER_TOKEN: ${CREDENTIAL_VAULT_WORKER_TOKEN}
+      CREDENTIAL_VAULT_WORKER_TOKEN: ${CREDENTIAL_VAULT_WORKER_TOKEN:-dev-vault-worker-token}
       DEVICE_BACKEND: ${DEVICE_BACKEND:-mobile-mcp}
       MOBILE_MCP_BRIDGE_URL: ${MOBILE_MCP_BRIDGE_URL:-http://host.docker.internal:4321}
-      MOBILE_MCP_BRIDGE_TOKEN: ${MOBILE_MCP_BRIDGE_TOKEN}
+      MOBILE_MCP_BRIDGE_TOKEN: ${MOBILE_MCP_BRIDGE_TOKEN:-dev-bridge-token}
       WORKER_CORS_ORIGIN: ${WORKER_CORS_ORIGIN:-http://localhost:3000}
       GATEWAY_BASE_URL: ${GATEWAY_BASE_URL:-http://gateway:8080}
-      GATEWAY_HTTP_TOKEN: ${GATEWAY_HTTP_TOKEN}
+      GATEWAY_HTTP_TOKEN: ${GATEWAY_HTTP_TOKEN:-dev-gateway-token}
       DEVICE_COMMAND_TIMEOUT_MS: "30000"
       RUN_POLL_INTERVAL_MS: "5000"
       RUN_LEASE_TTL_MS: "60000"
@@ -50,8 +50,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      GATEWAY_HTTP_TOKEN: ${GATEWAY_HTTP_TOKEN}
-      GATEWAY_DEVICE_ENROLLMENT_TOKEN: ${GATEWAY_DEVICE_ENROLLMENT_TOKEN}
+      GATEWAY_HTTP_TOKEN: ${GATEWAY_HTTP_TOKEN:-dev-gateway-token}
+      GATEWAY_DEVICE_ENROLLMENT_TOKEN: ${GATEWAY_DEVICE_ENROLLMENT_TOKEN:-dev-enrollment-token}
       GATEWAY_CORS_ORIGIN: ${GATEWAY_CORS_ORIGIN:-http://localhost:3000}
     restart: unless-stopped
     healthcheck:
