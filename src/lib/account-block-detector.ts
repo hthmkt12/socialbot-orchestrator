@@ -47,7 +47,7 @@ export async function handlePotentialBlock(
   if (!detectedReason) return false;
 
   try {
-    await supabase
+    const { error } = await supabase
       .from('accounts')
       .update({
         is_blocked: true,
@@ -56,6 +56,7 @@ export async function handlePotentialBlock(
       })
       .eq('id', accountId);
 
+    if (error) return false;
     return true;
   } catch {
     // Best effort

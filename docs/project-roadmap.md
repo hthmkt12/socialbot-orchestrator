@@ -99,9 +99,9 @@ Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level
 
 ### Phase 4: Failover and Device Rotation (Q2 2027)
 
-Status: Pilot verified for resilience, error recovery, and hardware mutex on 2026-10-04 (`scripts/verify-level5-resilience-recovery.mjs`).
+Status: Pilot verified for resilience, error recovery, checkpoint block detection, and hardware mutex on 2026-10-04 (`scripts/verify-level5-resilience-recovery.mjs` and `scripts/verify-concrete-social-bots.mjs`).
 
-- Account block detection: Implemented.
+- Account block detection and automated quarantine: Implemented and verified via unit tests (`src/lib/account-block-detector.test.ts`) and live physical execution (`scripts/verify-concrete-social-bots.mjs`). Detects social platform restriction keywords (`'action blocked'`, `'try again later'`, `'we restrict certain activity'`, etc.), updates database flag `is_blocked = true` with reason, and triggers immediate fail-closed pre-execution cutoffs.
 - Hardware lock mutex: Verified single-device mutual exclusion (`DEVICE_LOCKED`) prevents overlapping runs.
 - Step failure automatic lock release: Verified runs that fail mid-execution cleanly release device locks in `finally` block.
 - Stale lock auto-cleanup: Verified worker deletes expired locks and safely recovers device execution.
@@ -125,9 +125,11 @@ Status: Implemented for threshold policy and Supabase storage path; scale readin
 
 ### Phase 7: Concrete Social Bots (Q4 2027)
 
-Status: Implemented in code; starter templates verified via unit testing.
+Status: Implemented and verified on physical Android hardware (`QC4DKJUO6PW4FMQW` / Xiaomi Redmi 13C) on 2026-10-04 (`scripts/verify-concrete-social-bots.mjs`).
 
 - Concrete Instagram/TikTok macro templates: Implemented and registered (`instagram_warmup`, `instagram_hashtag_engage`, `tiktok_view_bot`).
+- Physical social engagement execution: Verified real execution combining app launch, human-like reading pauses (2000ms+), natural feed scrolling variance, budgeted action execution (`like`), and proof screenshot capture.
+- Checkpoint block detection and fail-closed isolation: Verified automated account isolation upon detecting platform error indicators, preventing further gesture dispatch while maintaining 0 residual hardware locks.
 - `foreach` execution support: Implemented.
 - Anti-detection engine in worker: Implemented.
 

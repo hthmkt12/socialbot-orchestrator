@@ -24,6 +24,13 @@
   - Automatically assesses account warm-up progress and promotes accounts to higher stages (`warm_up_stage`) with ramped `daily_action_limit` when day thresholds are met.
   - Integrated into `services/execution-worker/src/index.ts` with graceful startup/shutdown and `/health` reporting.
   - Verified 100% test coverage with 6 unit tests in `services/execution-worker/src/account-warmup-scheduler.test.ts`.
+- **Concrete Social Bots & Checkpoint Auto-Block Isolation verified**: Implemented and executed end-to-end verification (`scripts/verify-concrete-social-bots.mjs`) on connected physical Android hardware (`QC4DKJUO6PW4FMQW` / Xiaomi Redmi 13C, Android 14):
+  - Created unit tests in `src/lib/account-block-detector.test.ts` (6 tests passing) covering keyword detection (`action blocked`, `try again later`, `we restrict certain activity`, `suspicious activity`, etc.) and database update logic with error handling.
+  - Executed concrete social engagement macro (`ffb4bd1e-b94a-42d9-b111-ddc1e21bdb24`) on physical device with app launch, human-like reading pauses (2000-2500ms), feed scrolling gestures, budgeted action consumption, and proof screenshot capture.
+  - Successfully verified action counter incrementation (0 -> 1) and action history persistence in `account_action_history`.
+  - Tested checkpoint auto-block isolation: simulated platform restriction message automatically triggered `handlePotentialBlock`, updating database to `is_blocked = true` with reason.
+  - Verified follow-up run on blocked account fails closed immediately with status `FAILED` before physical gesture dispatch.
+  - Confirmed hardware lock mutex cleanliness with 0 residual locks. Evidence saved to `plans/reports/concrete-social-bots-verify-2026-10-04T07-01-57-956Z.json`.
 
 ## 2026-07-08
 
