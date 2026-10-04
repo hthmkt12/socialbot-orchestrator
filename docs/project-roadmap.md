@@ -186,6 +186,16 @@ Status: Removed from MVP runtime scope during use-case cleanup.
 
 - Natural language macro generation, provider-backed prompt translation, and conversational editing are not part of the current MVP.
 
+### Phase 14: Fleet Soak & Memory Integrity Characterization
+
+Status: Pilot verified on physical Android hardware (`QC4DKJUO6PW4FMQW` / Xiaomi Redmi 13C) on 2026-10-04 (`scripts/verify-fleet-soak-integrity.mjs`, report `plans/reports/fleet-soak-integrity-report-1791115558368.json`).
+
+- Multi-cycle sequential execution: Verified 3 continuous automation cycles executing app launch, human pauses, multi-point feed swipe gestures, budgeted interactions (`like`), and screenshot artifacts to `COMPLETED`.
+- 100% clean hardware lock lifecycle: Verified `device_locks` acquired per run and cleanly released with 0 residual locks across every consecutive cycle.
+- Fault resilience lock release: Verified intentional step failure terminates with `FAILED` while releasing device locks unconditionally in worker `finally` block (0 lingering locks).
+- Account action count & daily reset: Verified atomic counter increments via RPC and daily counter rollover to 0.
+- Memory stability & bounded heap: Worker process memory observed in real-time via `/health` endpoint; heap growth bounded at +2.53 MB across full multi-run sequence (threshold < 25 MB). Zero leaks.
+
 ## Later
 
 - Add Laixi-specific live clean-path proof when access is available.

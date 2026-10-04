@@ -1,4 +1,6 @@
 import { createServer } from 'node:http';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { GATEWAY_PROTOCOL_VERSION } from '../../../packages/shared/src';
 import { MultiTargetRunExecutor } from './multi-target-run-executor';
 import { RunClaimCoordinator, type WorkerConfig } from './run-claim-coordinator';
@@ -6,6 +8,37 @@ import { SingleDeviceRunExecutor } from './single-device-run-executor';
 import { WorkflowScheduleTrigger } from './workflow-schedule-trigger';
 import { AccountWarmupScheduler } from './account-warmup-scheduler';
 import { handleControlPlaneProxy } from './control-plane-proxy';
+
+function loadDotEnvIfMissing() {
+  const candidates = [
+    resolve(process.cwd(), '.env'),
+    resolve(process.cwd(), '../../.env'),
+    resolve(process.cwd(), '../.env'),
+  ];
+  for (const envPath of candidates) {
+    if (existsSync(envPath)) {
+      try {
+        const content = readFileSync(envPath, 'utf8');
+        for (const line of content.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+          const idx = trimmed.indexOf('=');
+          const key = trimmed.slice(0, idx).trim();
+          let val = trimmed.slice(idx + 1).trim();
+          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+            val = val.slice(1, -1);
+          }
+          process.env[key] = val;
+        }
+        break;
+      } catch (err) {
+        void err;
+      }
+    }
+  }
+}
+
+loadDotEnvIfMissing();
 
 function readRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -80,6 +113,8 @@ function startHealthServer(
         JSON.stringify({
           service: 'execution-worker',
           status: 'ok',
+          uptime: process.uptime(),
+          memory: process.memoryUsage(),
           pollIntervalMs: config.pollIntervalMs,
           deviceBackend: config.deviceBackend,
           gatewayBaseUrl: config.gatewayBaseUrl,

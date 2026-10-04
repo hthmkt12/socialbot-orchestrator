@@ -2,6 +2,14 @@
 
 ## 2026-10-04
 
+- **Fleet Soak & Memory Integrity Characterization (Phase 14) verified**:
+  - Implemented continuous multi-cycle fleet soak and memory integrity test harness (`scripts/verify-fleet-soak-integrity.mjs`).
+  - Added real-time process memory metrics (`rss`, `heapUsed`, `heapTotal`) and `uptime` to execution worker `/health` endpoint (`services/execution-worker/src/index.ts`).
+  - Verified 3 consecutive physical device automation cycles on Xiaomi Redmi 13C hardware (`QC4DKJUO6PW4FMQW`): multi-step gestures, feed scrolls, budgeted actions, and screenshot captures with 100% completion.
+  - Verified hardware device lock mutual exclusion and 100% clean release leaving 0 residual locks across all cycles.
+  - Verified fault resilience: injected step failure cleanly terminates to `FAILED` with 0 residual device locks released in `finally` block.
+  - Verified account action count tracking and daily counter rollover to 0.
+  - Verified memory integrity: initial heap 16.18 MB, final heap 18.71 MB, bounded delta +2.53 MB (well below the 25 MB stability threshold), confirming zero memory leaks.
 - **CI/CD Actions & Keepalive Workflow Hardening**:
   - Corrected official GitHub action versions from non-existent `@v6` tags to current stable releases (`actions/checkout@v4`, `actions/setup-node@v4`, `actions/setup-python@v5`) across all jobs in `.github/workflows/ci.yml`.
   - Added `workflow_dispatch:` trigger to `.github/workflows/ci.yml` enabling manual pipeline triggers via GitHub CLI and Web UI.
