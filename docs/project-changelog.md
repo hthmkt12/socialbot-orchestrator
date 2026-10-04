@@ -1,5 +1,16 @@
 # Project Changelog
 
+## 2026-10-04
+
+- **Level 1 Social Pilot & Mobile MCP Runtime Proof verified**: Refreshed physical Android pilot proof on workstation using connected Xiaomi Redmi 13C (`QC4DKJUO6PW4FMQW` / `23106RN0DA`, Android 14). Verified server credential boundary, Mobile MCP FastAPI bridge, and execution worker integration.
+- **Level 2 Social Pilot (Multi-Step Gestures) verified**: Implemented and verified natural feed scrolling gestures with randomized swipe durations (650ms-750ms), human reading pauses (1500ms-3000ms), and touch coordinate jitter. Verified via `scripts/verify-level2-social-pilot.mjs` (`commit 33515d4`).
+- **Level 3 Social Action Budget & Automated Schedule Trigger verified**: Implemented per-account action budget policy with pre-execution cutoff `BUDGET_EXCEEDED` before touching hardware, Supabase RPC `increment_account_action_count`, and background `WorkflowScheduleTrigger` polling `workflow_schedules` table with cron recalculation. Resolved schedule foreign key constraints and target selector key normalization. Verified via `scripts/verify-level3-action-budget.mjs` and `scripts/verify-scheduled-workflow-trigger.mjs` (`commit 1eb275f`).
+- **Level 4 Multi-Action Warm-Up Macro verified**: Executed a 12-step composite macro combining app launch, foreground verification, multi-point feed swipe gestures, anti-detection delays, budgeted interactions (`like`), and dual screenshot evidence capture on Redmi 13C hardware. Triggered automatically via background cron schedule loop. Verified via `scripts/verify-level4-multiaction-pilot.mjs` (`commit a883761`).
+- **Level 5 Resilience, Fault Recovery & Hardware Mutex verified**: Implemented and verified comprehensive resilience harness (`scripts/verify-level5-resilience-recovery.mjs`):
+  - Scenario 1 (Step failure & automatic lock release): Verified runs encountering step errors or intentional stop terminate cleanly with status `FAILED` and release device locks unconditionally in `finally` block.
+  - Scenario 2 (Concurrent hardware lock mutex enforcement): Verified runs attempting to target a locked device fail immediately with error `DEVICE_LOCKED` to prevent physical gesture collisions.
+  - Scenario 3 (Expired stale lock auto-cleanup & recovery): Verified execution worker automatically purges expired locks and resumes normal execution to `COMPLETED` on physical hardware without operator intervention.
+
 ## 2026-07-08
 
 - **Phase 2: Production Credential Boundary implemented**: 3-tier status model (`pilot_client_encrypted`, `server_boundary_required`, `server_managed`). Missing/weak key blocks save/import. `v2:` payloads preserved. Secret-scrub in readiness evidence enforced. Decision note created. Docs updated.

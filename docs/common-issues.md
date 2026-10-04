@@ -552,6 +552,40 @@ Solutions:
 Verification:
 - `node scripts/verify-scheduled-workflow-trigger.mjs`
 
+## Device Lock Foreign Key Constraint on Workflow Run ID
+
+Symptoms:
+- Inserting a test or synthetic lock directly into `device_locks` fails with foreign key constraint violation `device_locks_workflow_run_id_fkey`.
+
+Root Cause:
+- `device_locks.workflow_run_id` enforces a foreign key constraint to `workflow_runs(id)`. Random or non-persisted UUIDs cannot be used to lock a device.
+
+Common Triggers:
+- Direct database seeding or testing concurrency locks without creating a corresponding `workflow_runs` record first.
+
+Solutions:
+- Insert or reference an existing `workflow_runs` record before inserting into `device_locks`. Clean up both records during teardown.
+
+Verification:
+- `node scripts/verify-level5-resilience-recovery.mjs`
+
+## Step Failure Automatic Lock Release
+
+Symptoms:
+- When a macro step encounters an error or intentional stop, operator is concerned the physical device remains locked in `device_locks`.
+
+Root Cause:
+- Devices must be released immediately upon step or runner error so subsequent runs or operators are not blocked indefinitely.
+
+Common Triggers:
+- Macro step failure with `onError: 'stop'` or unhandled runtime exceptions.
+
+Solutions:
+- `executeOwnedDeviceRun` wraps execution in a `try...finally` block that invokes `releaseDeviceLock(params.supabase, params.device.id, params.runId)` unconditionally upon exit, ensuring lock release even on unexpected crashes.
+
+Verification:
+- `node scripts/verify-level5-resilience-recovery.mjs`
+
 
 ## Current Decisions
 

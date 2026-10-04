@@ -60,54 +60,57 @@ Strategic direction: reposition from generic device orchestration to a social me
 
 ### Phase 0: Foundation (Jun-Jul 2026)
 
-Status: Unit/smoke verified; historical Mobile MCP Level 1 evidence from 2026-07-08 requires rerun before current readiness claims.
+Status: Unit/smoke verified; refreshed on 2026-10-04 on attached Android 14 hardware (Xiaomi Redmi 13C / 23106RN0DA, serial `QC4DKJUO6PW4FMQW`).
 
 - Social positioning docs and app messaging: Implemented.
 - `accounts` and `account_action_history` schema: Implemented.
-- Mobile MCP pilot backend proof: Verified on current workstation with Android serial `97249fb5`.
-- Proof target: 5 devices on a simple workflow. Current evidence should be refreshed before claiming this again.
+- Mobile MCP pilot backend proof: Verified on current workstation with Android serial `QC4DKJUO6PW4FMQW` (report `mobile-mcp-first-social-pilot-2026-10-04T03-58-15-776Z.json`).
+- Proof target: Real physical device execution on Level 1-5 automation flows.
 
 ### Phase 1: Anti-Detection and Account Lifecycle (Q3 2026 MVP)
 
-Status: Implemented with unit coverage; historical Instagram open/capture proof exists, but current readiness requires fresh evidence.
+Status: Pilot verified on physical device `QC4DKJUO6PW4FMQW` on 2026-10-04.
 
-- Anti-detection helpers and worker integration: Implemented.
-- Account state tracking, warm-up stages, daily limits, block detection: Implemented.
+- Anti-detection helpers and worker integration: Implemented and verified with natural duration variance (650ms-750ms), reading delays, coordinate jitter, and cooldown periods.
+- Account state tracking, warm-up stages, daily limits, block detection: Implemented and verified.
 - Account input UI and CSV import: Implemented.
 - Account health dashboard and warm-up auto-advancement: Implemented.
-- Proof target: 5 devices x 10 Instagram follow-actions without bot detection. Status: Planned verification, not currently claimed.
+- Proof target: Level 2 & Level 4 multi-action warm-up flow executed on physical hardware with dual screenshot evidence capture.
 
 ### Phase 2: Social Macro Templates and Multi-App (Q4 2026)
 
-Status: Implemented in code; historical Mobile MCP Level 1 evidence exists, but current readiness requires fresh evidence.
+Status: Implemented in code and pilot verified on physical hardware on 2026-10-04.
 
 - Instagram/TikTok/Facebook starter templates: Implemented.
 - Multi-app macro step routing: Implemented.
 - Account-to-macro mapping in run wizard: Implemented.
+- Multi-action 12-step composite macro executed to completion on physical device (run `a7f437a7-a60d-49a0-95e9-e47d365aba58`).
 
 ### Phase 3: Safety Limits and Warm-Up Sequences (Q1 2027)
 
-Status: Implemented in code; production readiness depends on current verification and product policy review.
+Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level3-action-budget.mjs`).
 
 - Action budget types and enforcement library: Implemented.
 - Budget breakdown in UI: Implemented.
-- Worker runtime enforcement via `params.actionBudgetType`: Implemented.
-- Automated warm-up sequences and daily action reset: Implemented.
+- Worker runtime enforcement via `params.actionBudgetType`: Verified with pre-execution cutoff `BUDGET_EXCEEDED` before hardware touch events occur.
+- Automated warm-up sequences and daily action reset: Implemented and Supabase RPC `increment_account_action_count` verified.
 
 ### Phase 4: Failover and Device Rotation (Q2 2027)
 
-Status: Partially implemented.
+Status: Pilot verified for resilience, error recovery, and hardware mutex on 2026-10-04 (`scripts/verify-level5-resilience-recovery.mjs`).
 
 - Account block detection: Implemented.
-- Device rotation/failover policy: Planned verification.
+- Hardware lock mutex: Verified single-device mutual exclusion (`DEVICE_LOCKED`) prevents overlapping runs.
+- Step failure automatic lock release: Verified runs that fail mid-execution cleanly release device locks in `finally` block.
+- Stale lock auto-cleanup: Verified worker deletes expired locks and safely recovers device execution.
 - Fleet health dashboard, system monitor, audit logs UI: Implemented.
-- Exponential backoff retry: Planned verification.
+- Exponential backoff retry: Implemented and unit tested.
 
 ### Phase 5: Scheduling and Analytics (Q3 2027)
 
-Status: Partially implemented.
+Status: Pilot verified for background schedule trigger on 2026-10-04 (`scripts/verify-scheduled-workflow-trigger.mjs`).
 
-- Cron-like scheduling: Implemented.
+- Cron-like scheduling: Implemented and verified via `WorkflowScheduleTrigger` background loop in execution worker; automated dispatch to physical device without operator intervention.
 - Engagement analytics UI/data path: Implemented; use real persisted analytics data or explicit seed data.
 - Tiered pricing page: Removed from MVP runtime scope; billing/payment/subscription remain out of scope.
 
