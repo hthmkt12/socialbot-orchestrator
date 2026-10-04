@@ -1,3 +1,4 @@
+import './websocket-polyfill.js';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

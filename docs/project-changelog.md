@@ -2,6 +2,11 @@
 
 ## 2026-10-04
 
+- **Docker Compose Full Stack Container Lifecycle & Node 20 WebSocket Polyfill**:
+  - Resolved `Error: Node.js 20 detected without native WebSocket support` in `services/execution-worker` container by introducing `websocket-polyfill.ts` that provides `globalThis.WebSocket = WebSocket` from `ws` for `@supabase/supabase-js`.
+  - Configured configurable frontend host port in `docker-compose.yml` (`${FRONTEND_PORT:-3000}:80`), preventing port collisions when host port 3000 is occupied by other local services.
+  - Successfully ran all three production containers simultaneously (`frontend`, `gateway`, `worker`), verified all reached `(healthy)` / `Up` status, and verified HTTP 200 responses on all three public endpoints.
+  - Tested clean stack teardown via `docker compose down` with zero residual networks or containers.
 - **Docker Build Context Pruning & Compose Development Defaults**:
   - Excluded Python virtualenvs (`**/.venv*`, `**/venv*`), `__pycache__`, `**/.pytest_cache`, and `services/mobile-mcp-bridge` in `.dockerignore`.
   - Slashed Docker build context transfer from 1.33 GB to 38.9 KB (99.9% reduction), reducing local context transfer from 5 minutes to 1.3 seconds.

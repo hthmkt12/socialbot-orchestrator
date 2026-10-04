@@ -7,7 +7,7 @@ services:
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-dev-anon-key}
         VITE_ACCOUNT_PASSWORD_KEY: ${VITE_ACCOUNT_PASSWORD_KEY:-dev-account-password-key}
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     restart: unless-stopped
     depends_on:
       worker:

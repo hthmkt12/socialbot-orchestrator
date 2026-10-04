@@ -679,6 +679,46 @@ Verification:
 - `docker compose up -d gateway` reaches status `Up (healthy)` in under 10 seconds.
 - `curl http://127.0.0.1:8080/health` returns HTTP 200 `{"service":"laixi-gateway","status":"ok"}`.
 
+## Execution Worker Container WebSocket Support in Node 20
+
+Symptoms:
+- Starting worker container via `docker compose up -d worker` enters restart loop (`Restarting (1)`), with log output: `Error: Node.js 20 detected without native WebSocket support.`
+
+Root Cause:
+- `@supabase/supabase-js`'s realtime client expects either native `globalThis.WebSocket` (Node 22+) or an explicit WebSocket transport/polyfill. In Alpine `node:20-alpine`, `globalThis.WebSocket` is undefined.
+
+Common Triggers:
+- Running `services/execution-worker` inside a Node 20 container image.
+
+Solutions:
+- Add a lightweight polyfill `websocket-polyfill.ts` importing `ws` and assigning `globalThis.WebSocket = WebSocket` if undefined.
+- Import `./websocket-polyfill.js` at entry points (`index.ts`, `execute-device-worker-thread.ts`).
+
+Verification:
+- `docker compose up -d worker` reaches status `Up (healthy)` in under 10 seconds.
+- `curl http://127.0.0.1:4310/health` returns HTTP 200 `{"service":"execution-worker","status":"ok"}`.
+
+## Docker Compose Frontend Port Conflict and WSL Environment Forwarding
+
+Symptoms:
+- `docker compose up -d frontend` fails with `Error response from daemon: Bind for 127.0.0.1:3000 failed: port is already allocated`.
+- Setting `$env:FRONTEND_PORT = "3001"` in PowerShell does not change the bound port in `docker compose`.
+
+Root Cause:
+- Host port 3000 is occupied by another local service (e.g. Next.js).
+- `docker.cmd` delegates to `wsl.exe -d Ubuntu -e docker`. Windows PowerShell environment variables are not forwarded into WSL unless specified in `WSLENV`.
+
+Common Triggers:
+- Running frontend container alongside existing services listening on port 3000 on Windows/WSL2.
+
+Solutions:
+- Configure `ports: - "${FRONTEND_PORT:-3000}:80"` in `docker-compose.yml`.
+- Set `$env:WSLENV = "FRONTEND_PORT"` in PowerShell when passing custom port numbers to Docker Compose via WSL wrapper.
+
+Verification:
+- `$env:FRONTEND_PORT = "3001"; $env:WSLENV = "FRONTEND_PORT"; docker compose up -d frontend` binds to `0.0.0.0:3001->80/tcp`.
+- `curl http://127.0.0.1:3001` returns HTTP 200 with Nginx serving the frontend bundle.
+
 ## Current Decisions
 
 - Mobile MCP is the accepted pilot-default backend. Laixi remains future-compatible until VIP/API/live-session proof is available.

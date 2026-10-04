@@ -1,3 +1,4 @@
+import './websocket-polyfill.js';
 import { parentPort, workerData } from 'node:worker_threads';
 import { createClient } from '@supabase/supabase-js';
 import { executeOwnedDeviceRun } from './execute-owned-device-run.js';
