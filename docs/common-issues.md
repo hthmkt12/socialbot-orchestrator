@@ -517,6 +517,42 @@ Solutions:
 Verification:
 - `node scripts/verify-level2-social-pilot.mjs`
 
+## Schedule Target Selector Key Mismatch
+
+Symptoms:
+- Runs triggered by background schedule loop fail immediately with error `EXECUTION_ERROR`: `Run <id> has invalid or missing single device selector`.
+
+Root Cause:
+- `WorkflowScheduleTrigger` constructed target selectors using `{ deviceIds: [id] }`, whereas `SingleDeviceRunExecutor` / `loadSingleDeviceRunContext` previously extracted `target_ids?.[0]`.
+
+Common Triggers:
+- Automated schedules targeting `SINGLE_DEVICE` dispatched via `workflow_schedules` trigger loop.
+
+Solutions:
+- `WorkflowScheduleTrigger` emits both `target_ids` and `deviceIds` in the selector object.
+- `loadSingleDeviceRunContext` accepts either `target_ids` or `deviceIds` with fallback.
+
+Verification:
+- `node scripts/verify-scheduled-workflow-trigger.mjs`
+
+## Workflow Schedule User ID Foreign Key Mismatch
+
+Symptoms:
+- `WorkflowScheduleTrigger` fails to insert runs into `workflow_runs`, logging foreign key constraint violation on `triggered_by_user_id`.
+
+Root Cause:
+- `workflow_schedules.created_by` references `auth.users(id)` while `workflow_runs.triggered_by_user_id` references `profiles(id)`. When `profile.id` differs from `profile.user_id`, inserting raw `schedule.created_by` into `workflow_runs` violates foreign key constraint.
+
+Common Triggers:
+- Triggering workflow schedules created by authenticated users where auth user ID does not match profile primary key.
+
+Solutions:
+- In `WorkflowScheduleTrigger`, look up `profiles.id` by `user_id` when resolving `triggered_by_user_id`, falling back gracefully to valid profile IDs.
+
+Verification:
+- `node scripts/verify-scheduled-workflow-trigger.mjs`
+
+
 ## Current Decisions
 
 - Mobile MCP is the accepted pilot-default backend. Laixi remains future-compatible until VIP/API/live-session proof is available.

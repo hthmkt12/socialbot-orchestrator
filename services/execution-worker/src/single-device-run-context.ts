@@ -45,7 +45,8 @@ export async function loadSingleDeviceRunContext(
   let targetDeviceId: string;
   try {
     const selector = run.target_selector_json as Record<string, unknown> | null;
-    targetDeviceId = (selector as { target_ids?: string[] } | null)?.target_ids?.[0];
+    const s = selector as { target_ids?: string[]; deviceIds?: string[] } | null;
+    targetDeviceId = s?.target_ids?.[0] ?? s?.deviceIds?.[0] ?? '';
     if (!targetDeviceId) throw new Error();
   } catch {
     throw new Error(`Run ${runId} has invalid or missing single device selector`);

@@ -24,7 +24,13 @@ export function buildScheduleTargetSelector(schedule: Pick<DueSchedule, 'target_
       return { ok: false as const, error: 'Schedule target device is required' };
     }
 
-    return { ok: true as const, selector: { deviceIds: [schedule.target_device_id] } };
+    return {
+      ok: true as const,
+      selector: {
+        target_ids: [schedule.target_device_id],
+        deviceIds: [schedule.target_device_id],
+      },
+    };
   }
 
   if (schedule.target_type === 'DEVICE_GROUP') {
@@ -165,6 +171,29 @@ export class WorkflowScheduleTrigger {
         return;
       }
 
+      // Resolve profile ID for workflow_runs FK (schedule.created_by references auth.users)
+      let triggeredByUserId = schedule.created_by;
+      if (triggeredByUserId) {
+        const { data: profileByUserId } = await this.supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', triggeredByUserId)
+          .maybeSingle();
+        if (profileByUserId?.id) {
+          triggeredByUserId = profileByUserId.id;
+        }
+      }
+      if (!triggeredByUserId) {
+        const { data: fallbackProfile } = await this.supabase
+          .from('profiles')
+          .select('id')
+          .limit(1)
+          .maybeSingle();
+        if (fallbackProfile?.id) {
+          triggeredByUserId = fallbackProfile.id;
+        }
+      }
+
       // 2. Create the workflow run. The worker claim loop performs device execution.
       const { error: runError } = await this.supabase.from('workflow_runs').insert({
         macro_version_id: schedule.macro_version_id,
@@ -172,7 +201,7 @@ export class WorkflowScheduleTrigger {
         target_selector_json: target.selector,
         input_variables_json: schedule.input_variables ?? {},
         status: 'QUEUED',
-        triggered_by_user_id: schedule.created_by,
+        triggered_by_user_id: triggeredByUserId,
         summary_json: { source: 'schedule', scheduleId: schedule.id, scheduleName: schedule.name },
       });
 
