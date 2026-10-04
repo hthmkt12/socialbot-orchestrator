@@ -2,6 +2,12 @@
 
 ## 2026-10-04
 
+- **Docker Build Context Pruning & Compose Development Defaults**:
+  - Excluded Python virtualenvs (`**/.venv*`, `**/venv*`), `__pycache__`, `**/.pytest_cache`, and `services/mobile-mcp-bridge` in `.dockerignore`.
+  - Slashed Docker build context transfer from 1.33 GB to 38.9 KB (99.9% reduction), reducing local context transfer from 5 minutes to 1.3 seconds.
+  - Added safe local development environment variable defaults in `docker-compose.yml` (`GATEWAY_HTTP_TOKEN`, `GATEWAY_DEVICE_ENROLLMENT_TOKEN`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CREDENTIAL_VAULT_WORKER_TOKEN`), eliminating runtime configuration crash loops.
+  - Tested live container spin-up and healthcheck probe with `docker compose up -d gateway`, confirming `(healthy)` status within 7 seconds and HTTP 200 response on `/health`.
+  - Executed and verified `verify:fleet-parallel-dispatch` proving concurrent multi-target dispatch and device mutex lock isolation without cross-device deadlocks.
 - **Playwright Test Suite Reliability & Verification Script Aliases**:
   - Bound Vite webServer command explicitly to IPv4 `127.0.0.1:5173` in `playwright.config.ts`, resolving 120s timeout issues on Windows where Vite defaults to `[::1]`.
   - Added dedicated npm scripts in `package.json` for all automated pilot verification harnesses (`verify:level2-social-pilot`, `verify:level3-action-budget`, `verify:level4-multiaction-pilot`, `verify:level5-resilience-recovery`, `verify:concrete-social-bots`, `verify:scheduled-workflow-trigger`, `verify:warmup-campaign-progression`, `verify:fleet-parallel-dispatch`, `verify:fleet-soak-integrity`, `verify:quarantine-alerting`).

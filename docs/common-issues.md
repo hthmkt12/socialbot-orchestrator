@@ -641,6 +641,44 @@ Solutions:
 Verification:
 - `npx.cmd playwright test tests/e2e/operator-warmup-dashboard.spec.ts` connects within seconds and passes all tests.
 
+## Docker Build Context Bloat from Python Virtual Environments
+
+Symptoms:
+- `docker compose build` spends several minutes transferring gigabytes of context (`transferring context: 1.33GB`), hanging or running out of memory.
+
+Root Cause:
+- Subservice Python virtual environments (`services/mobile-mcp-bridge/.venv`) and test artifacts (`**/artifacts`, `**/.pytest_cache`) were not matched by top-level `.dockerignore` patterns, causing Docker Desktop (over WSL2 9P filesystem) to upload the entire Python environment.
+
+Common Triggers:
+- Elevating build context to repository root (`context: .`) while local Python services have virtual environments installed.
+
+Solutions:
+- Add `**/.venv*`, `**/venv*`, `**/__pycache__`, `**/.pytest_cache`, `**/artifacts`, and `services/mobile-mcp-bridge` to `.dockerignore`.
+- Context transfer immediately drops from 1.33 GB to under 40 KB (1.3 seconds).
+
+Verification:
+- `docker compose build worker` transfers context in ~1.3s with ~39 KB transferred.
+
+## Docker Compose Environment Variable Crash Loop in Gateway
+
+Symptoms:
+- Starting gateway service via `docker compose up -d gateway` enters a crash restart loop (`Restarting (1)`), and logs display `Error: Missing required env var: GATEWAY_HTTP_TOKEN`.
+
+Root Cause:
+- `GatewaySecurityPolicy` enforces strict fail-closed validation for `GATEWAY_HTTP_TOKEN`. When running `docker compose up` without export variables in the host shell, compose passes empty strings (`""`), causing security validation failure.
+
+Common Triggers:
+- Running `docker compose up` on local development environments without a pre-configured `.env` containing gateway tokens.
+
+Solutions:
+- Provide safe local development fallback values in `docker-compose.yml`:
+  `GATEWAY_HTTP_TOKEN: ${GATEWAY_HTTP_TOKEN:-dev-gateway-token}`
+  `GATEWAY_DEVICE_ENROLLMENT_TOKEN: ${GATEWAY_DEVICE_ENROLLMENT_TOKEN:-dev-enrollment-token}`
+
+Verification:
+- `docker compose up -d gateway` reaches status `Up (healthy)` in under 10 seconds.
+- `curl http://127.0.0.1:8080/health` returns HTTP 200 `{"service":"laixi-gateway","status":"ok"}`.
+
 ## Current Decisions
 
 - Mobile MCP is the accepted pilot-default backend. Laixi remains future-compatible until VIP/API/live-session proof is available.
