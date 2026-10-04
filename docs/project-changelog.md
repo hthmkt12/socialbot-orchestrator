@@ -2,6 +2,8 @@
 
 ## 2026-10-04
 
+- **Production Docker Compose Deployment Template Added**:
+  - Provided `.env.production.example` capturing the exact required configuration variables for production deployments across `frontend`, `worker`, and `gateway` containers.
 - **Docker Compose Full Stack Container Lifecycle & Node 20 WebSocket Polyfill**:
   - Resolved `Error: Node.js 20 detected without native WebSocket support` in `services/execution-worker` container by introducing `websocket-polyfill.ts` that provides `globalThis.WebSocket = WebSocket` from `ws` for `@supabase/supabase-js`.
   - Configured configurable frontend host port in `docker-compose.yml` (`${FRONTEND_PORT:-3000}:80`), preventing port collisions when host port 3000 is occupied by other local services.
