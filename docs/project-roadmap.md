@@ -102,6 +102,7 @@ Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level
 Status: Pilot verified for resilience, error recovery, checkpoint block detection, and hardware mutex on 2026-10-04 (`scripts/verify-level5-resilience-recovery.mjs` and `scripts/verify-concrete-social-bots.mjs`).
 
 - Account block detection and automated quarantine: Implemented and verified via unit tests (`src/lib/account-block-detector.test.ts`) and live physical execution (`scripts/verify-concrete-social-bots.mjs`). Detects social platform restriction keywords (`'action blocked'`, `'try again later'`, `'we restrict certain activity'`, etc.), updates database flag `is_blocked = true` with reason, and triggers immediate fail-closed pre-execution cutoffs.
+- Operator Checkpoint Resolution & Unblock Journey: Implemented and verified via Playwright E2E (`tests/e2e/operator-warmup-dashboard.spec.ts`). `AccountHealthCard` surfaces platform restriction alerts and `detected_block_reason`, with one-click "Resolve & Unblock Account" mutation resetting `is_blocked = false` and clearing `detected_block_reason = null` with instant toast notification.
 - Hardware lock mutex: Verified single-device mutual exclusion (`DEVICE_LOCKED`) prevents overlapping runs.
 - Step failure automatic lock release: Verified runs that fail mid-execution cleanly release device locks in `finally` block.
 - Stale lock auto-cleanup: Verified worker deletes expired locks and safely recovers device execution.

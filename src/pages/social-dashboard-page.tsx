@@ -55,6 +55,19 @@ export default function SocialDashboardPage() {
     }
   };
 
+  const handleUnblockAccount = async (id: string) => {
+    try {
+      await updateAccount.mutateAsync({
+        id,
+        is_blocked: false,
+        detected_block_reason: null,
+      });
+      addToast('Account unblocked successfully', 'success');
+    } catch {
+      addToast('Failed to unblock account', 'error');
+    }
+  };
+
   const activeAccounts = (accounts ?? []).filter((a) => !a.is_blocked);
   const blockedAccounts = (accounts ?? []).filter((a) => a.is_blocked);
   const totalActions = (accounts ?? []).reduce((sum, a) => sum + a.current_action_count, 0);
@@ -177,6 +190,7 @@ export default function SocialDashboardPage() {
                         account={account}
                         onStartWarmUp={handleStartWarmUp}
                         onShowHistory={setHistoryAccountId}
+                        onUnblock={handleUnblockAccount}
                       />
                     ))}
                   </div>

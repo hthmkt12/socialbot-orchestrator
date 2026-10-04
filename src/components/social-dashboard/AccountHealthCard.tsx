@@ -13,9 +13,10 @@ interface AccountHealthCardProps {
   account: Account;
   onStartWarmUp: (id: string) => void;
   onShowHistory: (id: string) => void;
+  onUnblock?: (id: string) => void;
 }
 
-export function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: AccountHealthCardProps) {
+export function AccountHealthCard({ account, onStartWarmUp, onShowHistory, onUnblock }: AccountHealthCardProps) {
   const stageInfo = getStageInfo(account.platform, account.warm_up_stage);
   const recommendedStage = computeRecommendedStage(account);
   const actionCheck = canPerformAction(account);
@@ -55,6 +56,20 @@ export function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: Acc
           {account.is_blocked ? 'Blocked' : actionCheck.allowed ? 'Active' : 'Limit Reached'}
         </Badge>
       </div>
+
+      {/* Blocked checkpoint banner */}
+      {account.is_blocked && (
+        <div className="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+          <p className="font-semibold flex items-center gap-1.5">
+            <span>⚠️</span> Checkpoint / Restriction Detected
+          </p>
+          {account.detected_block_reason && (
+            <p className="mt-1 text-[11px] text-red-600 font-mono truncate" title={account.detected_block_reason}>
+              {account.detected_block_reason}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Warm-up stage */}
       <div className="mb-3">
@@ -117,10 +132,21 @@ export function AccountHealthCard({ account, onStartWarmUp, onShowHistory }: Acc
       {/* Actions */}
       {account.warm_up_stage === 1 && !account.is_blocked && (
         <button
+          type="button"
           onClick={(e) => { e.stopPropagation(); onStartWarmUp(account.id); }}
           className="w-full text-center py-2 text-xs font-medium text-sky-600 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors"
         >
           Start Warm-Up
+        </button>
+      )}
+
+      {account.is_blocked && onUnblock && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onUnblock(account.id); }}
+          className="w-full text-center py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
+        >
+          Resolve & Unblock Account
         </button>
       )}
     </div>

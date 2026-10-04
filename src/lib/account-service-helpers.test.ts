@@ -344,6 +344,19 @@ describe('account-service-helpers', () => {
       expect(result.daily_action_limit).toBe(150);
     });
 
+    it('unblocks account by clearing is_blocked and detected_block_reason', async () => {
+      setupUpdateChain({ id: '1', username: 'unblocked', is_blocked: false, detected_block_reason: null });
+
+      const result = await updateAccount('1', { is_blocked: false, detected_block_reason: null });
+
+      expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({
+        is_blocked: false,
+        detected_block_reason: null,
+      }));
+      expect(result.is_blocked).toBe(false);
+      expect(result.detected_block_reason).toBeNull();
+    });
+
     it('throws when update query fails', async () => {
       const { profileSelect } = mockOperatorProfile();
       const updateMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: { message: 'Update failed' } });

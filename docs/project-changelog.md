@@ -31,6 +31,11 @@
   - Tested checkpoint auto-block isolation: simulated platform restriction message automatically triggered `handlePotentialBlock`, updating database to `is_blocked = true` with reason.
   - Verified follow-up run on blocked account fails closed immediately with status `FAILED` before physical gesture dispatch.
   - Confirmed hardware lock mutex cleanliness with 0 residual locks. Evidence saved to `plans/reports/concrete-social-bots-verify-2026-10-04T07-01-57-956Z.json`.
+- **Operator Checkpoint Resolution & Unblock Flow implemented & verified**:
+  - Enhanced `AccountHealthCard` (`src/components/social-dashboard/AccountHealthCard.tsx`) with warning banner displaying detected restriction reason and dedicated `Resolve & Unblock Account` action button.
+  - Updated `useUpdateAccount` (`src/hooks/use-accounts.ts`) and `SocialDashboardPage` (`src/pages/social-dashboard-page.tsx`) to support resetting `is_blocked = false` and `detected_block_reason = null` via Supabase PATCH mutation with toast feedback.
+  - Added unit test coverage in `src/lib/account-service-helpers.test.ts` (32 tests passing) validating account unblocking and database mutation payload.
+  - Verified end-to-end operator journey via Playwright E2E (`tests/e2e/operator-warmup-dashboard.spec.ts`, 3/3 tests passing).
 
 ## 2026-07-08
 

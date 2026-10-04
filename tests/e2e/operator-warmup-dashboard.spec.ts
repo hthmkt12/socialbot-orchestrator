@@ -36,6 +36,21 @@ test.describe('Operator Warm-Up Dashboard Journey', () => {
         created_at: thirtyDaysAgo,
         updated_at: thirtyDaysAgo,
       },
+      {
+        id: 'acc-blocked-3',
+        user_id: 'test-user-id',
+        username: 'insta_blocked_pilot',
+        encrypted_password: 'v2:test-enc-pw',
+        platform: 'instagram',
+        warm_up_stage: 3,
+        warm_up_started_at: fiveDaysAgo,
+        daily_action_limit: 15,
+        current_action_count: 5,
+        is_blocked: true,
+        detected_block_reason: 'Detected keyword: "action blocked"',
+        created_at: fiveDaysAgo,
+        updated_at: fiveDaysAgo,
+      },
     ];
 
     await loginAsTestUser(page, { role: 'OPERATOR' });
@@ -46,8 +61,12 @@ test.describe('Operator Warm-Up Dashboard Journey', () => {
         await route.fulfill({ json: mockAccounts });
       } else if (route.request().method() === 'PATCH') {
         const patchData = route.request().postDataJSON();
+        const url = route.request().url();
+        const match = url.match(/id=eq\.([^&]+)/);
+        const targetId = match ? match[1] : mockAccounts[0].id;
+        const targetAccount = mockAccounts.find((a) => a.id === targetId) ?? mockAccounts[0];
         await route.fulfill({
-          json: { ...mockAccounts[0], ...patchData },
+          json: { ...targetAccount, ...patchData },
         });
       } else {
         await route.continue();
@@ -89,5 +108,23 @@ test.describe('Operator Warm-Up Dashboard Journey', () => {
 
     // Toast notification should announce success
     await expect(page.getByText(/Advanced 1 account/i)).toBeVisible();
+  });
+
+  test('resolving and unblocking account triggers mutation and success toast', async ({ page }) => {
+    await page.goto('/social-dashboard', { waitUntil: 'domcontentloaded' });
+
+    // Verify blocked warning banner & card presence
+    await expect(page.getByText(/1 account blocked/i)).toBeVisible();
+    await expect(page.getByText('insta_blocked_pilot').first()).toBeVisible();
+    await expect(page.getByText('Checkpoint / Restriction Detected')).toBeVisible();
+    await expect(page.getByText(/Detected keyword: "action blocked"/i)).toBeVisible();
+
+    // Click "Resolve & Unblock Account"
+    const unblockButton = page.getByRole('button', { name: 'Resolve & Unblock Account', exact: true });
+    await expect(unblockButton).toBeVisible();
+    await unblockButton.click();
+
+    // Verify success toast
+    await expect(page.getByText(/Account unblocked successfully/i)).toBeVisible();
   });
 });

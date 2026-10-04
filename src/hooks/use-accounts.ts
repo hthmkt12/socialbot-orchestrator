@@ -55,7 +55,7 @@ export function useUpdateAccount() {
       warm_up_stage?: number;
       warm_up_started_at?: string;
       is_blocked?: boolean;
-      detected_block_reason?: string;
+      detected_block_reason?: string | null;
       current_action_count?: number;
       last_action_reset_at?: string;
     }) => updateAccount(id, updates),
