@@ -2,6 +2,13 @@
 
 ## 2026-10-04
 
+- **Docker Compose & Monorepo Containerization Boundary Hardened**:
+  - Elevated microservice build contexts to repository root (`context: .`) with explicit dockerfile paths in `docker-compose.yml` (`services/execution-worker/Dockerfile`, `services/laixi-gateway/Dockerfile`).
+  - Implemented multi-stage Docker builds resolving monorepo shared packages (`packages/shared/src`) and root utilities without build-time boundary errors.
+  - Added HTTP healthchecks (`/health`) to worker and gateway services in `docker-compose.yml`.
+  - Added `"cron-parser": "^5.6.1"` to `services/execution-worker/package.json`.
+  - Optimized `.dockerignore` to exclude `**/node_modules`, `**/dist`, `plans`, `.claude`, `docs`, and test reports, reducing build context transfer.
+  - Verified with `docker compose config`, `docker build -t test-worker -f services/execution-worker/Dockerfile .`, `docker build -t test-gateway -f services/laixi-gateway/Dockerfile .`, and full `docker compose build`.
 - **Checkpoint Quarantine Webhook Notification & Audit Alerting (Phase 15) verified**:
   - Enhanced `handlePotentialBlock` in `src/lib/account-block-detector.ts` with Supabase `audit_logs` persistence and outbound webhook alert dispatch.
   - Implemented real-time alert payload dispatch (`event: 'ACCOUNT_QUARANTINED'`) via HTTP POST to configurable notification endpoints (`ACCOUNT_QUARANTINE_WEBHOOK_URL` / `ALERT_WEBHOOK_URL`), with fail-safe error isolation and 3s timeout.

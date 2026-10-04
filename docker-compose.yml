@@ -15,7 +15,8 @@ services:
 
   worker:
     build:
-      context: services/execution-worker
+      context: .
+      dockerfile: services/execution-worker/Dockerfile
     environment:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
@@ -35,10 +36,17 @@ services:
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:4310/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   gateway:
     build:
-      context: services/laixi-gateway
+      context: .
+      dockerfile: services/laixi-gateway/Dockerfile
     ports:
       - "8080:8080"
     environment:
@@ -46,3 +54,9 @@ services:
       GATEWAY_DEVICE_ENROLLMENT_TOKEN: ${GATEWAY_DEVICE_ENROLLMENT_TOKEN}
       GATEWAY_CORS_ORIGIN: ${GATEWAY_CORS_ORIGIN:-http://localhost:3000}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

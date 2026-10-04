@@ -603,6 +603,26 @@ Solutions:
 Verification:
 - `node scripts/verify-warmup-campaign-progression.mjs`
 
+## Monorepo Microservice Docker Build Context Boundary
+
+Symptoms:
+- Running `docker build` or `docker compose build` for `services/execution-worker` or `services/laixi-gateway` fails with module resolution errors: `Could not resolve "../../../packages/shared/src"`, `Could not resolve "cron-parser"`, or missing `package-lock.json`.
+
+Root Cause:
+- Docker build context was pinned to subdirectories (`services/execution-worker`, `services/laixi-gateway`), isolating the container from monorepo root files, package locks, and shared packages (`packages/shared/src`, `src/lib/credential-decrypt.ts`).
+
+Common Triggers:
+- Isolated microservice Dockerfiles attempting to build using a subfolder context (`context: services/execution-worker`) while code imports relative paths from parent monorepo folders.
+
+Solutions:
+- Elevate build context to repository root (`context: .`) with explicit `dockerfile: services/<name>/Dockerfile` in `docker-compose.yml`.
+- Multi-stage Dockerfiles copy root `package.json`, root `package-lock.json`, and service `package.json`, execute `npm ci` for root and `npm install` for service, copy source across the repo, and build self-contained bundles.
+- Broaden `.dockerignore` to exclude `**/node_modules`, `**/dist`, `plans`, `.claude`, `docs`, and test reports to keep build context uploads minimal.
+
+Verification:
+- `docker compose config` passes with zero validation errors.
+- `docker build -t test-worker -f services/execution-worker/Dockerfile .` completes with exit code 0.
+- `docker build -t test-gateway -f services/laixi-gateway/Dockerfile .` completes with exit code 0.
 
 ## Current Decisions
 
