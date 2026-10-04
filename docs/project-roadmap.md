@@ -161,11 +161,13 @@ Status: Implemented.
 
 ### Phase 11: Playwright E2E Testing Suite
 
-Status: Implemented baseline.
+Status: Implemented and verified on 2026-10-04 (`tests/e2e/run-wizard-journey.spec.ts`).
 
 - Playwright config and baseline navigation tests: Implemented.
 - CI coverage and auth mocking: Implemented.
-- Continue expanding around run wizard and account flows.
+- Run wizard multi-step dynamic navigation: Implemented and unit tested (`src/components/runs/run-wizard-navigation.test.ts`).
+- Run wizard submission & account safety checks: Implemented and unit tested (`src/components/runs/run-wizard-submit.test.ts`).
+- Full operator workflow run launch E2E: Verified in browser with real UI transitions, anti-detection account selection, input parameters, preflight validation gates, and run dispatch redirection to `/runs/{id}/monitor`.
 
 ### Phase 12: Advanced Macros
 

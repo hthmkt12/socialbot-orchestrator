@@ -2,7 +2,18 @@
 
 ## 2026-10-04
 
-- **Level 1 Social Pilot & Mobile MCP Runtime Proof verified**: Refreshed physical Android pilot proof on workstation using connected Xiaomi Redmi 13C (`QC4DKJUO6PW4FMQW` / `23106RN0DA`, Android 14). Verified server credential boundary, Mobile MCP FastAPI bridge, and execution worker integration.
+- **Run Wizard Operator Journey & Multi-Step E2E Testing (Phase 11) verified**:
+  - Implemented unit tests for run wizard step generation and navigation rules (`src/components/runs/run-wizard-navigation.test.ts`, 5 tests passing).
+  - Implemented unit tests for run wizard submission, preflight validation gates, and account safety gating (`src/components/runs/run-wizard-submit.test.ts`, 6 tests passing).
+  - Implemented comprehensive Playwright E2E journey test (`tests/e2e/run-wizard-journey.spec.ts`, 1 test passing):
+    - Authenticates operator and navigates to Workflow Runs page.
+    - Launches New Run wizard modal and selects macro requiring anti-detection.
+    - Selects online target device (`Redmi 13C Pilot`).
+    - Validates account selection safety check: asserts blocked accounts (`insta_blocked_acc`) are disabled and unselectable, selects active account (`insta_pilot_active`).
+    - Fills input variables (`photography` tag).
+    - Reviews execution details and preflight summary.
+    - Executes run, verifies dispatch toast (`PENDING`/`QUEUED`), closes wizard modal, and redirects cleanly to the run monitor page (`/runs/run-e2e-789/monitor`).
+  - Cleaned up TypeScript typings and ESLint across test suites with 0 lint and 0 type errors. Full suite: 65 test files, 620 vitest tests passing.
 - **Level 2 Social Pilot (Multi-Step Gestures) verified**: Implemented and verified natural feed scrolling gestures with randomized swipe durations (650ms-750ms), human reading pauses (1500ms-3000ms), and touch coordinate jitter. Verified via `scripts/verify-level2-social-pilot.mjs` (`commit 33515d4`).
 - **Level 3 Social Action Budget & Automated Schedule Trigger verified**: Implemented per-account action budget policy with pre-execution cutoff `BUDGET_EXCEEDED` before touching hardware, Supabase RPC `increment_account_action_count`, and background `WorkflowScheduleTrigger` polling `workflow_schedules` table with cron recalculation. Resolved schedule foreign key constraints and target selector key normalization. Verified via `scripts/verify-level3-action-budget.mjs` and `scripts/verify-scheduled-workflow-trigger.mjs` (`commit 1eb275f`).
 - **Level 4 Multi-Action Warm-Up Macro verified**: Executed a 12-step composite macro combining app launch, foreground verification, multi-point feed swipe gestures, anti-detection delays, budgeted interactions (`like`), and dual screenshot evidence capture on Redmi 13C hardware. Triggered automatically via background cron schedule loop. Verified via `scripts/verify-level4-multiaction-pilot.mjs` (`commit a883761`).
