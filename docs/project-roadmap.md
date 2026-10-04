@@ -111,10 +111,10 @@ Status: Pilot verified for resilience, error recovery, checkpoint block detectio
 
 ### Phase 5: Scheduling and Analytics (Q3 2027)
 
-Status: Pilot verified for background schedule trigger on 2026-10-04 (`scripts/verify-scheduled-workflow-trigger.mjs`).
+Status: Pilot verified for background schedule trigger (`scripts/verify-scheduled-workflow-trigger.mjs`) and engagement analytics rollup (`tests/e2e/analytics-journey.spec.ts` & `src/lib/analytics-service.test.ts`) on 2026-10-04.
 
 - Cron-like scheduling: Implemented and verified via `WorkflowScheduleTrigger` background loop in execution worker; automated dispatch to physical device without operator intervention.
-- Engagement analytics UI/data path: Implemented; use real persisted analytics data or explicit seed data.
+- Engagement analytics UI/data path: Implemented live aggregation of `account_action_history` events into daily action rollups, action type distribution, live success rates, and recent device error logs with Playwright E2E verification on `AnalyticsPage`.
 - Tiered pricing page: Removed from MVP runtime scope; billing/payment/subscription remain out of scope.
 
 ### Phase 6: Object Storage (Q3 2027)
@@ -136,11 +136,12 @@ Status: Implemented and verified on physical Android hardware (`QC4DKJUO6PW4FMQW
 
 ### Phase 8: Parallel Execution (Fleet Speed)
 
-Status: Unit/smoke verified.
+Status: Unit/smoke verified; multi-target concurrency & hardware mutex isolation verified on 2026-10-04 (`scripts/verify-fleet-parallel-dispatch.mjs`).
 
 - Worker thread execution boundary: Implemented.
 - `MultiTargetRunExecutor` dispatcher refactor: Implemented.
 - Atomic counter RPC: Implemented.
+- Hardware Device Mutex & Fleet Isolation: Verified parallel acquisition of multiple device locks simultaneously under parent `MULTI_DEVICE` run, strict mutual exclusion rejecting conflicting runs, and 100% clean-path release leaving 0 residual locks.
 - Keep pilot validation capped at five Android devices; current runtime dispatches multi-target runs concurrently in bounded chunks of 10, without a fleet-speed SLA.
 
 ### Phase 9: Laixi Clean-Path Proof

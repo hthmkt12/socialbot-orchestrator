@@ -201,3 +201,45 @@ export async function recordAccountAction(input: {
   if (error) throw new Error(`Failed to record action: ${error.message}`);
   return data as AccountActionHistory;
 }
+
+export function generateAccountsCsv(accounts: Account[]): string {
+  const headers = [
+    'ID',
+    'Username',
+    'Platform',
+    'WarmUpStage',
+    'DailyActionLimit',
+    'CurrentActionCount',
+    'IsBlocked',
+    'DetectedBlockReason',
+    'WarmUpStartedAt',
+    'LastActionResetAt',
+    'CreatedAt',
+  ];
+
+  const escapeCell = (val: unknown): string => {
+    if (val === null || val === undefined) return '';
+    const str = String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const rows = accounts.map((acc) => [
+    escapeCell(acc.id),
+    escapeCell(acc.username),
+    escapeCell(acc.platform),
+    escapeCell(acc.warm_up_stage),
+    escapeCell(acc.daily_action_limit),
+    escapeCell(acc.current_action_count),
+    escapeCell(acc.is_blocked),
+    escapeCell(acc.detected_block_reason),
+    escapeCell(acc.warm_up_started_at),
+    escapeCell(acc.last_action_reset_at),
+    escapeCell(acc.created_at),
+  ]);
+
+  return [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+}
+

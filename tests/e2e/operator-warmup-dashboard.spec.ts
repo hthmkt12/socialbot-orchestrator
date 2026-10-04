@@ -127,4 +127,20 @@ test.describe('Operator Warm-Up Dashboard Journey', () => {
     // Verify success toast
     await expect(page.getByText(/Account unblocked successfully/i)).toBeVisible();
   });
+
+  test('exporting accounts snapshot triggers csv download and success toast', async ({ page }) => {
+    await page.goto('/social-dashboard', { waitUntil: 'domcontentloaded' });
+
+    const exportBtn = page.getByRole('button', { name: /Export CSV Snapshot/i });
+    await expect(exportBtn).toBeVisible();
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      exportBtn.click(),
+    ]);
+
+    expect(download.suggestedFilename()).toMatch(/^accounts-snapshot-.*\.csv$/);
+    await expect(page.getByText(/Accounts exported successfully/i)).toBeVisible();
+  });
 });
+

@@ -36,6 +36,16 @@
   - Updated `useUpdateAccount` (`src/hooks/use-accounts.ts`) and `SocialDashboardPage` (`src/pages/social-dashboard-page.tsx`) to support resetting `is_blocked = false` and `detected_block_reason = null` via Supabase PATCH mutation with toast feedback.
   - Added unit test coverage in `src/lib/account-service-helpers.test.ts` (32 tests passing) validating account unblocking and database mutation payload.
   - Verified end-to-end operator journey via Playwright E2E (`tests/e2e/operator-warmup-dashboard.spec.ts`, 3/3 tests passing).
+- **Engagement Analytics Rollup (Phase 5) implemented & verified**:
+  - Added `aggregateActionHistory` and `fetchAccountActionMetrics` (`src/lib/analytics-service.ts`) with unit test suite (`src/lib/analytics-service.test.ts`, 2 tests passing).
+  - Added `useAccountActionMetrics` query hook (`src/hooks/use-analytics.ts`).
+  - Extended `EngagementAnalytics` component (`src/components/analytics/EngagementAnalytics.tsx`) with dynamic "Executed Actions Daily Rollup" bar chart, live success rate gauge, action distribution chips, and failure alert panel.
+  - Implemented and verified full E2E journey via Playwright (`tests/e2e/analytics-journey.spec.ts`).
+- **Multi-Target Parallel Concurrency & Fleet Mutex Isolation (Phase 8) verified**:
+  - Implemented standalone fleet concurrency verification script (`scripts/verify-fleet-parallel-dispatch.mjs`).
+  - Verified simultaneous acquisition of multiple device locks under parent `MULTI_DEVICE` workflow run without deadlock.
+  - Verified strict hardware mutual exclusion rejecting conflicting runs with database unique constraint violations.
+  - Verified 100% clean-path lock release upon run completion with zero residual locks.
 
 ## 2026-07-08
 

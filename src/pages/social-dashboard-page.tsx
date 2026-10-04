@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { BarChart3, Users, Activity, AlertTriangle, TrendingUp, Sparkles, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { BarChart3, Users, Activity, AlertTriangle, TrendingUp, Sparkles, ShieldAlert, CheckCircle2, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAccounts, useUpdateAccount } from '../hooks/use-accounts';
 import { useReadinessReports } from '../hooks/use-readiness-reports';
 import { getReadinessEvidenceFreshness } from '../lib/readiness-report-service';
 import { useUIStore } from '../stores/ui';
 import { useWarmUpAdvancementState, useAdvanceAccounts } from '../hooks/use-warmup-auto-advance';
+import { generateAccountsCsv } from '../lib/account-service-helpers';
 import Header from '../components/layout/Header';
 import Spinner from '../components/ui/Spinner';
 import EmptyState from '../components/ui/EmptyState';
@@ -66,6 +67,24 @@ export default function SocialDashboardPage() {
     } catch {
       addToast('Failed to unblock account', 'error');
     }
+  };
+
+  const handleExportCsv = () => {
+    if (!accounts || accounts.length === 0) {
+      addToast('No accounts to export', 'error');
+      return;
+    }
+    const csvContent = generateAccountsCsv(accounts);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `accounts-snapshot-${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    addToast('Accounts exported successfully', 'success');
   };
 
   const activeAccounts = (accounts ?? []).filter((a) => !a.is_blocked);
@@ -182,7 +201,17 @@ export default function SocialDashboardPage() {
 
                 {/* Account health cards */}
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900 mb-3">Account Health</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-semibold text-gray-900">Account Health</h2>
+                    <button
+                      type="button"
+                      onClick={handleExportCsv}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5 text-gray-500" />
+                      Export CSV Snapshot
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {accounts.map((account) => (
                       <AccountHealthCard

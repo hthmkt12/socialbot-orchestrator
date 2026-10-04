@@ -23,6 +23,7 @@ import {
   deleteAccount,
   fetchAccountHistory,
   recordAccountAction,
+  generateAccountsCsv,
 } from './account-service-helpers';
 
 const mockFrom = vi.mocked(supabase.from) as Mock;
@@ -638,7 +639,60 @@ describe('account-service-helpers', () => {
       expect(result).toEqual([]);
     });
   });
+
+  describe('generateAccountsCsv', () => {
+    it('generates well-formatted CSV with headers and escaped fields', () => {
+      const accounts = [
+        {
+          id: 'acc-1',
+          user_id: 'user-1',
+          username: 'insta_john',
+          encrypted_password: 'v2:pw',
+          platform: 'instagram' as const,
+          warm_up_started_at: '2026-10-01T00:00:00.000Z',
+          warm_up_stage: 3,
+          daily_action_limit: 15,
+          current_action_count: 5,
+          last_action_reset_at: '2026-10-04T00:00:00.000Z',
+          is_blocked: false,
+          detected_block_reason: null,
+          credential_policy_status: null,
+          credential_key_version: null,
+          credential_rotated_at: null,
+          created_at: '2026-10-01T00:00:00.000Z',
+          updated_at: '2026-10-04T00:00:00.000Z',
+        },
+        {
+          id: 'acc-2',
+          user_id: 'user-1',
+          username: 'tiktok,special',
+          encrypted_password: 'v2:pw',
+          platform: 'tiktok' as const,
+          warm_up_started_at: null,
+          warm_up_stage: 1,
+          daily_action_limit: 5,
+          current_action_count: 0,
+          last_action_reset_at: null,
+          is_blocked: true,
+          detected_block_reason: 'Detected "action blocked" warning',
+          credential_policy_status: null,
+          credential_key_version: null,
+          credential_rotated_at: null,
+          created_at: '2026-10-02T00:00:00.000Z',
+          updated_at: '2026-10-04T00:00:00.000Z',
+        },
+      ];
+
+      const csv = generateAccountsCsv(accounts);
+      const lines = csv.split('\n');
+
+      expect(lines[0]).toBe('ID,Username,Platform,WarmUpStage,DailyActionLimit,CurrentActionCount,IsBlocked,DetectedBlockReason,WarmUpStartedAt,LastActionResetAt,CreatedAt');
+      expect(lines[1]).toBe('acc-1,insta_john,instagram,3,15,5,false,,2026-10-01T00:00:00.000Z,2026-10-04T00:00:00.000Z,2026-10-01T00:00:00.000Z');
+      expect(lines[2]).toBe('acc-2,"tiktok,special",tiktok,1,5,0,true,"Detected ""action blocked"" warning",,,2026-10-02T00:00:00.000Z');
+    });
+  });
 });
+
 
 // Helper: chain select → eq → maybeSingle
 function chainSelectEq({ maybeSingleData }: { maybeSingleData: unknown }) {
