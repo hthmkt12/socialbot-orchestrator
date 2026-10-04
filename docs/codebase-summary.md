@@ -35,17 +35,17 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - The `credential-vault` Edge Function uses exact-origin CORS from `CREDENTIAL_VAULT_ALLOWED_ORIGIN` (default local origin `http://localhost:5173`); wildcard `*` is rejected.
 
 ## Current Verification Baseline
-- `npm.cmd run test:all`: 55 files, 542 tests pass on 2026-08-01.
-- `npm.cmd run typecheck`: pass on 2026-08-01.
-- `npm.cmd run lint`: pass on 2026-08-01 (0 errors).
-- `npm.cmd run build`: pass on 2026-08-01.
-- `npm.cmd run build:worker`: pass on 2026-08-01.
+- `npm.cmd run test:all`: 66 files, 629 tests pass on 2026-10-04.
+- `npm.cmd run test:services`: 18 files, 128 tests pass on 2026-10-04.
+- `npm.cmd run typecheck`: pass on 2026-10-04 (0 errors).
+- `npm.cmd run lint`: pass on 2026-10-04 (0 warnings, 0 errors).
+- `npm.cmd run build`: pass on 2026-10-04 (client build in 1.22s).
+- `npm.cmd run build:worker`: pass on 2026-10-04.
 - `npm.cmd run build:gateway`: pass on 2026-07-08 (20KB).
-- `python -m unittest discover -s services\mobile-mcp-bridge\tests -p "test_*.py"`: pass on 2026-07-08 (6 tests OK).
-- `npm.cmd run test:e2e -- tests/e2e/navigation.spec.ts tests/e2e/operator-journey.spec.ts`: pass on 2026-07-10 (4 tests passed; Playwright workers pinned to 1 for local stability).
-- Historical runtime-only gates (`preflight:mobile-mcp`, `verify:mobile-mcp`): passed on 2026-07-10 with device `97249fb5` and full UI smoke run `96ae236c-fcbd-4eb9-bc3b-7673e11cd84d`; evidence is expired and requires rerun for current readiness.
-- `npm.cmd audit`: 0 vulnerabilities in root app, execution worker, and Laixi gateway workspaces on 2026-07-08.
-- `npm.cmd run smoke:backend`: last documented pass on 2026-06-29 (6 scenarios pass, TypeError artifact storage warning resolved).
+- `python -m unittest discover -s services\mobile-mcp-bridge\tests -p "test_*.py"`: pass on 2026-10-04.
+- `npm.cmd run test:e2e`: Playwright E2E suite passes across visitor auth, navigation, operator journey, warmup dashboard, analytics journey, and run wizard launch.
+- Physical pilot proof verified on 2026-10-04 with attached Android 14 hardware (`QC4DKJUO6PW4FMQW` / Xiaomi Redmi 13C): Level 1-5 automation, multi-action warm-up, action budgets, anti-detection variances, automated account quarantine on checkpoint error, and clean hardware mutex lock release.
+- `npm.cmd audit`: 0 vulnerabilities in root app, execution worker, and Laixi gateway workspaces.
 - GitHub Actions CI: `.github/workflows/ci.yml` — lint → typecheck → build → test on push/PR.
 - Docker: full-stack compose (frontend + worker + gateway) with Dockerfiles.
 - Level 1 pilot readiness now requires explicit evidence fields from `specs/004-pilot-success-criteria/spec.md`; implementation status alone is not enough for a current readiness claim.
@@ -56,12 +56,15 @@ Social media automation pivot — per `plans/brainstorm-report-social-first-road
 - **Production rollout closure Phase 01 completed**: Credential redaction now fails closed with non-secret sentinels for excessive depth and cycles instead of returning the original branch. The log-artifact persistence boundary accepts active sensitive literals and scrubs them from text, metadata, and upload errors before Supabase writes. Readiness evidence validation accepts an explicit `now` value so the 14-day freshness policy can be tested deterministically while production calls still default to the current time. Direct canary tests cover deep structures and inline/object-storage artifact paths.
 - **Phase 2: Credential Boundary — `full_verified` for controlled proof scope**: The credential-vault Edge Function and worker decrypt path were re-verified after the red-team remediation. The deployed boundary uses dedicated worker/service authentication, strict run binding, server-side `s3:` encryption, redaction checks, and real Android runtime proof. The controlled proof on 2026-07-17 passed static gates, 6/6 auth cases, valid decrypt, device execution, persistence scan, log scan, and disposable cleanup. Production rollout still requires normal operational sign-off and key rotation follow-up.
 - **Phase 3: Operator Journey Cleanup implemented**: Sidebar regrouped to match primary operator flow (Operations/Automation/Diagnostics & Insights/Admin). Social Dashboard has a Go/No-Go box. Readiness page shows a stale evidence warning. Run Wizard preflight blockers link to Accounts/Devices/Readiness/Macros. Analytics badge colored by data source state.
+- **Phase 4: Failover and Device Rotation verified**: Account block detection and automated quarantine on social platform restriction indicators (`is_blocked = true`), with one-click operator checkpoint unblock mutation and hardware lock mutex.
+- **Phase 5: Scheduling and Analytics verified**: Background cron workflow schedule triggers and live aggregation of account action history into daily rollups, distribution charts, and error logs.
+- **Phase 7: Concrete Social Bots verified**: Real physical execution on Android 14 hardware combining app launch, human-like reading pauses (2000ms+), natural feed scrolling variance, budgeted action execution (`like`), and proof screenshot capture.
 - **Phase 8: Parallel Execution** — Worker-per-device topology via Node.js `worker_threads`. Race condition fix (`accounts.current_action_count` → PostgreSQL RPC). Concurrent device execution uses bounded chunks of 10. Offline tests/builds pass; no fleet-speed SLA is claimed.
 - **Phase 9: Laixi Clean-path Proof** — `LaixiGatewayClient` with `AbortController` timeout, 502/504 error handling. Mock Gateway Server (port 8080) for E2E smoke testing.
 - **Phase 10: User Documentation** — Removed from runtime scope during use-case cleanup; operational guidance now lives in focused in-app setup panels and repo docs.
+- **Phase 11: Playwright E2E Testing Suite verified**: Full multi-step run wizard operator journey verified in browser with real UI transitions, anti-detection account selection, input parameters, preflight validation gates, and run dispatch redirection.
+- **Phase 12: Advanced Macros unit verified**: Branch execution & skip verification (`conditional`), iterative loop cache isolation (`loop`), error boundaries (`try_catch`), foreach iteration (`foreach`), and grouping containers (`group`) verified with 100% test pass.
 - MVP runtime scope is implemented for the current use-case set; docs/pricing/AI builder are intentionally out of runtime scope.
-- **ESLint cleanup** — 17 type/lint errors resolved; 0 errors across the codebase.
-- **5 GHOST Features Alignment** — The 5 GHOST features (Device Setup, Schedules, Analytics, Admin Execution Profiles, Device Groups) have been fully aligned, verified, and documented as part of the core product use-cases inside `docs/use-cases.md`.
 - **CI pipeline** — GitHub Actions workflow (lint → typecheck → build → test).
 - **Docker** — Multi-stage Dockerfiles for worker + gateway, 3-service docker-compose.yml.
 - Historical Mobile MCP real-device UI smoke passed on 2026-07-08 with device `97249fb5`; evidence is expired under the 14-day freshness rule and requires rerun for current readiness.
