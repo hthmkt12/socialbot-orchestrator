@@ -88,12 +88,12 @@ Status: Implemented in code and pilot verified on physical hardware on 2026-10-0
 
 ### Phase 3: Safety Limits and Warm-Up Sequences (Q1 2027)
 
-Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level3-action-budget.mjs`).
+Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level3-action-budget.mjs`, `scripts/verify-warmup-campaign-progression.mjs`).
 
 - Action budget types and enforcement library: Implemented.
 - Budget breakdown in UI: Implemented.
 - Worker runtime enforcement via `params.actionBudgetType`: Verified with pre-execution cutoff `BUDGET_EXCEEDED` before hardware touch events occur.
-- Automated warm-up sequences and daily action reset: Implemented and Supabase RPC `increment_account_action_count` verified.
+- Automated warm-up sequences, stage auto-advancement, and daily action reset: Implemented and verified on physical hardware (`QC4DKJUO6PW4FMQW`) with dynamic stage advancement (Stage 2 -> Stage 3), daily action limit ramp (5 -> 15), counter reset (5 -> 0), and budgeted execution under newly unlocked limits. Supabase RPC `increment_account_action_count` verified.
 
 ### Phase 4: Failover and Device Rotation (Q2 2027)
 

@@ -10,6 +10,11 @@
   - Scenario 1 (Step failure & automatic lock release): Verified runs encountering step errors or intentional stop terminate cleanly with status `FAILED` and release device locks unconditionally in `finally` block.
   - Scenario 2 (Concurrent hardware lock mutex enforcement): Verified runs attempting to target a locked device fail immediately with error `DEVICE_LOCKED` to prevent physical gesture collisions.
   - Scenario 3 (Expired stale lock auto-cleanup & recovery): Verified execution worker automatically purges expired locks and resumes normal execution to `COMPLETED` on physical hardware without operator intervention.
+- **Account Warm-Up Campaign Auto-Advancement & Daily Reset verified**: Implemented and verified end-to-end multi-day warm-up campaign progression and daily action counter reset (`scripts/verify-warmup-campaign-progression.mjs`):
+  - Verified `account-warmup-auto-advance.ts`, `account-warmup-scheduler.ts`, and `account-action-reset.ts` unit test coverage (4 test files, 60 tests passed).
+  - Validated progression from Stage 2 (Day 1-3, daily limit 5) to Stage 3 (Day 4-7, daily limit 15) when elapsed warm-up reaches 5 days.
+  - Validated daily counter reset logic (`shouldResetActionCount`), resetting `current_action_count` from 5 to 0 on new calendar day and updating `last_action_reset_at`.
+  - Executed budgeted social action macro run (`07678f72-47cc-47f2-a8b7-bb570a298e3a`) under newly expanded Stage 3 daily limits on connected physical Android hardware (`QC4DKJUO6PW4FMQW` / Xiaomi Redmi 13C, Android 14), achieving clean `COMPLETED` execution, `account_action_history` recording, and hardware lock release.
 
 ## 2026-07-08
 

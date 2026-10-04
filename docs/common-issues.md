@@ -586,6 +586,23 @@ Solutions:
 Verification:
 - `node scripts/verify-level5-resilience-recovery.mjs`
 
+## Accounts Table User ID Foreign Key Constraint
+
+Symptoms:
+- Inserting an account fails with database error: `insert or update on table "accounts" violates foreign key constraint "accounts_user_id_fkey"`.
+
+Root Cause:
+- `accounts.user_id` enforces a foreign key constraint referencing `auth.users(id)` (stored as `profiles.user_id`), rather than the profile primary key `profiles.id`. Passing `profile.id` directly when `profile.id` differs from `profile.user_id` violates this constraint.
+
+Common Triggers:
+- Automated scripts, seed helpers, or test harnesses creating accounts using `profile.id` instead of the associated auth user ID (`profile.user_id`).
+
+Solutions:
+- Query `id, user_id` from `profiles` and supply `profile.user_id ?? profile.id` when setting `accounts.user_id`.
+
+Verification:
+- `node scripts/verify-warmup-campaign-progression.mjs`
+
 
 ## Current Decisions
 
