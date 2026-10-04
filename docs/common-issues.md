@@ -43,6 +43,24 @@ Verification:
 - `npm.cmd --prefix project exec vitest run services/execution-worker/src/run-claim-coordinator.test.ts`
 - Confirm worker health serialization contains no claim token literal.
 
+## Credential Boundary Decrypt Token Mismatch
+
+Symptoms:
+- `valid_bound_decrypt` returns HTTP 401 and credential boundary proof fails with `vault_http_error`.
+
+Root Cause:
+- `supabase/functions/function-env.txt` served by local Supabase Edge Runtime contained an outdated or placeholder `CREDENTIAL_VAULT_WORKER_TOKEN`, while the execution worker and proof harness used the active secret token.
+
+Common Triggers:
+- Running `node scripts/run-credential-boundary-proof.mjs --run-real-proof` or `node scripts/credential-boundary-proof-harness.mjs` against a local Supabase Edge Runtime instance where function env was not synced.
+
+Solutions:
+- Synchronize `CREDENTIAL_VAULT_WORKER_TOKEN` in `supabase/functions/function-env.txt` to match the worker runtime environment and restart `supabase functions serve`.
+
+Verification:
+- `node scripts/run-credential-boundary-proof.mjs --run-real-proof`
+- Confirm `valid_bound_decrypt` passes with status `pass` and overall verdict is `full_verified`.
+
 ## Karpathy Coding Principles
 
 Four guardrails against common LLM coding failures.

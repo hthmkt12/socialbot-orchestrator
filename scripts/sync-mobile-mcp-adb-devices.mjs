@@ -27,8 +27,8 @@ function loadDotEnv(path) {
 }
 
 const dotEnv = loadDotEnv(join(rootDir, '.env'));
-const supabaseUrl = process.env.SUPABASE_URL ?? dotEnv.VITE_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = dotEnv.SUPABASE_URL ?? dotEnv.VITE_SUPABASE_URL ?? process.env.SUPABASE_URL;
+const serviceRoleKey = dotEnv.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
 const serialFilter = (process.env.MOBILE_MCP_DEVICE_SERIALS ?? '')
   .split(',')
   .map((value) => value.trim())

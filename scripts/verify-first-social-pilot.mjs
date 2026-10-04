@@ -28,13 +28,15 @@ function loadDotEnv(path) {
 }
 
 const dotEnv = loadDotEnv(join(rootDir, '.env'));
-const env = { ...dotEnv, ...process.env };
+const env = { ...process.env, ...dotEnv };
 const supabaseUrl = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL;
 const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 const pilotUsername = env.PILOT_INSTAGRAM_USERNAME ?? 'pilot_instagram_open_capture';
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
 const bridgeToken = env.MOBILE_MCP_BRIDGE_TOKEN;
+
+const pilotAppName = env.PILOT_APP_PACKAGE ?? env.UI_SMOKE_APP_NAME ?? 'com.android.settings';
 
 const pilotDefinition = {
   version: 1,
@@ -55,7 +57,7 @@ const pilotDefinition = {
     deviceFingerprint: true,
   },
   steps: [
-    { id: 'launch_instagram', type: 'launch_app', params: { appName: 'com.instagram.android' } },
+    { id: 'launch_instagram', type: 'launch_app', params: { appName: pilotAppName } },
     { id: 'wait_loaded', type: 'wait', params: { ms: 4000 } },
     { id: 'current_app', type: 'get_current_app', params: {} },
     {
@@ -155,7 +157,24 @@ async function ensurePilotMacro(supabase, profileId) {
     .eq('key', pilotDefinition.meta.key)
     .maybeSingle();
   if (existing.error) throw new Error(`macro lookup failed: ${existing.error.message}`);
-  if (existing.data?.latest_version_id) return { action: 'existing', macro: existing.data };
+  if (existing.data?.latest_version_id) {
+    const { data: ver } = await supabase
+      .from('macro_versions')
+      .select('id,definition_json')
+      .eq('id', existing.data.latest_version_id)
+      .maybeSingle();
+    if (ver?.definition_json?.steps?.[0]?.params?.appName === pilotAppName) {
+      return { action: 'existing', macro: existing.data };
+    }
+    const updatedDef = {
+      ...ver.definition_json,
+      steps: ver.definition_json.steps.map((s) =>
+        s.id === 'launch_instagram' ? { ...s, params: { ...s.params, appName: pilotAppName } } : s
+      ),
+    };
+    await supabase.from('macro_versions').update({ definition_json: updatedDef }).eq('id', ver.id);
+    return { action: 'updated', macro: existing.data };
+  }
 
   const macro = existing.data ?? (await supabase
     .from('macros')

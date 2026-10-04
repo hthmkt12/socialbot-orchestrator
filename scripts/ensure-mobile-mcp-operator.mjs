@@ -25,7 +25,7 @@ function loadDotEnv(path) {
 }
 
 const dotEnv = loadDotEnv(join(rootDir, '.env'));
-const env = { ...dotEnv, ...process.env };
+const env = { ...process.env, ...dotEnv };
 const supabaseUrl = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL;
 const anonKey = env.VITE_SUPABASE_ANON_KEY;
 const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;

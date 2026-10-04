@@ -28,7 +28,7 @@ function loadDotEnv(path) {
 }
 
 const envFile = loadDotEnv(join(rootDir, '.env'));
-const mergedEnv = { ...envFile, ...process.env };
+const mergedEnv = { ...process.env, ...envFile };
 
 function localUrl(envName, fallback) {
   return mergedEnv[envName] ?? envFile[envName] ?? fallback;

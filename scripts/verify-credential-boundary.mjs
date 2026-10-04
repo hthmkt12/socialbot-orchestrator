@@ -232,7 +232,7 @@ async function checkRuntimeAvailability(env) {
 
 async function main() {
   const dotEnv = loadDotEnv(join(rootDir, '.env'));
-  const env = { ...dotEnv, ...process.env };
+  const env = { ...process.env, ...dotEnv };
   const noWriteReport = process.argv.includes('--no-write-report');
 
   const isTestMode = isTestModeActive(env);

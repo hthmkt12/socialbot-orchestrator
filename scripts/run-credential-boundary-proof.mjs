@@ -65,7 +65,7 @@ function loadDotEnv(path) {
 const dotEnv = process.env.CREDENTIAL_BOUNDARY_SKIP_DOTENV === 'true'
   ? {}
   : loadDotEnv(join(rootDir, '.env'));
-const env = { ...dotEnv, ...process.env };
+const env = { ...process.env, ...dotEnv };
 
 const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.WORKER_BASE_URL ?? env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
@@ -164,7 +164,7 @@ function startService(name, command, args, serviceEnv, logDir) {
     env: { ...process.env, ...dotEnv, ...serviceEnv },
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
-    shell: false,
+    shell: isWindows,
   });
   child.stdout.pipe(stdout);
   child.stderr.pipe(stderr);

@@ -42,16 +42,41 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // --- Env loading ---
-const env = { ...process.env };
+function loadDotEnv(path) {
+  try {
+    return Object.fromEntries(
+      readFileSync(path, 'utf8')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line && !line.startsWith('#') && line.includes('='))
+        .map((line) => {
+          const index = line.indexOf('=');
+          let value = line.slice(index + 1);
+          if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          return [line.slice(0, index), value];
+        })
+    );
+  } catch {
+    return {};
+  }
+}
+
+const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const dotEnv = loadDotEnv(join(rootDir, '.env'));
+const env = { ...process.env, ...dotEnv };
+if (process.env.CREDENTIAL_BOUNDARY_CANARY) {
+  env.CREDENTIAL_BOUNDARY_CANARY = process.env.CREDENTIAL_BOUNDARY_CANARY;
+}
 const supabaseUrl = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL;
 const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY;
 const workerToken = env.CREDENTIAL_VAULT_WORKER_TOKEN;
 const canary = env.CREDENTIAL_BOUNDARY_CANARY;
 const operatorJwt = env.PROOF_OPERATOR_JWT;
-const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL;
+const bridgeUrl = env.MOBILE_MCP_BRIDGE_URL ?? env.VITE_MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
 const workerUrl = env.WORKER_BASE_URL ?? env.VITE_WORKER_BASE_URL ?? 'http://127.0.0.1:4310';
-const rootDir = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 // --- Helpers ---
 function canaryHash(value) {
@@ -85,14 +110,35 @@ const vaultUrl = `${supabaseUrl}/functions/v1/credential-vault`;
 
 // --- Supabase admin client ---
 let supabase;
+let resolvedOperatorJwt = operatorJwt;
+
+async function getOperatorJwt() {
+  if (env.UI_SMOKE_EMAIL && env.UI_SMOKE_PASSWORD && anonKey) {
+    try {
+      const authClient = createClient(supabaseUrl, anonKey, { auth: { persistSession: false } });
+      const { data, error } = await authClient.auth.signInWithPassword({
+        email: env.UI_SMOKE_EMAIL,
+        password: env.UI_SMOKE_PASSWORD,
+      });
+      if (!error && data?.session?.access_token) {
+        resolvedOperatorJwt = data.session.access_token;
+        return resolvedOperatorJwt;
+      }
+    } catch {
+      // fallback to initial operatorJwt
+    }
+  }
+  return resolvedOperatorJwt;
+}
 
 // --- Step 1: Encrypt the disposable password via the vault ---
 async function encryptDisposablePassword() {
+  const jwt = await getOperatorJwt();
   const response = await fetch(vaultUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${operatorJwt}`,
+      Authorization: `Bearer ${jwt}`,
     },
     body: JSON.stringify({ action: 'encrypt', plaintext: canary }),
   });
@@ -596,7 +642,7 @@ async function main() {
     createdIds.macroId = macroResult.macroId;
 
     // Find a device for the run
-    const expectedSerials = (process.env.MOBILE_MCP_EXPECTED_SERIALS ?? '')
+    const expectedSerials = (env.MOBILE_MCP_EXPECTED_SERIALS ?? process.env.MOBILE_MCP_EXPECTED_SERIALS ?? '')
       .split(',')
       .map((value) => value.trim())
       .filter(Boolean);
@@ -656,10 +702,12 @@ async function main() {
     if (createdIds.accountId || createdIds.runId || createdIds.macroVersionId) {
       cleanupResult = await cleanup(createdIds);
     }
+    const safeReason = error instanceof BlockedProofError ? error.message : 'harness_error';
+    console.error(`[harness] ${safeReason}`);
     // Print blocked manifest — never expose error details that might contain the canary
     const manifest = {
       blocked: true,
-      reason: 'harness_error',
+      reason: safeReason,
       authMatrix: [],
       loginRun: { completed: false },
       persistenceScan: { surfaces: {} },

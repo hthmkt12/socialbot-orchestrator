@@ -201,6 +201,52 @@ class BridgeGuardTests(unittest.TestCase):
         # The canary must not appear anywhere in the response
         self.assertNotIn(self.CANARY, str(result))
 
+    def test_bridge_handler_auth_enforcement(self):
+        class DummyHandler:
+            def __init__(self, headers, bridge_token, allow_insecure):
+                self.headers = headers
+                self.bridge_token = bridge_token
+                self.allow_insecure = allow_insecure
+                self.responses = []
+
+            def _send_json(self, status, payload):
+                self.responses.append((status, payload))
+
+            _check_auth = bridge_server.BridgeHandler._check_auth
+
+        # 1. Valid token succeeds
+        orig_token, orig_insecure = bridge_server.BRIDGE_TOKEN, bridge_server.ALLOW_INSECURE_DEV
+        try:
+            bridge_server.BRIDGE_TOKEN = "valid-token-123"
+            bridge_server.ALLOW_INSECURE_DEV = False
+
+            handler = DummyHandler({"x-bridge-token": "valid-token-123"}, "valid-token-123", False)
+            self.assertTrue(handler._check_auth())
+            self.assertEqual(len(handler.responses), 0)
+
+            # 2. Missing/invalid token returns 401
+            handler_invalid = DummyHandler({"x-bridge-token": "wrong"}, "valid-token-123", False)
+            self.assertFalse(handler_invalid._check_auth())
+            self.assertEqual(handler_invalid.responses[0][0], 401)
+            self.assertEqual(handler_invalid.responses[0][1]["code"], "BRIDGE_UNAUTHORIZED")
+
+            # 3. Unconfigured auth without insecure dev returns 503
+            bridge_server.BRIDGE_TOKEN = ""
+            bridge_server.ALLOW_INSECURE_DEV = False
+            handler_unconfigured = DummyHandler({}, "", False)
+            self.assertFalse(handler_unconfigured._check_auth())
+            self.assertEqual(handler_unconfigured.responses[0][0], 503)
+            self.assertEqual(handler_unconfigured.responses[0][1]["code"], "BRIDGE_AUTH_NOT_CONFIGURED")
+
+            # 4. Insecure dev mode allows unauthenticated
+            bridge_server.ALLOW_INSECURE_DEV = True
+            handler_insecure = DummyHandler({}, "", True)
+            self.assertTrue(handler_insecure._check_auth())
+            self.assertEqual(len(handler_insecure.responses), 0)
+        finally:
+            bridge_server.BRIDGE_TOKEN = orig_token
+            bridge_server.ALLOW_INSECURE_DEV = orig_insecure
+
 
 if __name__ == "__main__":
     unittest.main()

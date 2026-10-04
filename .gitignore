@@ -40,11 +40,15 @@ htmlcov/
 
 # Supabase local state
 supabase/.temp/
+supabase/.branches/
+supabase/functions/function-env.txt
 
 # Generated runtime artifacts and reports
 plans/reports/*.json
+plans/*/reports/*.json
 plans/reports/*.png
 plans/reports/mobile-mcp-runtime/
+plans/reports/orchestrate-*
 plans/social-macro-recordings/
 services/execution-worker/plans/social-macro-recordings/
 services/mobile-mcp-bridge/artifacts/
@@ -63,8 +67,10 @@ Thumbs.db
 *.sw?
 
 # Local agent/workspace files
+.agentkit/
 .agents/
 .claude/command-archive/
+.claude/hooks/.logs/
 .claude/skills/
 ORIGINAL_REQUEST.md
 PROJECT.md
