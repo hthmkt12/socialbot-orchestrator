@@ -2,6 +2,10 @@
 
 ## 2026-10-04
 
+- **CI/CD Actions & Keepalive Workflow Hardening**:
+  - Corrected official GitHub action versions from non-existent `@v6` tags to current stable releases (`actions/checkout@v4`, `actions/setup-node@v4`, `actions/setup-python@v5`) across all jobs in `.github/workflows/ci.yml`.
+  - Added `workflow_dispatch:` trigger to `.github/workflows/ci.yml` enabling manual pipeline triggers via GitHub CLI and Web UI.
+  - Hardened `.github/workflows/supabase-keepalive.yml` with `@v4` action tags and graceful secret validation in POSIX shell to skip cleanly with code 0 when Supabase URL/service role secrets are unconfigured.
 - **Social Fleet Operator Runbook created**:
   - Published comprehensive operational runbook (`docs/runbooks/social-fleet-operator-runbook.md`) for fleet operators managing 5–50 physical Android/iOS automation devices.
   - Documented setup topology, Mobile MCP bridge and worker launch commands, and ADB hardware diagnostic verification.
