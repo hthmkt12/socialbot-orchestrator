@@ -2,6 +2,13 @@
 
 ## 2026-10-04
 
+- **Social Fleet Operator Runbook created**:
+  - Published comprehensive operational runbook (`docs/runbooks/social-fleet-operator-runbook.md`) for fleet operators managing 5–50 physical Android/iOS automation devices.
+  - Documented setup topology, Mobile MCP bridge and worker launch commands, and ADB hardware diagnostic verification.
+  - Documented account lifecycle stages (Stages 1–5), CSV onboarding, and server-side vault encryption.
+  - Documented campaign execution via Run Wizard and background cron scheduling via `WorkflowScheduleTrigger`.
+  - Documented safety enforcement: pre-execution `BUDGET_EXCEEDED` cutoff, automated 00:00 UTC counter reset, and single-device mutex locking.
+  - Documented incident response: checkpoint auto-block quarantine (`is_blocked = true`), operator one-click unblock resolution journey, and stale lock recovery.
 - **Advanced Macros & Control Flow Execution (Phase 12) unit verified**:
   - Implemented unit test suite for advanced macro step execution (`services/execution-worker/src/single-device-step-runner.advanced-control-flow.test.ts`, 9 tests passing).
   - Verified conditional branching (`conditional`): validates expression evaluation against input variables, executes the active branch (`then` or `else`), and records the inactive branch as `SKIPPED`.
