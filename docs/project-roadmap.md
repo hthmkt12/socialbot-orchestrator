@@ -171,9 +171,14 @@ Status: Implemented and verified on 2026-10-04 (`tests/e2e/run-wizard-journey.sp
 
 ### Phase 12: Advanced Macros
 
-Status: Implemented in code; broaden coverage before production claims.
+Status: Unit verified on 2026-10-04 (`services/execution-worker/src/single-device-step-runner.advanced-control-flow.test.ts`).
 
-- Conditionals, while loops, variables, and error boundaries: Implemented.
+- Conditionals, while loops, variables, and error boundaries: Implemented and unit tested.
+- Branch execution & skip verification: Verified `conditional` step evaluates templated expressions, dispatches active branch, and records inactive branch as `SKIPPED`.
+- Iterative loop cache isolation: Verified `loop` step repetition clears persisted step cache across iterations and halts cleanly on step failure.
+- Try/Catch error boundaries: Verified `try_catch` step intercepts inner failures, executes recovery steps in `catch` block, and marks parent step `SUCCESS` with `output.caughtError: true`. Catch block failures propagate to `FAILED`.
+- Foreach iteration & context injection: Verified dynamic unpacking of comma-separated strings and JSON arrays into iteration context.
+- Grouping containers: Verified composite `group` step execution across all inner steps.
 
 ### Phase 13: AI Workflow Builder
 

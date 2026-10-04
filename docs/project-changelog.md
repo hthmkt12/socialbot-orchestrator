@@ -2,7 +2,14 @@
 
 ## 2026-10-04
 
-- **Run Wizard Operator Journey & Multi-Step E2E Testing (Phase 11) verified**:
+- **Advanced Macros & Control Flow Execution (Phase 12) unit verified**:
+  - Implemented unit test suite for advanced macro step execution (`services/execution-worker/src/single-device-step-runner.advanced-control-flow.test.ts`, 9 tests passing).
+  - Verified conditional branching (`conditional`): validates expression evaluation against input variables, executes the active branch (`then` or `else`), and records the inactive branch as `SKIPPED`.
+  - Verified loop execution (`loop`): validates repetition for specified count, verifies step store cache clearing across iterations to prevent stale skip state, and confirms execution halts immediately on inner step failure.
+  - Verified error boundaries (`try_catch`): validates interception of inner step failures in the `try` block, execution of recovery steps in the `catch` block, and recovery of the parent step to `SUCCESS` with `output.caughtError: true`. Confirmed catch block failures propagate to `FAILED`.
+  - Verified iteration (`foreach`): validates dynamic unpacking and execution for both comma-separated string lists and JSON array strings, with context injection for inner templated steps.
+  - Verified group containers (`group`): validates sequential execution of inner steps within a grouped step definition.
+  - All 66 test files and 629 tests passing across the project test suite.
   - Implemented unit tests for run wizard step generation and navigation rules (`src/components/runs/run-wizard-navigation.test.ts`, 5 tests passing).
   - Implemented unit tests for run wizard submission, preflight validation gates, and account safety gating (`src/components/runs/run-wizard-submit.test.ts`, 6 tests passing).
   - Implemented comprehensive Playwright E2E journey test (`tests/e2e/run-wizard-journey.spec.ts`, 1 test passing):
