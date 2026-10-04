@@ -1,5 +1,11 @@
 **/node_modules
 **/dist
+**/.venv*
+**/venv*
+**/__pycache__
+**/.pytest_cache
+**/artifacts
+services/mobile-mcp-bridge
 .git
 .env*
 *.md
