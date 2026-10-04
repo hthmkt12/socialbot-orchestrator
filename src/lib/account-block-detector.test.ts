@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { detectAccountBlock, handlePotentialBlock } from './account-block-detector';
 
 describe('account-block-detector', () => {
@@ -28,7 +29,7 @@ describe('account-block-detector', () => {
         from: vi.fn(),
       };
 
-      const result = await handlePotentialBlock(mockSupabase as any, undefined, 'Action Blocked');
+      const result = await handlePotentialBlock(mockSupabase as unknown as SupabaseClient, undefined, 'Action Blocked');
       expect(result).toBe(false);
       expect(mockSupabase.from).not.toHaveBeenCalled();
     });
@@ -38,7 +39,7 @@ describe('account-block-detector', () => {
         from: vi.fn(),
       };
 
-      const result = await handlePotentialBlock(mockSupabase as any, 'acc-123', 'Adb connection timeout');
+      const result = await handlePotentialBlock(mockSupabase as unknown as SupabaseClient, 'acc-123', 'Adb connection timeout');
       expect(result).toBe(false);
       expect(mockSupabase.from).not.toHaveBeenCalled();
     });
@@ -64,7 +65,7 @@ describe('account-block-detector', () => {
       };
 
       const result = await handlePotentialBlock(
-        mockSupabase as any,
+        mockSupabase as unknown as SupabaseClient,
         'acc-123',
         'Warning: We restrict certain activity to protect our community.'
       );
@@ -87,7 +88,7 @@ describe('account-block-detector', () => {
         })),
       };
 
-      const result = await handlePotentialBlock(mockSupabase as any, 'acc-123', 'action blocked');
+      const result = await handlePotentialBlock(mockSupabase as unknown as SupabaseClient, 'acc-123', 'action blocked');
       expect(result).toBe(false);
     });
   });

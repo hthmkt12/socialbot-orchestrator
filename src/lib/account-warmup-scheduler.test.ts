@@ -64,7 +64,7 @@ describe('account-warmup-scheduler', () => {
   });
 
   it('advances eligible accounts and updates daily action limit', async () => {
-    mockUpdateAccount.mockResolvedValue({} as any);
+    mockUpdateAccount.mockResolvedValue({} as unknown as Account);
 
     const now = new Date('2026-10-04T12:00:00Z');
     const eligibleAccount = {

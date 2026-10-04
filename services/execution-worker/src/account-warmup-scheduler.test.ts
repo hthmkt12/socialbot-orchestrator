@@ -1,4 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   AccountWarmupScheduler,
   computeRecommendedStage,
@@ -138,7 +139,7 @@ describe('AccountWarmupScheduler', () => {
       }),
     };
 
-    const scheduler = new AccountWarmupScheduler(mockConfig, mockSupabase as any);
+    const scheduler = new AccountWarmupScheduler(mockConfig, mockSupabase as unknown as SupabaseClient);
 
     const cycleResult = await scheduler.poll(now);
 
@@ -173,7 +174,7 @@ describe('AccountWarmupScheduler', () => {
       })),
     };
 
-    const scheduler = new AccountWarmupScheduler(mockConfig, mockSupabase as any);
+    const scheduler = new AccountWarmupScheduler(mockConfig, mockSupabase as unknown as SupabaseClient);
     const result = await scheduler.poll();
 
     expect(result.processedCount).toBe(0);
