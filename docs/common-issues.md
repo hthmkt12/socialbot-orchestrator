@@ -624,6 +624,23 @@ Verification:
 - `docker build -t test-worker -f services/execution-worker/Dockerfile .` completes with exit code 0.
 - `docker build -t test-gateway -f services/laixi-gateway/Dockerfile .` completes with exit code 0.
 
+## Playwright WebServer IPv6 Loopback Timeout
+
+Symptoms:
+- Running `npx playwright test` times out after 120s with error: `Error: Timed out waiting 120000ms from config.webServer`.
+
+Root Cause:
+- Vite dev server binds to `[::1]:5173` (IPv6 loopback) by default on Node 20+ Windows environments, while Playwright's `webServer.url` probes `http://127.0.0.1:5173` (IPv4 loopback), causing Playwright to wait for an IPv4 connection that never responds.
+
+Common Triggers:
+- Running Playwright E2E suites where `playwright.config.ts` uses default `command: 'npm run dev'` without explicit host binding.
+
+Solutions:
+- Configure `webServer.command` in `playwright.config.ts` with explicit IPv4 host binding: `npm run dev -- --host 127.0.0.1 --port 5173`.
+
+Verification:
+- `npx.cmd playwright test tests/e2e/operator-warmup-dashboard.spec.ts` connects within seconds and passes all tests.
+
 ## Current Decisions
 
 - Mobile MCP is the accepted pilot-default backend. Laixi remains future-compatible until VIP/API/live-session proof is available.

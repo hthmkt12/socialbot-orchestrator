@@ -2,6 +2,10 @@
 
 ## 2026-10-04
 
+- **Playwright Test Suite Reliability & Verification Script Aliases**:
+  - Bound Vite webServer command explicitly to IPv4 `127.0.0.1:5173` in `playwright.config.ts`, resolving 120s timeout issues on Windows where Vite defaults to `[::1]`.
+  - Added dedicated npm scripts in `package.json` for all automated pilot verification harnesses (`verify:level2-social-pilot`, `verify:level3-action-budget`, `verify:level4-multiaction-pilot`, `verify:level5-resilience-recovery`, `verify:concrete-social-bots`, `verify:scheduled-workflow-trigger`, `verify:warmup-campaign-progression`, `verify:fleet-parallel-dispatch`, `verify:fleet-soak-integrity`, `verify:quarantine-alerting`).
+  - Verified 100% green Playwright journeys across `operator-warmup-dashboard.spec.ts`, `analytics-journey.spec.ts`, `run-wizard-journey.spec.ts`, `visitor-auth.spec.ts`, and `operator-accounts.spec.ts`.
 - **Docker Compose & Monorepo Containerization Boundary Hardened**:
   - Elevated microservice build contexts to repository root (`context: .`) with explicit dockerfile paths in `docker-compose.yml` (`services/execution-worker/Dockerfile`, `services/laixi-gateway/Dockerfile`).
   - Implemented multi-stage Docker builds resolving monorepo shared packages (`packages/shared/src`) and root utilities without build-time boundary errors.
