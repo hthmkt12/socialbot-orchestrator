@@ -15,6 +15,15 @@
   - Validated progression from Stage 2 (Day 1-3, daily limit 5) to Stage 3 (Day 4-7, daily limit 15) when elapsed warm-up reaches 5 days.
   - Validated daily counter reset logic (`shouldResetActionCount`), resetting `current_action_count` from 5 to 0 on new calendar day and updating `last_action_reset_at`.
   - Executed budgeted social action macro run (`07678f72-47cc-47f2-a8b7-bb570a298e3a`) under newly expanded Stage 3 daily limits on connected physical Android hardware (`QC4DKJUO6PW4FMQW` / Xiaomi Redmi 13C, Android 14), achieving clean `COMPLETED` execution, `account_action_history` recording, and hardware lock release.
+- **Operator Web UI Dashboard & Warm-Up Progression Journey verified**: Implemented and verified comprehensive Playwright E2E spec (`tests/e2e/operator-warmup-dashboard.spec.ts`):
+  - Verified `SocialDashboardPage` rendering with stat cards ("In Warm-Up", "Full Speed"), account health cards, and per-action budget badges (Likes, Follows, Comments, Posts, Shares).
+  - Verified `WarmUpAdvancementPanel` correctly detects and displays candidate accounts ready to advance based on elapsed warm-up days.
+  - Verified one-click advancement trigger mutating account stage and daily action limit in database with optimistic UI update and success toast feedback.
+- **Worker Background Warm-Up Scheduler implemented & integrated**: Added `AccountWarmupScheduler` to the Node.js execution worker (`services/execution-worker/src/account-warmup-scheduler.ts`):
+  - Automatically queries active social accounts, determines whether daily action counts require reset based on calendar day transitions, and resets `current_action_count` to 0.
+  - Automatically assesses account warm-up progress and promotes accounts to higher stages (`warm_up_stage`) with ramped `daily_action_limit` when day thresholds are met.
+  - Integrated into `services/execution-worker/src/index.ts` with graceful startup/shutdown and `/health` reporting.
+  - Verified 100% test coverage with 6 unit tests in `services/execution-worker/src/account-warmup-scheduler.test.ts`.
 
 ## 2026-07-08
 

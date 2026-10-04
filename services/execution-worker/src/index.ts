@@ -4,6 +4,7 @@ import { MultiTargetRunExecutor } from './multi-target-run-executor';
 import { RunClaimCoordinator, type WorkerConfig } from './run-claim-coordinator';
 import { SingleDeviceRunExecutor } from './single-device-run-executor';
 import { WorkflowScheduleTrigger } from './workflow-schedule-trigger';
+import { AccountWarmupScheduler } from './account-warmup-scheduler';
 import { handleControlPlaneProxy } from './control-plane-proxy';
 
 function readRequiredEnv(name: string): string {
@@ -51,7 +52,11 @@ function corsHeaders() {
   };
 }
 
-function startHealthServer(config: WorkerConfig, coordinator: RunClaimCoordinator) {
+function startHealthServer(
+  config: WorkerConfig,
+  coordinator: RunClaimCoordinator,
+  warmupScheduler?: AccountWarmupScheduler
+) {
   const server = createServer(async (req, res) => {
     if (req.method === 'OPTIONS') {
       res.writeHead(204, corsHeaders());
@@ -83,6 +88,7 @@ function startHealthServer(config: WorkerConfig, coordinator: RunClaimCoordinato
           commandTimeoutMs: config.commandTimeoutMs,
           leaseTtlMs: config.leaseTtlMs,
           ...coordinator.getHealthSnapshot(),
+          warmupScheduler: warmupScheduler?.getHealthSnapshot() ?? null,
         })
       );
       return;
@@ -112,14 +118,17 @@ function main() {
   );
 
   const scheduleTrigger = new WorkflowScheduleTrigger(config);
+  const warmupScheduler = new AccountWarmupScheduler(config);
 
-  startHealthServer(config, coordinator);
+  startHealthServer(config, coordinator, warmupScheduler);
   coordinator.start();
   scheduleTrigger.start();
+  warmupScheduler.start(Number(process.env.WARMUP_POLL_INTERVAL_MS ?? 60000));
 
   // Graceful shutdown: release claims before exit
   const shutdown = async (signal: string) => {
     console.log(`[execution-worker] received ${signal}, shutting down...`);
+    warmupScheduler.stop();
     scheduleTrigger.stop();
     await coordinator.stop();
     process.exit(0);

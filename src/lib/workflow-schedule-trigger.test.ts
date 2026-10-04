@@ -68,6 +68,14 @@ function makeTableMock(options: {
     if (table === 'workflow_schedules') return { update };
     if (table === 'macro_versions') return { select: macroSelect };
     if (table === 'workflow_runs') return { insert: runInsert };
+    if (table === 'profiles') {
+      const profileChain = {
+        eq: vi.fn(() => profileChain),
+        limit: vi.fn(() => profileChain),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'user-1' }, error: null }),
+      };
+      return { select: vi.fn(() => profileChain) };
+    }
     return {};
   });
 

@@ -88,10 +88,12 @@ Status: Implemented in code and pilot verified on physical hardware on 2026-10-0
 
 ### Phase 3: Safety Limits and Warm-Up Sequences (Q1 2027)
 
-Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level3-action-budget.mjs`, `scripts/verify-warmup-campaign-progression.mjs`).
+Status: Pilot verified on physical hardware on 2026-10-04 (`scripts/verify-level3-action-budget.mjs`, `scripts/verify-warmup-campaign-progression.mjs`, and `tests/e2e/operator-warmup-dashboard.spec.ts`).
 
 - Action budget types and enforcement library: Implemented.
 - Budget breakdown in UI: Implemented.
+- Operator Web UI Dashboard & Warm-Up Progression: Implemented and verified via Playwright E2E (`tests/e2e/operator-warmup-dashboard.spec.ts`) testing `SocialDashboardPage`, `WarmUpAdvancementPanel`, `AccountHealthCard` budget badges, and one-click advancement mutations with toast notifications.
+- Worker Background Warm-Up Scheduler: Implemented `AccountWarmupScheduler` in execution worker (`services/execution-worker/src/account-warmup-scheduler.ts`) running periodic background polling for stage auto-advancement and daily action counter reset, integrated into worker health server and verified with 100% passing unit tests (`services/execution-worker/src/account-warmup-scheduler.test.ts`).
 - Worker runtime enforcement via `params.actionBudgetType`: Verified with pre-execution cutoff `BUDGET_EXCEEDED` before hardware touch events occur.
 - Automated warm-up sequences, stage auto-advancement, and daily action reset: Implemented and verified on physical hardware (`QC4DKJUO6PW4FMQW`) with dynamic stage advancement (Stage 2 -> Stage 3), daily action limit ramp (5 -> 15), counter reset (5 -> 0), and budgeted execution under newly unlocked limits. Supabase RPC `increment_account_action_count` verified.
 
