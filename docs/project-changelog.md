@@ -2,6 +2,12 @@
 
 ## 2026-10-04
 
+- **Checkpoint Quarantine Webhook Notification & Audit Alerting (Phase 15) verified**:
+  - Enhanced `handlePotentialBlock` in `src/lib/account-block-detector.ts` with Supabase `audit_logs` persistence and outbound webhook alert dispatch.
+  - Implemented real-time alert payload dispatch (`event: 'ACCOUNT_QUARANTINED'`) via HTTP POST to configurable notification endpoints (`ACCOUNT_QUARANTINE_WEBHOOK_URL` / `ALERT_WEBHOOK_URL`), with fail-safe error isolation and 3s timeout.
+  - Added audit logging with metadata: `detected_keyword`, `platform`, `username`, `error_excerpt`, and `quarantined_at`.
+  - Expanded unit test suite in `src/lib/account-block-detector.test.ts` covering keyword detection, DB updates, audit logging, webhook delivery, network error resilience, and DB failure cases (100% test pass).
+  - Created and executed automated verification harness `scripts/verify-quarantine-alerting.mjs` with an in-process mock webhook server, proving end-to-end database quarantine, audit log creation, webhook reception, and operator unblock recovery (report `plans/reports/quarantine-alerting-report-1791116280159.json`).
 - **Fleet Soak & Memory Integrity Characterization (Phase 14) verified**:
   - Implemented continuous multi-cycle fleet soak and memory integrity test harness (`scripts/verify-fleet-soak-integrity.mjs`).
   - Added real-time process memory metrics (`rss`, `heapUsed`, `heapTotal`) and `uptime` to execution worker `/health` endpoint (`services/execution-worker/src/index.ts`).

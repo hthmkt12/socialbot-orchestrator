@@ -196,6 +196,16 @@ Status: Pilot verified on physical Android hardware (`QC4DKJUO6PW4FMQW` / Xiaomi
 - Account action count & daily reset: Verified atomic counter increments via RPC and daily counter rollover to 0.
 - Memory stability & bounded heap: Worker process memory observed in real-time via `/health` endpoint; heap growth bounded at +2.53 MB across full multi-run sequence (threshold < 25 MB). Zero leaks.
 
+### Phase 15: Checkpoint Quarantine Webhook Notification & Audit Alerting
+
+Status: Unit and integration verified with mock alert receiver on 2026-10-04 (`scripts/verify-quarantine-alerting.mjs`, report `plans/reports/quarantine-alerting-report-1791116280159.json`).
+
+- Checkpoint block detection: Automated detection of social restriction keywords (`action blocked`, `we restrict certain activity`, `suspicious activity`, `unusual activity`, etc.).
+- Automated quarantine & fail-closed cutoff: Flagged account `is_blocked = true` with `detected_block_reason`, stopping further budgeted actions immediately.
+- Immutable audit log entry: Persisted `action = 'ACCOUNT_QUARANTINED'` into Supabase `audit_logs` table with metadata including platform, username, detected keyword, error excerpt, and timestamp.
+- Outbound alert webhook delivery: Real-time HTTP POST notification dispatch to operator monitoring systems (`ACCOUNT_QUARANTINE_WEBHOOK_URL` / `ALERT_WEBHOOK_URL`) with fail-safe error handling and timeout boundaries.
+- Operator unblock & recovery journey: Verified one-click resolution clears `is_blocked = false` and resets `detected_block_reason = null`.
+
 ## Later
 
 - Add Laixi-specific live clean-path proof when access is available.
