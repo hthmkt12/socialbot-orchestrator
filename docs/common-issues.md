@@ -498,6 +498,25 @@ Verification:
 - `npm.cmd run build:worker`: exit code 0.
 - `npm.cmd run build:gateway`: exit code 0.
 
+## Device Concurrency Lock Rejection
+
+Symptoms:
+- Workflow run fails immediately with error code `DEVICE_LOCKED`: `Device is locked by run <id>`.
+
+Root Cause:
+- Single-device execution runner enforces mutual exclusion on device hardware. If a workflow run is actively running on the device, subsequent runs targeting that device fail immediately to prevent physical touch/gesture collisions.
+
+Common Triggers:
+- Triggering overlapping runs against the same physical device serial.
+- Premature client polling cancellation while worker and device are still executing steps.
+
+Solutions:
+- Await active run terminal status (`COMPLETED`, `FAILED`, `CANCELLED`) before dispatching the next run to the same device.
+- In automated test scripts and schedulers, query active run locks before dispatching.
+
+Verification:
+- `node scripts/verify-level2-social-pilot.mjs`
+
 ## Current Decisions
 
 - Mobile MCP is the accepted pilot-default backend. Laixi remains future-compatible until VIP/API/live-session proof is available.
