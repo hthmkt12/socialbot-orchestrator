@@ -3,6 +3,7 @@ import { MobileMcpStepBackend } from '../mobile-mcp-step-backend';
 import { executeSmokeStep, makeSmokeDevice, step } from './mobile-mcp-smoke-utils';
 
 const bridgeUrl = process.env.MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
+const bridgeToken = process.env.MOBILE_MCP_BRIDGE_TOKEN;
 const timeoutMs = Number(process.env.DEVICE_COMMAND_TIMEOUT_MS ?? 30000);
 const serials = parseSerials();
 
@@ -29,7 +30,7 @@ function parseSerials() {
 }
 
 async function runSerial(serial: string, index: number) {
-  const backend = new MobileMcpStepBackend(bridgeUrl, timeoutMs);
+  const backend = new MobileMcpStepBackend(bridgeUrl, timeoutMs, bridgeToken);
   const device = makeSmokeDevice(serial, index);
   const runId = `mobile-mcp-multi-smoke-run-${index}`;
   await backend.connect();

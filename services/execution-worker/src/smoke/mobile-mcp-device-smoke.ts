@@ -4,6 +4,7 @@ import { executeSmokeStep, makeSmokeDevice, step } from './mobile-mcp-smoke-util
 
 const serial = process.env.MOBILE_MCP_DEVICE_SERIAL ?? process.argv[2];
 const bridgeUrl = process.env.MOBILE_MCP_BRIDGE_URL ?? 'http://127.0.0.1:4321';
+const bridgeToken = process.env.MOBILE_MCP_BRIDGE_TOKEN;
 const timeoutMs = Number(process.env.DEVICE_COMMAND_TIMEOUT_MS ?? 30000);
 
 if (!serial) {
@@ -14,7 +15,7 @@ if (!serial) {
 const device = makeSmokeDevice(serial);
 
 async function main() {
-  const backend = new MobileMcpStepBackend(bridgeUrl, timeoutMs);
+  const backend = new MobileMcpStepBackend(bridgeUrl, timeoutMs, bridgeToken);
   await backend.connect();
   try {
     await executeSmokeStep(backend, device, step('launch_settings', 'launch_app', { appName: 'com.android.settings' }), 'mobile-mcp-smoke-run', '[mobile-mcp-smoke]');
