@@ -18,6 +18,9 @@ import {
 } from '../../../packages/shared/src';
 import { GatewayDeviceStateStore } from './gateway-device-state-store';
 import { timingSafeEqual } from 'node:crypto';
+import { logger as rootLogger } from './logger';
+
+const logger = rootLogger.child({ module: 'session-manager' });
 
 interface DeviceSession {
   socket: WebSocket;
@@ -407,7 +410,7 @@ export class GatewaySessionManager {
       ...(snapshot.lastError ? { lastErrorMessage: snapshot.lastError } : {}),
       ...(snapshot.lastErrorAt ? { lastErrorAt: snapshot.lastErrorAt } : {}),
     }).catch((error) => {
-      console.error('[laixi-gateway] failed to persist device health', error);
+      logger.error({ err: error }, 'failed to persist device health');
     });
   }
 
@@ -423,7 +426,7 @@ export class GatewaySessionManager {
       ...(session.snapshot.lastError ? { lastErrorMessage: session.snapshot.lastError } : {}),
       ...(session.snapshot.lastErrorAt ? { lastErrorAt: session.snapshot.lastErrorAt } : {}),
     }).catch((error) => {
-      console.error('[laixi-gateway] failed to persist offline device health', error);
+      logger.error({ err: error }, 'failed to persist offline device health');
     });
   }
 }

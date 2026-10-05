@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { WorkerConfig } from './run-claim-coordinator';
+import { logger } from './logger';
 
 export interface WarmUpStageConfig {
   stage: number;
@@ -108,7 +109,7 @@ export class AccountWarmupScheduler {
   }
 
   start(intervalMs = 60000) {
-    console.log('[execution-worker] account warmup scheduler ready');
+    logger.info('account warmup scheduler ready');
     this.timer = setInterval(() => void this.poll(), intervalMs);
     this.timer.unref();
     void this.poll();
@@ -196,7 +197,7 @@ export class AccountWarmupScheduler {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       result.errors.push(msg);
-      console.error(`[execution-worker] warmup scheduler cycle failed: ${msg}`);
+      logger.error({ err }, 'warmup scheduler cycle failed');
     } finally {
       this.lastRunAt = now.toISOString();
       this.lastCycleResult = result;

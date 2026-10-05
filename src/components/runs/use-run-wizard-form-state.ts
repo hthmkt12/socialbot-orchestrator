@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { TargetType } from '../../lib/database.types';
+import type { RunPreset } from '../../hooks/use-run-presets';
 
 export function useRunWizardFormState() {
   const [selectedMacroId, setSelectedMacroId] = useState('');
@@ -47,9 +48,22 @@ export function useRunWizardFormState() {
     );
   }, [targetType]);
 
+  /** Populate wizard form from a saved preset. */
+  const loadFromPreset = useCallback((preset: RunPreset) => {
+    setSelectedMacroId(preset.macroId);
+    setSelectedVersionId(''); // resolved to latest by data hook
+    setTargetType(preset.targetType);
+    setSelectedDeviceIds(preset.deviceIds);
+    setSelectedGroupId(preset.groupId);
+    setSelectedAccountId(preset.accountId);
+    setInputValues(preset.inputValues);
+    setMacroSearch('');
+  }, []);
+
   return {
     applyDeclaredTargetType,
     inputValues,
+    loadFromPreset,
     macroSearch,
     selectedAccountId,
     selectedDeviceIds,

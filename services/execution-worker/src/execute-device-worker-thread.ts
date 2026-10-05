@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { executeOwnedDeviceRun } from './execute-owned-device-run.js';
 import { createDeviceStepBackend } from './device-step-backend-factory.js';
 import { getCredentialVaultServiceRoleKey } from './run-claim-coordinator.js';
+import { logger } from './logger.js';
 
 async function main() {
   if (!parentPort) {
@@ -45,11 +46,11 @@ async function main() {
 
 main().catch(error => {
   if (parentPort) {
-    parentPort.postMessage({ 
-      type: 'ERROR', 
-      error: error instanceof Error ? error.message : String(error) 
+    parentPort.postMessage({
+      type: 'ERROR',
+      error: error instanceof Error ? error.message : String(error)
     });
   } else {
-    console.error(error);
+    logger.error({ err: error }, 'worker thread uncaught error');
   }
 });

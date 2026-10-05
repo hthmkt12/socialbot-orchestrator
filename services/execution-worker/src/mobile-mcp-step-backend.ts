@@ -3,6 +3,7 @@ import type { StepArtifactRef } from '../../../packages/shared/src';
 import type { StepExecutionResult } from './execute-device-step.js';
 import type { DeviceStepBackend, DeviceStepExecutionArgs } from './device-step-backend.js';
 import { applyCoordinateVariance, getRandomDelay, sleep } from './lib/anti-detection.js';
+import { withExponentialBackoff } from './retry-backoff.js';
 
 interface MobileMcpBridgeResponse {
   success: boolean;
@@ -114,27 +115,35 @@ export class MobileMcpStepBackend implements DeviceStepBackend {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.commandTimeoutMs);
     try {
-      const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/devices/${encodeURIComponent(serial)}/execute-step`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...(this.bridgeToken ? { 'x-bridge-token': this.bridgeToken } : {}),
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          runId: args.runId,
-          stepId: args.step.id,
-          stepType: args.step.type,
-          params: args.resolvedParams,
-          device: {
-            id: args.device.id,
-            serial,
-            platform,
-            screenWidth: args.device.screen_width,
-            screenHeight: args.device.screen_height,
-          },
-        }),
-      });
+      const response = await withExponentialBackoff(
+        () =>
+          fetch(`${this.baseUrl.replace(/\/$/, '')}/devices/${encodeURIComponent(serial)}/execute-step`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              ...(this.bridgeToken ? { 'x-bridge-token': this.bridgeToken } : {}),
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+              runId: args.runId,
+              stepId: args.step.id,
+              stepType: args.step.type,
+              params: args.resolvedParams,
+              device: {
+                id: args.device.id,
+                serial,
+                platform,
+                screenWidth: args.device.screen_width,
+                screenHeight: args.device.screen_height,
+              },
+            }),
+          }),
+        {
+          operation: `mobile-mcp-step:${serial}:${args.step.type}`,
+          maxRetries: 2,
+          initialDelayMs: 300,
+        }
+      );
       const body = await response.json().catch(() => ({})) as Partial<MobileMcpBridgeResponse>;
       if (!response.ok) {
         return {

@@ -5,6 +5,7 @@ import type {
   LaixiCommandResponse,
 } from '../../../packages/shared/src';
 import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client.js';
+import { withExponentialBackoff } from './retry-backoff.js';
 
 export class LaixiGatewayClient implements DeviceCommandClient {
   constructor(
@@ -38,15 +39,23 @@ export class LaixiGatewayClient implements DeviceCommandClient {
     const timeoutId = setTimeout(() => controller.abort(), this.commandTimeoutMs);
 
     try {
-      const response = await fetch(`${this.baseUrl.replace(/\/$/, '')}/dispatch-step`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...(this.gatewayHttpToken ? { authorization: `Bearer ${this.gatewayHttpToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      const response = await withExponentialBackoff(
+        () =>
+          fetch(`${this.baseUrl.replace(/\/$/, '')}/dispatch-step`, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              ...(this.gatewayHttpToken ? { authorization: `Bearer ${this.gatewayHttpToken}` } : {}),
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+          }),
+        {
+          operation: `gateway-dispatch:${deviceId}`,
+          maxRetries: 2,
+          initialDelayMs: 400,
+        }
+      );
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status} ${response.statusText}`;

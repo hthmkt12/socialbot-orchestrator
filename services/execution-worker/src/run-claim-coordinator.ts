@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { buildClaimSummary } from './run-claim-summary';
+import { logger } from './logger';
 
 export interface WorkerConfig {
   port: number;
@@ -66,9 +67,13 @@ export class RunClaimCoordinator {
   }
 
   start() {
-    console.log('[execution-worker] claim loop ready');
-    console.log(
-      `[execution-worker] instance ${this.config.instanceId}, poll ${this.config.pollIntervalMs}ms, lease ${this.config.leaseTtlMs}ms`
+    logger.info(
+      {
+        instanceId: this.config.instanceId,
+        pollIntervalMs: this.config.pollIntervalMs,
+        leaseTtlMs: this.config.leaseTtlMs,
+      },
+      'claim loop ready'
     );
 
     void this.poll();
@@ -96,13 +101,13 @@ export class RunClaimCoordinator {
           })
           .eq('id', runId)
           .eq('execution_claim_token', claim.claimToken);
-        console.log(`[execution-worker] released claim for run ${runId}`);
+        logger.info({ runId }, 'released claim for run');
       } catch (error) {
-        console.error(`[execution-worker] failed to release claim for run ${runId}`, error);
+        logger.error({ runId, err: error }, 'failed to release claim for run');
       }
     }
     this.activeClaims.clear();
-    console.log('[execution-worker] graceful shutdown complete');
+    logger.info('graceful shutdown complete');
   }
 
   getHealthSnapshot() {
@@ -136,7 +141,7 @@ export class RunClaimCoordinator {
         await this.claimQueuedRuns(remainingCapacity);
       }
     } catch (error) {
-      console.error('[execution-worker] claim loop error', error);
+      logger.error({ err: error }, 'claim loop error');
     } finally {
       this.pollInFlight = false;
     }
@@ -228,7 +233,7 @@ export class RunClaimCoordinator {
     const { data, error } = await query;
     if (error || !data) {
       if (error) {
-        console.error('[execution-worker] failed to load claim candidates', error);
+        logger.error({ err: error }, 'failed to load claim candidates');
       }
       return [];
     }
@@ -271,13 +276,14 @@ export class RunClaimCoordinator {
     if (error || !data) return;
 
     this.activeClaims.set(run.id, { claimToken, claimedAt, leaseExpiresAt });
-    console.log(
-      `[execution-worker] ${isReclaim ? 'reclaimed' : 'claimed'} run ${run.id} with token ${claimToken}`
+    logger.info(
+      { runId: run.id, claimToken, isReclaim },
+      isReclaim ? 'reclaimed run' : 'claimed run'
     );
 
     if (this.onClaim) {
       void this.onClaim({ runId: run.id, claimToken, targetType: run.target_type }).catch((error) => {
-        console.error(`[execution-worker] claim handler failed for run ${run.id}`, error);
+        logger.error({ runId: run.id, err: error }, 'claim handler failed for run');
       });
     }
   }

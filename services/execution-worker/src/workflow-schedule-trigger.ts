@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { CronExpressionParser } from 'cron-parser';
 import type { WorkerConfig } from './run-claim-coordinator';
+import { logger } from './logger';
 
 interface DueSchedule {
   id: string;
@@ -63,7 +64,7 @@ export class WorkflowScheduleTrigger {
   }
 
   start() {
-    console.log('[execution-worker] schedule trigger ready');
+    logger.info('schedule trigger ready');
     // Check every 30 seconds
     this.timer = setInterval(() => void this.poll(), 30000);
     this.timer.unref();
@@ -90,7 +91,7 @@ export class WorkflowScheduleTrigger {
         .lte('next_run_at', nowIso);
 
       if (error || !dueSchedules) {
-        if (error) console.error('[execution-worker] failed to load due schedules', error);
+        if (error) logger.error({ err: error }, 'failed to load due schedules');
         return;
       }
 
@@ -110,7 +111,7 @@ export class WorkflowScheduleTrigger {
       }
 
     } catch (error) {
-      console.error('[execution-worker] schedule trigger loop error', error);
+      logger.error({ err: error }, 'schedule trigger loop error');
     } finally {
       this.pollInFlight = false;
     }
@@ -122,7 +123,7 @@ export class WorkflowScheduleTrigger {
       try {
         nextRunIso = computeScheduleNextRunIso(schedule.cron_expression, schedule.timezone || 'UTC');
       } catch (err) {
-        console.error(`[execution-worker] invalid cron for schedule ${schedule.id}`, err);
+        logger.error({ scheduleId: schedule.id, err }, 'invalid cron for schedule');
         // Deactivate invalid schedules
         await this.supabase.from('workflow_schedules').update({ is_active: false }).eq('id', schedule.id);
         return;
@@ -142,7 +143,7 @@ export class WorkflowScheduleTrigger {
         .maybeSingle(); // Concurrency guard
 
       if (updateError) {
-        console.error(`[execution-worker] failed to update next_run_at for schedule ${schedule.id}`, updateError);
+        logger.error({ scheduleId: schedule.id, err: updateError }, 'failed to update next_run_at for schedule');
         return;
       }
 
@@ -157,17 +158,17 @@ export class WorkflowScheduleTrigger {
         .maybeSingle();
 
       if (macroVersionError) {
-        console.error(`[execution-worker] failed to verify macro version for schedule ${schedule.id}`, macroVersionError);
+        logger.error({ scheduleId: schedule.id, err: macroVersionError }, 'failed to verify macro version for schedule');
         return;
       }
       if (!macroVersion || macroVersion.status !== 'ACTIVE') {
-        console.error(`[execution-worker] schedule ${schedule.id} references missing or inactive macro version`);
+        logger.error({ scheduleId: schedule.id }, 'schedule references missing or inactive macro version');
         return;
       }
 
       const target = buildScheduleTargetSelector(schedule);
       if (!target.ok) {
-        console.error(`[execution-worker] invalid target for schedule ${schedule.id}: ${target.error}`);
+        logger.error({ scheduleId: schedule.id, err: target.error }, 'invalid target for schedule');
         return;
       }
 
@@ -206,12 +207,12 @@ export class WorkflowScheduleTrigger {
       });
 
       if (runError) {
-        console.error(`[execution-worker] failed to insert run for schedule ${schedule.id}`, runError);
+        logger.error({ scheduleId: schedule.id, err: runError }, 'failed to insert run for schedule');
       } else {
-        console.log(`[execution-worker] triggered schedule ${schedule.id} (${schedule.name})`);
+        logger.info({ scheduleId: schedule.id, name: schedule.name }, 'triggered schedule');
       }
     } catch (err) {
-      console.error(`[execution-worker] error processing schedule ${schedule.id}`, err);
+      logger.error({ scheduleId: schedule.id, err }, 'error processing schedule');
     }
   }
 }

@@ -18,6 +18,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "cron-parser": "^5.6.1",
+    "pino": "^10.4.0",
     "ws": "^8.18.0",
     "zod": "^4.3.6"
   },

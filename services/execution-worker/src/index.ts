@@ -9,6 +9,7 @@ import { SingleDeviceRunExecutor } from './single-device-run-executor';
 import { WorkflowScheduleTrigger } from './workflow-schedule-trigger';
 import { AccountWarmupScheduler } from './account-warmup-scheduler';
 import { handleControlPlaneProxy } from './control-plane-proxy';
+import { logger } from './logger';
 
 function loadDotEnvIfMissing() {
   const candidates = [
@@ -135,7 +136,7 @@ function startHealthServer(
   });
 
   server.listen(config.port, () => {
-    console.log(`[execution-worker] health server listening on :${config.port}`);
+    logger.info({ port: config.port }, 'health server listening');
   });
 }
 
@@ -163,7 +164,7 @@ function main() {
 
   // Graceful shutdown: release claims before exit
   const shutdown = async (signal: string) => {
-    console.log(`[execution-worker] received ${signal}, shutting down...`);
+    logger.info({ signal }, 'shutting down...');
     warmupScheduler.stop();
     scheduleTrigger.stop();
     await coordinator.stop();

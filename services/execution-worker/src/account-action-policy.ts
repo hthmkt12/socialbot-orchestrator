@@ -3,6 +3,7 @@ import type { MacroStep } from '../../../src/contracts/macro';
 import { checkActionBudget, getTodayActionCounts, type BudgetCheckResult } from '../../../src/lib/action-budget-enforcer.js';
 import type { BudgetedAccountActionType } from '../../../src/lib/action-budget-types.js';
 import type { Account, AccountActionHistory } from '../../../src/lib/database.types';
+import { logger } from './logger';
 
 export const BUDGETED_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share']);
 export const HISTORY_ACTION_TYPES = new Set<string>(['like', 'follow', 'comment', 'post', 'share', 'instagram_pilot_open']);
@@ -78,9 +79,9 @@ export async function recordStepAction(
       });
 
       if (rpcError) {
-        console.warn(
-          `[execution-worker] run ${runId} step ${step.id} failed to increment action count:`,
-          rpcError
+        logger.warn(
+          { runId, stepId: step.id, err: rpcError },
+          'failed to increment action count'
         );
       }
     }

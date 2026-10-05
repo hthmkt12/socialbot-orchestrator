@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "pino": "^10.4.0",
     "ws": "^8.18.0",
     "zod": "^4.3.6"
   },

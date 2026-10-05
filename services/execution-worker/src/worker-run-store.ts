@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { MacroDefinition } from '../../../src/contracts/macro';
 import type { Device } from '../../../src/lib/database.types';
 import { redactSensitiveValues, redactSensitiveJsonString, redactSensitiveText } from './credential-redaction.js';
+import { logger } from './logger.js';
 
 export interface SingleDeviceRunContext {
   runId: string;
@@ -68,7 +69,7 @@ async function createArtifactRecord(
 
       if (uploadError) {
         const safeUploadError = redactSensitiveText(String(uploadError?.message ?? uploadError), sensitiveValues) as string;
-        console.error('[execution-worker] Artifact storage upload failed:', redactSensitiveJsonString(safeUploadError));
+        logger.error({ err: redactSensitiveJsonString(safeUploadError) }, 'Artifact storage upload failed');
         artifact.metadata_json.storage_mode = 'omitted';
         artifact.metadata_json.storage_status = 'upload_failed';
         artifact.metadata_json.storage_error = safeUploadError;
@@ -78,7 +79,7 @@ async function createArtifactRecord(
       }
     } catch (e) {
       const safeUploadError = redactSensitiveText(String(e instanceof Error ? e.message : e), sensitiveValues) as string;
-      console.error('[execution-worker] Artifact storage upload exception:', redactSensitiveJsonString(safeUploadError));
+      logger.error({ err: redactSensitiveJsonString(safeUploadError) }, 'Artifact storage upload exception');
       artifact.metadata_json.storage_mode = 'omitted';
       artifact.metadata_json.storage_status = 'upload_failed';
       artifact.metadata_json.storage_error = safeUploadError;

@@ -10,6 +10,7 @@ import {
 import { GatewayDeviceStateStore } from './gateway-device-state-store';
 import { GatewaySessionManager } from './gateway-session-manager';
 import { GatewaySecurityPolicy } from './gateway-security';
+import { logger } from './logger';
 
 export interface GatewayConfig {
   port: number;
@@ -112,7 +113,7 @@ export function createGatewayServer(config: GatewayConfig) {
   sessions.startFreshnessLoop(config.healthSyncIntervalMs);
 
   if (!deviceStateStore.isEnabled()) {
-    console.warn('[laixi-gateway] device health persistence disabled; missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    logger.warn('device health persistence disabled; missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
   }
 
   const server = createServer(async (req, res) => {
@@ -211,7 +212,7 @@ export function createGatewayServer(config: GatewayConfig) {
 async function main() {
   const app = createGatewayServer(readConfig());
   const address = await app.listen();
-  console.log(`[laixi-gateway] listening on :${address.port}`);
+  logger.info({ port: address.port }, 'listening');
 }
 
 const entryPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';

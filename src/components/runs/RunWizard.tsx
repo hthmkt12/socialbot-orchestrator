@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { RunWizardFooter } from './RunWizardFooter';
 import { RunWizardModalLayout } from './RunWizardModalLayout';
+import { RunWizardPresetBar } from './run-wizard-preset-bar';
 import { RunWizardStepContent } from './run-wizard-step-content';
 import { useRunWizardData } from './use-run-wizard-data';
 import { useRunWizardFormState } from './use-run-wizard-form-state';
 import { useRunWizardNavigationState } from './use-run-wizard-navigation-state';
 import { useRunWizardSubmitAction } from './use-run-wizard-submit-action';
+import { useRunPresets } from '../../hooks/use-run-presets';
 import { useAuthStore } from '../../stores/auth';
 
 interface Props {
@@ -16,6 +18,7 @@ export default function RunWizard({ onClose }: Props) {
   const {
     applyDeclaredTargetType,
     inputValues,
+    loadFromPreset,
     macroSearch,
     selectedAccountId,
     selectedDeviceIds,
@@ -33,6 +36,8 @@ export default function RunWizard({ onClose }: Props) {
     toggleDevice,
   } = useRunWizardFormState();
   const profileRole = useAuthStore((s) => s.profile?.role);
+  const { presets, savePreset, deletePreset } = useRunPresets();
+  const [showSavePreset, setShowSavePreset] = useState(false);
 
   const {
     declaredTargetType,
@@ -108,7 +113,22 @@ export default function RunWizard({ onClose }: Props) {
   return (
     <RunWizardModalLayout
       body={(
-        <RunWizardStepContent
+        <>
+          <RunWizardPresetBar
+            deletePreset={deletePreset}
+            inputValues={inputValues}
+            loadFromPreset={loadFromPreset}
+            onSavePreset={savePreset}
+            presets={presets}
+            selectedAccountId={selectedAccountId}
+            selectedDeviceIds={selectedDeviceIds}
+            selectedGroupId={selectedGroupId}
+            selectedMacroId={selectedMacroId}
+            showSavePreset={showSavePreset}
+            setShowSavePreset={setShowSavePreset}
+            targetType={targetType}
+          />
+          <RunWizardStepContent
           declaredTargetType={declaredTargetType}
           definition={definition}
           deviceLockSnapshot={deviceLockSnapshot}
@@ -143,7 +163,8 @@ export default function RunWizard({ onClose }: Props) {
           targetDevices={targetDevices}
           targetType={targetType}
           versions={versions}
-        />
+          />
+        </>
       )}
       currentIdx={currentIdx}
       footer={(
