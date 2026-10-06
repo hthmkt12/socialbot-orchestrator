@@ -9,6 +9,12 @@
  * 4. Resilient lock release in worker finally block even when step execution fails.
  * 5. Memory stability (RSS / HeapUsed) across cycles with zero unbounded leaks.
  * 6. Daily action counter reset and warm-up schedule integrity.
+ *
+ * Cleanup guarantee: every soak macro, macro_version, workflow_run (plus
+ * run_steps/artifacts), the test account, and device locks created by a run
+ * are best-effort deleted in FK-safe order via cleanupSoakArtifacts, inside a
+ * try/finally so cleanup runs even when a cycle throws. Cleanup warnings never
+ * flip the PASS/FAIL verdict.
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -137,6 +143,81 @@ async function ensureSoakMacro(supabase, profileId, keySuffix, steps) {
   return { macroId: macroRecord.id, versionId: versionRecord.id };
 }
 
+async function cleanupSoakArtifacts(supabase, { macroIds = [], versionIds = [], runIds = [], accountId = null, deviceId = null }) {
+  const deleted = { runSteps: 0, artifacts: 0, runs: 0, versions: 0, macros: 0, account: 0 };
+  try {
+    if (runIds.length > 0) {
+      try {
+        const { data, error } = await supabase.from('run_steps').delete().in('workflow_run_id', runIds).select('id');
+        if (error) throw error;
+        deleted.runSteps = data?.length ?? 0;
+      } catch (err) {
+        console.warn(`cleanup warning: run_steps delete failed: ${err?.message ?? err}`);
+      }
+      try {
+        const { data, error } = await supabase.from('artifacts').delete().in('workflow_run_id', runIds).select('id');
+        if (error) throw error;
+        deleted.artifacts = data?.length ?? 0;
+      } catch (err) {
+        console.warn(`cleanup warning: artifacts delete failed: ${err?.message ?? err}`);
+      }
+      try {
+        const { data, error } = await supabase.from('workflow_runs').delete().in('id', runIds).select('id');
+        if (error) throw error;
+        deleted.runs = data?.length ?? 0;
+      } catch (err) {
+        console.warn(`cleanup warning: workflow_runs delete failed: ${err?.message ?? err}`);
+      }
+    }
+    if (macroIds.length > 0) {
+      try {
+        const { error } = await supabase.from('macros').update({ latest_version_id: null }).in('id', macroIds);
+        if (error) throw error;
+      } catch (err) {
+        console.warn(`cleanup warning: macros latest_version_id clear failed: ${err?.message ?? err}`);
+      }
+    }
+    if (versionIds.length > 0) {
+      try {
+        const { data, error } = await supabase.from('macro_versions').delete().in('id', versionIds).select('id');
+        if (error) throw error;
+        deleted.versions = data?.length ?? 0;
+      } catch (err) {
+        console.warn(`cleanup warning: macro_versions delete failed: ${err?.message ?? err}`);
+      }
+    }
+    if (macroIds.length > 0) {
+      try {
+        const { data, error } = await supabase.from('macros').delete().in('id', macroIds).select('id');
+        if (error) throw error;
+        deleted.macros = data?.length ?? 0;
+      } catch (err) {
+        console.warn(`cleanup warning: macros delete failed: ${err?.message ?? err}`);
+      }
+    }
+    if (accountId) {
+      try {
+        const { data, error } = await supabase.from('accounts').delete().eq('id', accountId).select('id');
+        if (error) throw error;
+        deleted.account = data?.length ?? 0;
+      } catch (err) {
+        console.warn(`cleanup warning: accounts delete failed: ${err?.message ?? err}`);
+      }
+    }
+    if (deviceId) {
+      try {
+        const { error } = await supabase.from('device_locks').delete().eq('device_id', deviceId);
+        if (error) throw error;
+      } catch (err) {
+        console.warn(`cleanup warning: device_locks delete failed: ${err?.message ?? err}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`cleanup warning: unexpected soak cleanup failure: ${err?.message ?? err}`);
+  }
+  console.log(`Soak cleanup summary: runs=${deleted.runs} run_steps=${deleted.runSteps} artifacts=${deleted.artifacts} versions=${deleted.versions} macros=${deleted.macros} account=${deleted.account}`);
+}
+
 async function main() {
   console.log('================================================================');
   console.log('Automated Fleet Soak & Memory Integrity Characterization Harness');
@@ -214,7 +295,12 @@ async function main() {
   if (accErr) throw accErr;
   console.log(`Created Soak Test Account: ${testAccount.username} [${testAccount.id}]`);
 
+  const createdMacroIds = [];
+  const createdVersionIds = [];
+  const createdRunIds = [];
   const cycleResults = [];
+
+  try {
 
   // 3. Multi-Cycle Soak Loop (3 Sequential Execution Cycles)
   console.log('\n[3/6] Running 3 Sequential Physical Automation Soak Cycles...');
@@ -256,7 +342,9 @@ async function main() {
     const config = cycleConfigs[i];
     console.log(`\n--- Starting ${config.name} [Cycle ${i + 1}/3] ---`);
 
-    const { versionId } = await ensureSoakMacro(supabase, operatorProfileId, `cycle_${i + 1}`, config.steps);
+    const { macroId, versionId } = await ensureSoakMacro(supabase, operatorProfileId, `cycle_${i + 1}`, config.steps);
+    createdMacroIds.push(macroId);
+    createdVersionIds.push(versionId);
 
     // Dispatch workflow run
     const { data: run, error: runErr } = await supabase
@@ -276,6 +364,7 @@ async function main() {
       .single();
 
     if (runErr) throw runErr;
+    createdRunIds.push(run.id);
     console.log(`Dispatched Run ID: ${run.id}`);
 
     // Poll until completed
@@ -333,7 +422,9 @@ async function main() {
     { id: 'f_invalid', type: 'non_existent_invalid_step_type', params: {} },
   ];
 
-  const { versionId: failVerId } = await ensureSoakMacro(supabase, operatorProfileId, 'fail_test', failingSteps);
+  const { macroId: failMacroId, versionId: failVerId } = await ensureSoakMacro(supabase, operatorProfileId, 'fail_test', failingSteps);
+  createdMacroIds.push(failMacroId);
+  createdVersionIds.push(failVerId);
 
   const { data: failRun, error: failRunErr } = await supabase
     .from('workflow_runs')
@@ -352,6 +443,7 @@ async function main() {
     .single();
 
   if (failRunErr) throw failRunErr;
+  createdRunIds.push(failRun.id);
   console.log(`Dispatched Failure Test Run ID: ${failRun.id}`);
 
   const settledFailRun = await pollRunUntilTerminal(supabase, failRun.id, 45000);
@@ -445,10 +537,15 @@ async function main() {
   const reportPath = join(reportDir, `fleet-soak-integrity-report-${Date.now()}.json`);
   writeFileSync(reportPath, JSON.stringify(soakReport, null, 2), 'utf8');
   console.log(`\nReport successfully written to: ${reportPath}`);
-
-  // Cleanup test account and device lock
-  await supabase.from('device_locks').delete().eq('device_id', dbDevice.id);
-  await supabase.from('accounts').delete().eq('id', testAccount.id);
+  } finally {
+    await cleanupSoakArtifacts(supabase, {
+      macroIds: createdMacroIds,
+      versionIds: createdVersionIds,
+      runIds: createdRunIds,
+      accountId: testAccount.id,
+      deviceId: dbDevice.id,
+    });
+  }
 
   console.log('\n================================================================');
   console.log('ALL SOAK & MEMORY INTEGRITY CHECKS PASSED');
