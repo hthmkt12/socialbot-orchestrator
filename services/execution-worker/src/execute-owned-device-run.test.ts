@@ -110,7 +110,6 @@ describe('executeOwnedDeviceRun lock ownership', () => {
   });
 
   it('rejects execution when device rate limit guardrail is exceeded', async () => {
-    const guardrail = new (await import('./device-action-guardrail.js')).DeviceActionGuardrail(1);
     // Use the global guardrail and fill it
     for (let i = 0; i < 500; i++) {
       globalDeviceActionGuardrail.recordAction('device-1');

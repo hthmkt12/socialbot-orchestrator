@@ -26,7 +26,6 @@ import { persistStepArtifacts } from './step-artifact-policy.js';
 import { isRecord } from './step-dispatch-results.js';
 import { redactSensitiveText } from './credential-redaction.js';
 import { globalDeviceActionGuardrail } from './device-action-guardrail.js';
-import { globalDeviceQuarantineCircuitBreaker } from './device-quarantine-circuit-breaker.js';
 import { childLogger } from './logger.js';
 
 export interface RunnerParams {

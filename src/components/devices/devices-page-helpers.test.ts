@@ -9,7 +9,6 @@ import type { DeviceLockSnapshot } from '../../lib/device-locks';
 
 const mockDevice: Device = {
   id: 'dev-1',
-  user_id: 'user-1',
   name: 'Pixel 6',
   model: 'Pixel 6',
   brand: 'Google',
@@ -19,7 +18,10 @@ const mockDevice: Device = {
   status: 'ONLINE',
   laixi_device_id: 'laixi-dev-1',
   created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
   last_seen_at: new Date().toISOString(),
+  last_error_message: null,
+  last_error_at: null,
   heartbeat_freshness: 'fresh',
   metadata_json: {},
 };

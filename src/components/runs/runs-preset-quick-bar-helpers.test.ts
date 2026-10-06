@@ -38,7 +38,7 @@ describe('RunsPresetQuickBar helpers', () => {
       id: 'p3',
       name: 'Valid Preset',
       macroId: 'm3',
-      targetType: 'ALL_ONLINE_DEVICES',
+      targetType: 'ALL_DEVICES',
       deviceIds: [],
       groupId: '',
       accountId: '',
