@@ -1,5 +1,7 @@
-import { Check, Copy, RefreshCw, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Copy, Power, RefreshCw, ShieldAlert, Smartphone, Sun } from 'lucide-react';
 import type { Device, DeviceLock } from '../../lib/database.types';
+import { requestDeviceRecovery } from '../../lib/mobile-mcp-orchestrator';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
 import {
@@ -24,6 +26,8 @@ export function RecoveryActionsPanel({
   onRecheck,
   profileRole,
   selectedDeviceLabel,
+  selectedDeviceSerial,
+  workerBaseUrl,
 }: {
   activeLocks: DeviceLock[];
   canForceClearLocks: boolean;
@@ -41,9 +45,42 @@ export function RecoveryActionsPanel({
   onRecheck: () => void;
   profileRole: string | undefined;
   selectedDeviceLabel: string | null;
+  selectedDeviceSerial?: string;
+  workerBaseUrl?: string;
 }) {
   const hasProfile = profileRole !== undefined;
+  const isOperatorOrAdmin = profileRole === 'ADMIN' || profileRole === 'OPERATOR';
   const deviceNameById = new Map(devices.map((device) => [device.id, device.name || device.laixi_device_id]));
+
+  const [hardwareActionLoading, setHardwareActionLoading] = useState<string | null>(null);
+  const [hardwareActionResult, setHardwareActionResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleDeviceHardwareRecovery = async (
+    action: 'restart_adb' | 'wake_screen' | 'reboot_device'
+  ) => {
+    setHardwareActionLoading(action);
+    setHardwareActionResult(null);
+    try {
+      const res = await requestDeviceRecovery(action, selectedDeviceSerial, workerBaseUrl);
+      setHardwareActionResult({
+        success: res.success,
+        message: res.message,
+      });
+      if (res.success) {
+        onRecheck();
+      }
+    } catch (err) {
+      setHardwareActionResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Hardware recovery action failed',
+      });
+    } finally {
+      setHardwareActionLoading(null);
+    }
+  };
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-4">
@@ -166,6 +203,95 @@ export function RecoveryActionsPanel({
           <p className="text-xs text-amber-800">
             Role {profileRole ?? 'unknown'} can inspect lock state, but only admins can force clear active locks.
           </p>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h5 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <Smartphone className="w-4 h-4 text-sky-600" />
+              Device Hardware & ADB Recovery
+            </h5>
+            <p className="text-xs text-gray-600 mt-1">
+              Direct recovery actions on ADB daemon and attached Android devices without accessing the host terminal.
+            </p>
+          </div>
+          <Badge variant={isOperatorOrAdmin ? 'blue' : 'gray'}>
+            {isOperatorOrAdmin ? 'Operator action' : 'Read-only'}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <button
+            onClick={() => handleDeviceHardwareRecovery('restart_adb')}
+            disabled={hardwareActionLoading !== null || !isOperatorOrAdmin}
+            className="inline-flex flex-col items-start gap-1 p-3 rounded-lg border border-sky-200 bg-white hover:bg-sky-50 disabled:opacity-50 text-left transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+              {hardwareActionLoading === 'restart_adb' ? (
+                <Spinner size="sm" />
+              ) : (
+                <RefreshCw className="w-4 h-4 text-sky-500" />
+              )}
+              Restart ADB
+            </div>
+            <span className="text-[11px] text-gray-500">
+              Kill & restart host ADB server to recover hanging USB bus.
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleDeviceHardwareRecovery('wake_screen')}
+            disabled={hardwareActionLoading !== null || !isOperatorOrAdmin || !selectedDeviceSerial}
+            className="inline-flex flex-col items-start gap-1 p-3 rounded-lg border border-sky-200 bg-white hover:bg-sky-50 disabled:opacity-50 text-left transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+              {hardwareActionLoading === 'wake_screen' ? (
+                <Spinner size="sm" />
+              ) : (
+                <Sun className="w-4 h-4 text-amber-500" />
+              )}
+              Wake & Unlock Screen
+            </div>
+            <span className="text-[11px] text-gray-500">
+              {selectedDeviceSerial
+                ? `Send KEYCODE_WAKEUP & unlock to ${selectedDeviceSerial}.`
+                : 'Select a device above to wake.'}
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleDeviceHardwareRecovery('reboot_device')}
+            disabled={hardwareActionLoading !== null || !isOperatorOrAdmin || !selectedDeviceSerial}
+            className="inline-flex flex-col items-start gap-1 p-3 rounded-lg border border-red-200 bg-white hover:bg-red-50 disabled:opacity-50 text-left transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-medium text-red-700">
+              {hardwareActionLoading === 'reboot_device' ? (
+                <Spinner size="sm" />
+              ) : (
+                <Power className="w-4 h-4 text-red-500" />
+              )}
+              Quick-Reboot Device
+            </div>
+            <span className="text-[11px] text-gray-500">
+              {selectedDeviceSerial
+                ? `Soft reboot ${selectedDeviceSerial} via ADB command.`
+                : 'Select a device above to reboot.'}
+            </span>
+          </button>
+        </div>
+
+        {hardwareActionResult && (
+          <div
+            className={`p-2.5 rounded-lg text-xs font-mono whitespace-pre-wrap ${
+              hardwareActionResult.success
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}
+          >
+            {hardwareActionResult.message}
+          </div>
         )}
       </div>
     </div>

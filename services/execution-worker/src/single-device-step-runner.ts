@@ -25,6 +25,8 @@ import { budgetCheckForStep, recordStepAction } from './account-action-policy.js
 import { persistStepArtifacts } from './step-artifact-policy.js';
 import { isRecord } from './step-dispatch-results.js';
 import { redactSensitiveText } from './credential-redaction.js';
+import { globalDeviceActionGuardrail } from './device-action-guardrail.js';
+import { globalDeviceQuarantineCircuitBreaker } from './device-quarantine-circuit-breaker.js';
 
 export interface RunnerParams {
   supabase: SupabaseClient;
@@ -649,6 +651,24 @@ export class SingleDeviceStepRunner {
       return { status: 'FAILED' as const };
     }
 
+    const deviceGuardrailCheck = globalDeviceActionGuardrail.getUsage(this.params.device.id);
+    if (!deviceGuardrailCheck.allowed) {
+      await this.saveStep({
+        runId: this.params.runId,
+        step,
+        deviceId: this.params.device.id,
+        stepIndex,
+        status: 'FAILED',
+        retryCount: 0,
+        errorPayload: {
+          code: 'DEVICE_RATE_LIMIT_EXCEEDED',
+          message: deviceGuardrailCheck.reason ?? 'Device daily action rate limit exceeded',
+          timestamp: new Date().toISOString(),
+        },
+      });
+      return { status: 'FAILED' as const };
+    }
+
     /* Resolve sensitive credential variables (e.g. {{accountPassword}}) BEFORE
        the retry loop so the decrypted value persists across retry attempts.
        Plaintext is held in sensitiveInputVariables (in-memory only, never persisted). */
@@ -764,6 +784,7 @@ export class SingleDeviceStepRunner {
             screenshotArtifactId,
           });
           await recordStepAction(this.params.supabase, step, this.params.runId, this.params.inputVariables, true);
+          globalDeviceActionGuardrail.recordAction(this.params.device.id);
           return { status: 'SUCCESS' as const };
         }
 

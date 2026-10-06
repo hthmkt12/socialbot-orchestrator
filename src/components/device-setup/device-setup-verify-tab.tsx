@@ -137,6 +137,8 @@ export function DeviceSetupVerifyTab({
         onRecheck={() => void runVerification()}
         profileRole={profileRole}
         selectedDeviceLabel={selectedDeviceLabel}
+        selectedDeviceSerial={selectedDevice?.device.laixi_device_id}
+        workerBaseUrl={workerBaseUrl}
       />
 
       <SelectedDeviceSummaryPanel

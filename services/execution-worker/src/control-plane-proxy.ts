@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createClient } from '@supabase/supabase-js';
+import { executeDeviceRecovery, type DeviceRecoveryRequest } from './device-recovery-service.js';
+import { globalDeviceActionGuardrail } from './device-action-guardrail.js';
+import { globalDeviceQuarantineCircuitBreaker } from './device-quarantine-circuit-breaker.js';
 
 const MAX_BODY_BYTES = 1024 * 1024;
 
@@ -75,7 +78,8 @@ async function authorize(req: IncomingMessage, config: ControlPlaneProxyConfig) 
 export async function handleControlPlaneProxy(
   req: IncomingMessage,
   res: ServerResponse,
-  config: ControlPlaneProxyConfig
+  config: ControlPlaneProxyConfig,
+  recoveryRunner = executeDeviceRecovery
 ) {
   const url = req.url ?? '';
   const isDevices = url === '/control/mobile-mcp/devices' && req.method === 'GET';
@@ -86,7 +90,24 @@ export async function handleControlPlaneProxy(
   const gatewayDispatch = url === '/control/gateway/dispatch-step' && req.method === 'POST';
   const mobileHealth = url === '/control/mobile-mcp/health' && req.method === 'GET';
   const gatewayHealth = url === '/control/gateway/health' && req.method === 'GET';
-  if (!isDevices && !executeMatch && !gatewaySessions && !gatewayDispatch && !mobileHealth && !gatewayHealth) return false;
+  const isDeviceRecovery = url === '/control/devices/recovery' && req.method === 'POST';
+  const isGuardrailUsage = url.startsWith('/control/devices/guardrail/') && req.method === 'GET';
+  const isQuarantineState = url.startsWith('/control/devices/quarantine/') && req.method === 'GET';
+  const isLiftQuarantine = url.startsWith('/control/devices/quarantine/') && url.endsWith('/lift') && req.method === 'POST';
+
+  if (
+    !isDevices &&
+    !executeMatch &&
+    !gatewaySessions &&
+    !gatewayDispatch &&
+    !mobileHealth &&
+    !gatewayHealth &&
+    !isDeviceRecovery &&
+    !isGuardrailUsage &&
+    !isQuarantineState &&
+    !isLiftQuarantine
+  )
+    return false;
 
   const origin = typeof req.headers.origin === 'string' && req.headers.origin === config.corsOrigin
     ? config.corsOrigin
@@ -94,6 +115,44 @@ export async function handleControlPlaneProxy(
   const auth = config.authorizeRequest ? await config.authorizeRequest(req) : await authorize(req, config);
   if (auth.status !== 200) {
     writeJson(res, auth.status, { error: auth.status === 401 ? 'Authentication required.' : 'Control-plane access denied.' }, origin);
+    return true;
+  }
+
+  if (isDeviceRecovery) {
+    try {
+      const body = (await readBody(req)) as DeviceRecoveryRequest;
+      if (!body || !body.action) {
+        writeJson(res, 400, { error: 'Action is required for device recovery.' }, origin);
+        return true;
+      }
+      const result = await recoveryRunner(body);
+      writeJson(res, result.success ? 200 : 500, result, origin);
+    } catch (err) {
+      writeJson(res, 500, { error: err instanceof Error ? err.message : 'Recovery execution failed.' }, origin);
+    }
+    return true;
+  }
+
+  if (isGuardrailUsage) {
+    const deviceId = decodeURIComponent(url.slice('/control/devices/guardrail/'.length));
+    const usage = globalDeviceActionGuardrail.getUsage(deviceId);
+    writeJson(res, 200, usage, origin);
+    return true;
+  }
+
+  if (isLiftQuarantine) {
+    const rawId = url.slice('/control/devices/quarantine/'.length);
+    const deviceId = decodeURIComponent(rawId.replace(/\/lift$/, ''));
+    globalDeviceQuarantineCircuitBreaker.liftQuarantine(deviceId);
+    const state = globalDeviceQuarantineCircuitBreaker.getState(deviceId);
+    writeJson(res, 200, { success: true, message: `Quarantine lifted for device ${deviceId}`, state }, origin);
+    return true;
+  }
+
+  if (isQuarantineState) {
+    const deviceId = decodeURIComponent(url.slice('/control/devices/quarantine/'.length));
+    const state = globalDeviceQuarantineCircuitBreaker.getState(deviceId);
+    writeJson(res, 200, state, origin);
     return true;
   }
   if ((isDevices || executeMatch || mobileHealth) && !config.mobileMcpBridgeToken) {

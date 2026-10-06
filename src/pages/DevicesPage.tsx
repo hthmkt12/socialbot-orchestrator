@@ -177,11 +177,13 @@ export default function DevicesPage() {
       {selectedDevice && (
         <DeviceDrawer
           canDelete={canDeleteDevices}
+          canManage={canSyncDevices}
           deletePending={deleteDevice.isPending}
           device={selectedDevice}
           lockState={getDeviceLockState(selectedDevice.id, deviceLockSnapshot)}
           onClose={() => setSelectedDevice(null)}
           onDelete={() => void handleDeleteDevice(selectedDevice)}
+          onRefetch={() => void handleSync()}
         />
       )}
     </>

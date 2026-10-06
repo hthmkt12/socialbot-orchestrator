@@ -20,6 +20,8 @@ vi.mock('./single-device-step-runner.js', () => ({
 }));
 
 import { executeOwnedDeviceRun } from './execute-owned-device-run.js';
+import { globalDeviceQuarantineCircuitBreaker } from './device-quarantine-circuit-breaker.js';
+import { globalDeviceActionGuardrail } from './device-action-guardrail.js';
 
 function params() {
   return {
@@ -37,6 +39,8 @@ function params() {
 describe('executeOwnedDeviceRun lock ownership', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    globalDeviceQuarantineCircuitBreaker.clear();
+    globalDeviceActionGuardrail.reset();
     mocks.acquireDeviceLock.mockResolvedValue({ acquired: true });
     mocks.releaseDeviceLock.mockResolvedValue(undefined);
     mocks.renewDeviceLock.mockResolvedValue(true);
@@ -91,5 +95,31 @@ describe('executeOwnedDeviceRun lock ownership', () => {
     expect(result.status).toBe('FAILED');
     expect(result.error?.message).toBe('lock lookup failed');
     expect(mocks.releaseDeviceLock).not.toHaveBeenCalled();
+  });
+
+  it('rejects execution when device is quarantined', async () => {
+    globalDeviceQuarantineCircuitBreaker.recordFailure('device-1');
+    globalDeviceQuarantineCircuitBreaker.recordFailure('device-1');
+    globalDeviceQuarantineCircuitBreaker.recordFailure('device-1');
+
+    const result = await executeOwnedDeviceRun(params());
+
+    expect(result.status).toBe('FAILED');
+    expect(result.error?.code).toBe('DEVICE_QUARANTINED');
+    expect(mocks.acquireDeviceLock).not.toHaveBeenCalled();
+  });
+
+  it('rejects execution when device rate limit guardrail is exceeded', async () => {
+    const guardrail = new (await import('./device-action-guardrail.js')).DeviceActionGuardrail(1);
+    // Use the global guardrail and fill it
+    for (let i = 0; i < 500; i++) {
+      globalDeviceActionGuardrail.recordAction('device-1');
+    }
+
+    const result = await executeOwnedDeviceRun(params());
+
+    expect(result.status).toBe('FAILED');
+    expect(result.error?.code).toBe('DEVICE_RATE_LIMIT_EXCEEDED');
+    expect(mocks.acquireDeviceLock).not.toHaveBeenCalled();
   });
 });

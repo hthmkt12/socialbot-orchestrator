@@ -22,6 +22,7 @@ vi.mock('./worker-run-store.js', () => ({
 
 import { SingleDeviceStepRunner } from './single-device-step-runner';
 import { createLogArtifact } from './worker-run-store.js';
+import { globalDeviceActionGuardrail } from './device-action-guardrail.js';
 
 const mockCreateLogArtifact = vi.mocked(createLogArtifact);
 
@@ -216,6 +217,7 @@ function retryRunnerFor(args: {
 describe('single-device step runner account budgets', () => {
   beforeEach(() => {
     persistedSteps.length = 0;
+    globalDeviceActionGuardrail.reset();
     vi.clearAllMocks();
   });
 
@@ -362,5 +364,28 @@ describe('single-device step runner account budgets', () => {
     }));
     expect(supabase.historyInserts).toHaveLength(1);
     expect(supabase.rpcCalls).toHaveLength(1);
+  });
+
+  it('blocks step when device daily action rate limit guardrail is exceeded', async () => {
+    const supabase = makeSupabase({
+      account: account({ daily_action_limit: 100 }),
+      history: [],
+    });
+
+    for (let i = 0; i < 500; i++) {
+      globalDeviceActionGuardrail.recordAction('device-1');
+    }
+
+    const result = await runnerFor({
+      supabase: supabase.supabase,
+      step: budgetedStep('guardrail-test'),
+      backendResult: { success: true, output: { ok: true } },
+    }).run();
+
+    expect(result.status).toBe('FAILED');
+    expect(persistedSteps).toContainEqual(expect.objectContaining({
+      status: 'FAILED',
+      errorPayload: expect.objectContaining({ code: 'DEVICE_RATE_LIMIT_EXCEEDED' }),
+    }));
   });
 });

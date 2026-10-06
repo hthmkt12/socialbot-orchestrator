@@ -166,6 +166,72 @@ export async function executeMobileMcpStep(
   };
 }
 
+export interface DeviceRecoveryActionRequest {
+  serial?: string;
+  action: 'restart_adb' | 'reboot_device' | 'wake_screen';
+}
+
+export interface DeviceRecoveryActionResult {
+  success: boolean;
+  action: string;
+  serial?: string;
+  message: string;
+  durationMs: number;
+}
+
+export async function requestDeviceRecovery(
+  action: DeviceRecoveryActionRequest['action'],
+  serial?: string,
+  workerUrl = DEFAULT_WORKER_URL
+): Promise<DeviceRecoveryActionResult> {
+  const targetUrl = `${trimTrailingSlash(workerUrl.trim() || DEFAULT_WORKER_URL)}/control/devices/recovery`;
+  return authenticatedRequest<DeviceRecoveryActionResult>(targetUrl, {
+    method: 'POST',
+    body: JSON.stringify({ action, serial }),
+  });
+}
+
+export interface DeviceGuardrailUsage {
+  allowed: boolean;
+  deviceId: string;
+  currentCount: number;
+  dailyLimit: number;
+  remaining: number;
+  reason?: string;
+}
+
+export async function fetchDeviceGuardrailUsage(
+  deviceId: string,
+  workerUrl = DEFAULT_WORKER_URL
+): Promise<DeviceGuardrailUsage> {
+  const targetUrl = `${trimTrailingSlash(workerUrl.trim() || DEFAULT_WORKER_URL)}/control/devices/guardrail/${encodeURIComponent(deviceId)}`;
+  return authenticatedRequest<DeviceGuardrailUsage>(targetUrl, { method: 'GET' });
+}
+
+export interface DeviceQuarantineStatus {
+  deviceId: string;
+  consecutiveFailures: number;
+  isQuarantined: boolean;
+  quarantinedAt?: string;
+  reason?: string;
+}
+
+export async function fetchDeviceQuarantineState(
+  deviceId: string,
+  workerUrl = DEFAULT_WORKER_URL
+): Promise<DeviceQuarantineStatus> {
+  const targetUrl = `${trimTrailingSlash(workerUrl.trim() || DEFAULT_WORKER_URL)}/control/devices/quarantine/${encodeURIComponent(deviceId)}`;
+  return authenticatedRequest<DeviceQuarantineStatus>(targetUrl, { method: 'GET' });
+}
+
+export async function requestLiftDeviceQuarantine(
+  deviceId: string,
+  workerUrl = DEFAULT_WORKER_URL
+): Promise<{ success: boolean; message: string; state: DeviceQuarantineStatus }> {
+  const targetUrl = `${trimTrailingSlash(workerUrl.trim() || DEFAULT_WORKER_URL)}/control/devices/quarantine/${encodeURIComponent(deviceId)}/lift`;
+  return authenticatedRequest<{ success: boolean; message: string; state: DeviceQuarantineStatus }>(targetUrl, { method: 'POST' });
+}
+
 function extractScreenshotBase64(output: Record<string, unknown>) {
   const artifacts = Array.isArray(output.artifacts) ? output.artifacts : [];
   for (const artifact of artifacts) {
