@@ -2,14 +2,14 @@ import { useCallback, useState } from 'react';
 import type { TargetType } from '../../lib/database.types';
 import type { RunPreset } from '../../hooks/use-run-presets';
 
-export function useRunWizardFormState() {
-  const [selectedMacroId, setSelectedMacroId] = useState('');
+export function useRunWizardFormState(initialPreset?: RunPreset | null) {
+  const [selectedMacroId, setSelectedMacroId] = useState(initialPreset?.macroId ?? '');
   const [selectedVersionId, setSelectedVersionId] = useState('');
-  const [selectedAccountId, setSelectedAccountId] = useState('');
-  const [targetType, setTargetType] = useState<TargetType>('SINGLE_DEVICE');
-  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState('');
-  const [inputValues, setInputValues] = useState<Record<string, string>>({});
+  const [selectedAccountId, setSelectedAccountId] = useState(initialPreset?.accountId ?? '');
+  const [targetType, setTargetType] = useState<TargetType>(initialPreset?.targetType ?? 'SINGLE_DEVICE');
+  const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>(initialPreset?.deviceIds ?? []);
+  const [selectedGroupId, setSelectedGroupId] = useState(initialPreset?.groupId ?? '');
+  const [inputValues, setInputValues] = useState<Record<string, string>>(initialPreset?.inputValues ?? {});
   const [macroSearch, setMacroSearch] = useState('');
 
   const resetTargetSelection = useCallback(() => {

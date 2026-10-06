@@ -7,14 +7,15 @@ import { useRunWizardData } from './use-run-wizard-data';
 import { useRunWizardFormState } from './use-run-wizard-form-state';
 import { useRunWizardNavigationState } from './use-run-wizard-navigation-state';
 import { useRunWizardSubmitAction } from './use-run-wizard-submit-action';
-import { useRunPresets } from '../../hooks/use-run-presets';
+import { useRunPresets, type RunPreset } from '../../hooks/use-run-presets';
 import { useAuthStore } from '../../stores/auth';
 
 interface Props {
   onClose: () => void;
+  initialPreset?: RunPreset | null;
 }
 
-export default function RunWizard({ onClose }: Props) {
+export default function RunWizard({ onClose, initialPreset }: Props) {
   const {
     applyDeclaredTargetType,
     inputValues,
@@ -34,7 +35,7 @@ export default function RunWizard({ onClose }: Props) {
     setSelectedVersionId,
     targetType,
     toggleDevice,
-  } = useRunWizardFormState();
+  } = useRunWizardFormState(initialPreset);
   const profileRole = useAuthStore((s) => s.profile?.role);
   const { presets, savePreset, deletePreset } = useRunPresets();
   const [showSavePreset, setShowSavePreset] = useState(false);

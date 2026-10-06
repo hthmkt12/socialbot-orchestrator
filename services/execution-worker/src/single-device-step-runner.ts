@@ -27,6 +27,7 @@ import { isRecord } from './step-dispatch-results.js';
 import { redactSensitiveText } from './credential-redaction.js';
 import { globalDeviceActionGuardrail } from './device-action-guardrail.js';
 import { globalDeviceQuarantineCircuitBreaker } from './device-quarantine-circuit-breaker.js';
+import { childLogger } from './logger.js';
 
 export interface RunnerParams {
   supabase: SupabaseClient;
@@ -61,8 +62,15 @@ export class SingleDeviceStepRunner {
    * to the database, logs, or artifacts. Cleared after each step execution.
    */
   private readonly sensitiveInputVariables = new Map<string, string>();
+  private readonly stepLogger: ReturnType<typeof childLogger>;
 
-  constructor(private readonly params: RunnerParams) {}
+  constructor(private readonly params: RunnerParams) {
+    this.stepLogger = childLogger({
+      runId: params.runId,
+      deviceId: params.device.id,
+      deviceModel: params.device.model,
+    });
+  }
 
   async run() {
     this.executionContext = new ExecutionContext(this.params.inputVariables);
@@ -785,6 +793,7 @@ export class SingleDeviceStepRunner {
           });
           await recordStepAction(this.params.supabase, step, this.params.runId, this.params.inputVariables, true);
           globalDeviceActionGuardrail.recordAction(this.params.device.id);
+          this.stepLogger.info({ stepId: step.id, stepType: step.type, attempt }, 'step executed successfully');
           return { status: 'SUCCESS' as const };
         }
 
@@ -848,6 +857,16 @@ export class SingleDeviceStepRunner {
             timestamp: new Date().toISOString(),
           }),
         });
+        this.stepLogger.warn(
+          {
+            stepId: step.id,
+            stepType: step.type,
+            attempt,
+            cancelled,
+            err: result.error,
+          },
+          cancelled ? 'step cancelled' : 'step execution failed'
+        );
         return { status: cancelled ? 'CANCELLED' : 'FAILED' };
       } catch (error) {
         const code = error instanceof StepTimeoutError ? 'STEP_TIMEOUT' : 'STEP_EXCEPTION';
@@ -912,6 +931,16 @@ export class SingleDeviceStepRunner {
             timestamp: new Date().toISOString(),
           }),
         });
+        this.stepLogger.error(
+          {
+            stepId: step.id,
+            stepType: step.type,
+            code,
+            attempt,
+            err: error,
+          },
+          'step execution threw exception'
+        );
         return { status: 'FAILED' as const };
       }
     }

@@ -2,6 +2,11 @@
 
 ## 2026-10-06
 
+- **Run Presets Quick-Replay (A1) & Structured Pino Logging (B1) & Device Auto-Retry (B3)**:
+  - Implemented `RunsPresetQuickBar` component and `use-run-presets` store with `useSyncExternalStore` in `src/pages/RunsPage.tsx`, enabling 1-click preset replay for multi-target workflow runs.
+  - Added preset pre-population support in `useRunWizardFormState` and `RunWizard.tsx` (`initialPreset`).
+  - Integrated correlated Pino structured JSON logging across `single-device-step-runner.ts`, `single-device-run-executor.ts`, `multi-target-run-executor.ts`, and `laixi-gateway/src/index.ts` with `runId`, `stepId`, `deviceId`, and `deviceModel` contextual metadata.
+  - Added unit test suite for `retry-backoff.ts` verifying transient network error detection and exponential backoff retry behavior.
 - **Device Auto-Retry, Worker State Persistence, and Quarantine Circuit Breaker UX**:
   - Implemented exponential backoff with jitter across all device backends (`LaixiDirectClient`, `MobilerunStepBackend`, `MobileMcpStepBackend`, and `LaixiGatewayClient`) to handle transient network/socket disconnects gracefully.
   - Implemented `WorkerStatePersistence` to save and restore daily action guardrail budgets (`DeviceActionGuardrail`) and quarantine circuit breaker states (`DeviceQuarantineCircuitBreaker`) to/from `.worker-state.json` on worker startup, shutdown, and every 30 seconds.

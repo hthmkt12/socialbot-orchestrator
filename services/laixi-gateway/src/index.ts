@@ -10,7 +10,7 @@ import {
 import { GatewayDeviceStateStore } from './gateway-device-state-store';
 import { GatewaySessionManager } from './gateway-session-manager';
 import { GatewaySecurityPolicy } from './gateway-security';
-import { logger } from './logger';
+import { logger, childLogger } from './logger';
 
 export interface GatewayConfig {
   port: number;
@@ -157,11 +157,24 @@ export function createGatewayServer(config: GatewayConfig) {
           return;
         }
 
+        const dispatchLog = childLogger({
+          runId: payload.runId,
+          stepId: payload.stepId,
+          deviceId: payload.deviceId,
+        });
+
+        dispatchLog.info({ action: (payload.command as { action?: string })?.action }, 'dispatching step to gateway session');
         const result = await sessions.dispatch(payload);
         const status =
           result.success ? 200 :
           result.outcome === 'device_offline' ? 409 :
           result.outcome === 'timed_out' ? 504 : 502;
+
+        if (result.success) {
+          dispatchLog.info({ outcome: result.outcome }, 'gateway dispatch succeeded');
+        } else {
+          dispatchLog.warn({ outcome: result.outcome, err: result.error }, 'gateway dispatch failed');
+        }
         json(res, status, result);
       } catch (error) {
         const status = error instanceof PayloadTooLargeError ? 413 : error instanceof SyntaxError ? 400 : 500;

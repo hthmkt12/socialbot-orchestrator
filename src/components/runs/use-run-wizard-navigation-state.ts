@@ -49,6 +49,7 @@ export function useRunWizardNavigationState({
   return {
     canNext,
     currentIdx,
+    goToStep: setStep,
     nextStep: () => setStep(getNextRunWizardStep(step, inputFields.length, hasAccountStep)),
     prevStep: () => setStep(getPreviousRunWizardStep(step, inputFields.length, hasAccountStep)),
     step,

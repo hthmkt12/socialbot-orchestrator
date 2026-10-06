@@ -49,26 +49,46 @@ function subscribe(onStoreChange: () => void): () => void {
   return () => listeners.delete(onStoreChange);
 }
 
+export function getRunPresetsSnapshot(): RunPreset[] {
+  return getSnapshot();
+}
+
+export function saveRunPreset(preset: Omit<RunPreset, 'id' | 'createdAt'>): RunPreset {
+  const next: RunPreset = {
+    ...preset,
+    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `preset-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: new Date().toISOString(),
+  };
+  writePresets([next, ...getSnapshot()]);
+  return next;
+}
+
+export function deleteRunPreset(id: string): void {
+  writePresets(getSnapshot().filter((p) => p.id !== id));
+}
+
+export function clearRunPresetsForTesting(): void {
+  cachedSnapshot = [];
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+  listeners.forEach((fn) => fn());
+}
+
 /* ── Hook ── */
 
 export function useRunPresets() {
   const presets = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const savePreset = useCallback(
-    (preset: Omit<RunPreset, 'id' | 'createdAt'>) => {
-      const next: RunPreset = {
-        ...preset,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
-      };
-      writePresets([next, ...getSnapshot()]);
-      return next;
-    },
+    (preset: Omit<RunPreset, 'id' | 'createdAt'>) => saveRunPreset(preset),
     [],
   );
 
   const deletePreset = useCallback((id: string) => {
-    writePresets(getSnapshot().filter((p) => p.id !== id));
+    deleteRunPreset(id);
   }, []);
 
   return { presets, savePreset, deletePreset } as const;

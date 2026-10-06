@@ -8,6 +8,7 @@ import { executeOwnedDeviceRun, type OwnedDeviceRunResult } from './execute-owne
 import type { Device, MacroDefinition } from '../../../packages/shared/src';
 import { createDeviceWorker, hasCompiledDeviceWorker } from './device-worker-runtime';
 import { createDeviceStepBackend } from './device-step-backend-factory.js';
+import { childLogger } from './logger.js';
 
 interface DeviceWorkerData {
   config: WorkerConfig;
@@ -79,8 +80,17 @@ export class SingleDeviceRunExecutor {
   }
 
   async executeClaimedRun(runId: string, claimToken: string) {
+    const runLogger = childLogger({ runId });
     try {
       const context = await loadSingleDeviceRunContext(this.supabase, runId, claimToken);
+      runLogger.info(
+        {
+          deviceId: context.device.id,
+          deviceModel: context.device.model,
+          macroId: context.macroDefinition.id,
+        },
+        'starting single-device run dispatch'
+      );
       
       await markOwnedRunStatus(this.supabase, context.runId, claimToken, 'RUNNING');
 
@@ -135,8 +145,18 @@ export class SingleDeviceRunExecutor {
         partial: 0,
         avgCompletionRate: aggregate.avgCompletionRate,
       });
+      runLogger.info(
+        {
+          status,
+          deviceId: context.device.id,
+          avgCompletionRate: aggregate.avgCompletionRate,
+          err: result.error,
+        },
+        'finalized single-device run'
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      runLogger.error({ err: error }, 'single-device run execution failed');
       try {
         await finalizeOwnedRun(this.supabase, runId, claimToken, 'FAILED', {
           error: { code: 'EXECUTION_ERROR', message },

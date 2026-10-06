@@ -10,6 +10,7 @@ import { createDeviceWorker, hasCompiledDeviceWorker } from './device-worker-run
 import { createDeviceStepBackend } from './device-step-backend-factory.js';
 import type { RetryBackoffPolicy } from './retry-backoff-policy.js';
 import { buildTargetFailureDecision, type TargetFailureDecision } from './target-failure-policy.js';
+import { childLogger } from './logger.js';
 
 function mergeResolvedTargetSummary(
   summaryJson: Record<string, unknown> | null,
@@ -106,8 +107,17 @@ export class MultiTargetRunExecutor {
   }
 
   async executeClaimedRun(runId: string, claimToken: string) {
+    const runLogger = childLogger({ runId });
     try {
       const context = await loadMultiTargetRunContext(this.supabase, runId, claimToken);
+      runLogger.info(
+        {
+          targetType: context.targetType,
+          deviceCount: context.devices.length,
+          policy: context.targetFailurePolicy,
+        },
+        'starting multi-target run dispatch'
+      );
       if (!context.resolvedDeviceIdsPersisted) {
         const { error: persistTargetsError } = await this.supabase
           .from('workflow_runs')
@@ -235,8 +245,20 @@ export class MultiTargetRunExecutor {
         targetFailureDecisions,
         avgCompletionRate: aggregate.avgCompletionRate,
       });
+      runLogger.info(
+        {
+          status,
+          totalDevices,
+          succeeded,
+          failed,
+          cancelled,
+          avgCompletionRate: aggregate.avgCompletionRate,
+        },
+        'finalized multi-target run'
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      runLogger.error({ err: error }, 'multi-target run execution failed');
       try {
         await finalizeOwnedRun(this.supabase, runId, claimToken, 'FAILED', {
           error: { code: 'EXECUTION_ERROR', message },
