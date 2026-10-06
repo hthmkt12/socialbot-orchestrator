@@ -54,6 +54,7 @@ plans/social-macro-recordings/
 services/execution-worker/plans/social-macro-recordings/
 services/mobile-mcp-bridge/artifacts/
 release-manifest.json
+.worker-state.json
 
 # Editor / OS files
 .vscode/*

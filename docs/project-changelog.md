@@ -2,6 +2,7 @@
 
 ## 2026-10-06
 
+- **Gate fixes + full proof day (ddaa805)**: fixed 2 test type errors (Device mock user_id, ALL_DEVICES enum) and 2 unused bindings blocking typecheck/lint; verified green: typecheck, lint, 666 unit tests, 3 builds, 18 e2e, credential static_verified, quarantine/alerting, L2-L5 hardware, fleet-parallel mutex, 3-cycle soak; diagnosed + worked around WSL idle-stop with keepalive.
 - **Run Presets Quick-Replay (A1) & Structured Pino Logging (B1) & Device Auto-Retry (B3)**:
   - Implemented `RunsPresetQuickBar` component and `use-run-presets` store with `useSyncExternalStore` in `src/pages/RunsPage.tsx`, enabling 1-click preset replay for multi-target workflow runs.
   - Added preset pre-population support in `useRunWizardFormState` and `RunWizard.tsx` (`initialPreset`).

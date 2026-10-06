@@ -82,6 +82,30 @@ Verification:
 - `npx.cmd vitest run services/execution-worker/src/laixi-direct-client.test.ts services/execution-worker/src/worker-state-persistence.test.ts`
 - Verified auto-retry on connection refusal and round-trip state restoration after process restart.
 
+## WSL Instance Idle-Stop Kills Local Supabase Stack
+
+Symptoms:
+- All `supabase_*` containers perpetually `Up 4-5s (health: starting)`; never reach `(healthy)`.
+- REST `http://127.0.0.1:54321/rest/v1/` alternates 200/000 between consecutive curls.
+- `wsl -l -v` shows Ubuntu `Stopped` minutes after last use.
+- Mass container start waves including unrelated projects; `docker events` buffer only ever shows the latest wave.
+
+Root Cause:
+- WSL utility VM auto-stops ~1-2 min after last in-WSL activity despite `vmIdleTimeout=-1` in `%USERPROFILE%\.wslconfig` (quirk/unapplied config on this WSL version); every docker/wsl call cold-boots it (fresh dockerd = cleared event ring + container restart wave).
+- No Docker Desktop installed (plain WSL dockerd via shim); supabase CLI/compose/watch/keepalive/scheduler all exonerated; host memory fine (28.7/47.7 GB free).
+
+Common Triggers:
+- Idle gaps between docker/supabase commands; long verify waits; any workflow assuming the local stack stays up unattended.
+
+Solutions:
+- Run a background keepalive inside WSL (`wsl.exe -d Ubuntu sleep infinity`, inert ~100KB, killable anytime) to hold the instance up.
+- Proper fix still owed: investigate why `vmIdleTimeout=-1` is not honored on this WSL version.
+
+Verification:
+- `wsl -l -v` shows `Running`.
+- `docker ps` uptimes grow past minutes with `(healthy)`.
+- `curl.exe http://127.0.0.1:54321/rest/v1/` returns 200 persistently.
+
 ## Karpathy Coding Principles
 
 Four guardrails against common LLM coding failures.
