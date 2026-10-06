@@ -71,6 +71,23 @@ export class DeviceActionGuardrail {
       this.dailyCounts.clear();
     }
   }
+
+  dumpSnapshot(): Record<string, number> {
+    const snapshot: Record<string, number> = {};
+    for (const [key, count] of this.dailyCounts.entries()) {
+      snapshot[key] = count;
+    }
+    return snapshot;
+  }
+
+  restoreSnapshot(snapshot: Record<string, number>): void {
+    this.dailyCounts.clear();
+    for (const [key, count] of Object.entries(snapshot)) {
+      if (typeof count === 'number') {
+        this.dailyCounts.set(key, count);
+      }
+    }
+  }
 }
 
 export const globalDeviceActionGuardrail = new DeviceActionGuardrail();

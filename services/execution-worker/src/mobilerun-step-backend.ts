@@ -1,6 +1,7 @@
 import { MobileMcpStepBackend, getDeviceSerial } from './mobile-mcp-step-backend.js';
 import type { StepExecutionResult } from './execute-device-step.js';
 import type { DeviceStepExecutionArgs } from './device-step-backend.js';
+import { withExponentialBackoff } from './retry-backoff.js';
 
 const AI_TASK_TIMEOUT_MS = 300_000; // 5 min default for LLM-driven tasks
 
@@ -40,29 +41,37 @@ export class MobilerunStepBackend extends MobileMcpStepBackend {
       : 'android';
 
     try {
-      const response = await fetch(
-        `${this.baseUrl.replace(/\/$/, '')}/devices/${encodeURIComponent(serial)}/execute-step`,
-        {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            ...(this.mobilerunBridgeToken ? { 'x-bridge-token': this.mobilerunBridgeToken } : {}),
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            runId: args.runId,
-            stepId: args.step.id,
-            stepType: 'ai_task',
-            params: { goal, timeout: timeoutMs },
-            device: {
-              id: args.device.id,
-              serial,
-              platform,
-              screenWidth: args.device.screen_width,
-              screenHeight: args.device.screen_height,
+      const response = await withExponentialBackoff(
+        () =>
+          fetch(
+            `${this.baseUrl.replace(/\/$/, '')}/devices/${encodeURIComponent(serial)}/execute-step`,
+            {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                ...(this.mobilerunBridgeToken ? { 'x-bridge-token': this.mobilerunBridgeToken } : {}),
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                runId: args.runId,
+                stepId: args.step.id,
+                stepType: 'ai_task',
+                params: { goal, timeout: timeoutMs },
+                device: {
+                  id: args.device.id,
+                  serial,
+                  platform,
+                  screenWidth: args.device.screen_width,
+                  screenHeight: args.device.screen_height,
+                },
+              }),
             },
-          }),
-        },
+          ),
+        {
+          operation: `mobilerun-ai-task:${serial}`,
+          maxRetries: 2,
+          initialDelayMs: 400,
+        }
       );
 
       const bridge = (await response.json()) as Record<string, unknown>;

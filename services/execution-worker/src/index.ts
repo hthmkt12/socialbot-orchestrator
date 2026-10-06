@@ -9,6 +9,7 @@ import { SingleDeviceRunExecutor } from './single-device-run-executor';
 import { WorkflowScheduleTrigger } from './workflow-schedule-trigger';
 import { AccountWarmupScheduler } from './account-warmup-scheduler';
 import { handleControlPlaneProxy } from './control-plane-proxy';
+import { globalWorkerStatePersistence } from './worker-state-persistence.js';
 import { logger } from './logger';
 
 function loadDotEnvIfMissing() {
@@ -157,14 +158,24 @@ function main() {
   const scheduleTrigger = new WorkflowScheduleTrigger(config);
   const warmupScheduler = new AccountWarmupScheduler(config);
 
+  // Restore guardrail and circuit breaker states from disk if available
+  globalWorkerStatePersistence.loadState();
+
   startHealthServer(config, coordinator, warmupScheduler);
   coordinator.start();
   scheduleTrigger.start();
   warmupScheduler.start(Number(process.env.WARMUP_POLL_INTERVAL_MS ?? 60000));
 
-  // Graceful shutdown: release claims before exit
+  // Periodic persistence every 30 seconds
+  const persistInterval = setInterval(() => {
+    globalWorkerStatePersistence.saveState();
+  }, 30_000);
+
+  // Graceful shutdown: release claims and save state before exit
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'shutting down...');
+    clearInterval(persistInterval);
+    globalWorkerStatePersistence.saveState();
     warmupScheduler.stop();
     scheduleTrigger.stop();
     await coordinator.stop();

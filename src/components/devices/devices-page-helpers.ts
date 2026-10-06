@@ -21,12 +21,14 @@ import type {
 
 export function buildDeviceCards(
   devices: Device[] | undefined,
-  deviceLockSnapshot: DeviceLockSnapshot
+  deviceLockSnapshot: DeviceLockSnapshot,
+  quarantinedDeviceIds?: Set<string>
 ): DeviceCardModel[] {
   return (devices ?? []).map((device) => ({
     device,
     health: getDeviceHealthSummary(device),
     lockState: getDeviceLockState(device.id, deviceLockSnapshot),
+    isQuarantined: quarantinedDeviceIds?.has(device.id) ?? false,
   }));
 }
 
@@ -38,10 +40,11 @@ export function filterDeviceCards(args: {
 }): DeviceCardModel[] {
   const { deviceCards, riskFilter, search, statusFilter } = args;
 
-  return deviceCards.filter(({ device, health, lockState }) => {
+  return deviceCards.filter(({ device, health, lockState, isQuarantined }) => {
     if (statusFilter !== 'ALL' && health.lifecycle.displayStatus !== statusFilter) return false;
     if (riskFilter === 'STALE_HEARTBEAT' && !health.lifecycle.isHeartbeatStale) return false;
     if (riskFilter === 'LOCKED_DEVICE' && !lockState.activeLock) return false;
+    if (riskFilter === 'QUARANTINED' && !isQuarantined) return false;
     if (!search) return true;
 
     const q = search.toLowerCase();
@@ -66,6 +69,7 @@ export function buildDeviceSummaryCohorts(stats: DeviceFleetMetrics): SummaryCoh
 
 export function getDispatchRiskDevices(deviceCards: DeviceCardModel[]): DeviceCardModel[] {
   return deviceCards.filter(
-    ({ health, lockState }) => health.lifecycle.isHeartbeatStale || lockState.activeLock
+    ({ health, lockState, isQuarantined }) =>
+      health.lifecycle.isHeartbeatStale || lockState.activeLock || Boolean(isQuarantined)
   );
 }

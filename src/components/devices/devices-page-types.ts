@@ -4,12 +4,13 @@ import type { getDeviceHealthSummary } from '../../lib/device-health';
 import type { DeviceLockState } from '../../lib/device-locks';
 
 export type FilterStatus = 'ALL' | DeviceStatus;
-export type RiskFilter = 'ALL' | 'STALE_HEARTBEAT' | 'LOCKED_DEVICE';
+export type RiskFilter = 'ALL' | 'STALE_HEARTBEAT' | 'LOCKED_DEVICE' | 'QUARANTINED';
 
 export interface DeviceCardModel {
   device: Device;
   health: ReturnType<typeof getDeviceHealthSummary>;
   lockState: DeviceLockState;
+  isQuarantined?: boolean;
 }
 
 export interface SummaryCohort {

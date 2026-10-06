@@ -92,6 +92,7 @@ export async function handleControlPlaneProxy(
   const gatewayHealth = url === '/control/gateway/health' && req.method === 'GET';
   const isDeviceRecovery = url === '/control/devices/recovery' && req.method === 'POST';
   const isGuardrailUsage = url.startsWith('/control/devices/guardrail/') && req.method === 'GET';
+  const isQuarantineList = url === '/control/devices/quarantine' && req.method === 'GET';
   const isQuarantineState = url.startsWith('/control/devices/quarantine/') && req.method === 'GET';
   const isLiftQuarantine = url.startsWith('/control/devices/quarantine/') && url.endsWith('/lift') && req.method === 'POST';
 
@@ -104,6 +105,7 @@ export async function handleControlPlaneProxy(
     !gatewayHealth &&
     !isDeviceRecovery &&
     !isGuardrailUsage &&
+    !isQuarantineList &&
     !isQuarantineState &&
     !isLiftQuarantine
   )
@@ -137,6 +139,12 @@ export async function handleControlPlaneProxy(
     const deviceId = decodeURIComponent(url.slice('/control/devices/guardrail/'.length));
     const usage = globalDeviceActionGuardrail.getUsage(deviceId);
     writeJson(res, 200, usage, origin);
+    return true;
+  }
+
+  if (isQuarantineList) {
+    const quarantinedDeviceIds = globalDeviceQuarantineCircuitBreaker.getQuarantinedDeviceIds();
+    writeJson(res, 200, { quarantinedDeviceIds }, origin);
     return true;
   }
 

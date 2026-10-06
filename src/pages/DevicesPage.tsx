@@ -16,7 +16,13 @@ import {
   filterDeviceCards,
   getDispatchRiskDevices,
 } from '../components/devices/devices-page-helpers';
-import { useDeleteDevice, useDeviceLocks, useDevices, useSyncDevices } from '../hooks/useDevices';
+import {
+  useDeleteDevice,
+  useDeviceLocks,
+  useDevices,
+  useQuarantinedDeviceIds,
+  useSyncDevices,
+} from '../hooks/useDevices';
 import { buildDeviceFleetMetrics } from '../lib/device-fleet-metrics';
 import {
   buildDeviceLockSnapshot,
@@ -31,6 +37,7 @@ import type { FilterStatus, RiskFilter } from '../components/devices/devices-pag
 export default function DevicesPage() {
   const { data: devices, isLoading } = useDevices();
   const { data: deviceLocks, error: deviceLocksError } = useDeviceLocks();
+  const { data: quarantinedIdsList } = useQuarantinedDeviceIds();
   const profile = useAuthStore((s) => s.profile);
   const syncDevices = useSyncDevices();
   const deleteDevice = useDeleteDevice();
@@ -41,13 +48,17 @@ export default function DevicesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [riskFilter, setRiskFilter] = useState<RiskFilter>('ALL');
+  const quarantinedDeviceIds = useMemo(
+    () => new Set(quarantinedIdsList ?? []),
+    [quarantinedIdsList]
+  );
   const deviceLockSnapshot = useMemo(
     () => buildDeviceLockSnapshot(deviceLocks ?? []),
     [deviceLocks]
   );
   const deviceCards = useMemo(
-    () => buildDeviceCards(devices, deviceLockSnapshot),
-    [deviceLockSnapshot, devices]
+    () => buildDeviceCards(devices, deviceLockSnapshot, quarantinedDeviceIds),
+    [deviceLockSnapshot, devices, quarantinedDeviceIds]
   );
 
   const filtered = useMemo(() => {

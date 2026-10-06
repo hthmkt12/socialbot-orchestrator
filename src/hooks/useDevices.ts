@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { getLaixiClient } from '../adapters/laixi/client';
 import { logAudit } from '../lib/audit';
 import { deleteAdminResource } from '../lib/admin-governance';
-import { loadMobileMcpFleetViaProxy } from '../lib/mobile-mcp-orchestrator';
+import { fetchAllQuarantinedDeviceIds, loadMobileMcpFleetViaProxy } from '../lib/mobile-mcp-orchestrator';
 import type { Device, DeviceLock } from '../lib/database.types';
 
 export function useDevices() {
@@ -47,6 +47,16 @@ export function useDeviceLocks() {
       if (error) throw error;
       return data as DeviceLock[];
     },
+  });
+}
+
+export function useQuarantinedDeviceIds() {
+  return useQuery({
+    queryKey: ['quarantined-device-ids'],
+    queryFn: async () => {
+      return await fetchAllQuarantinedDeviceIds();
+    },
+    refetchInterval: 10_000,
   });
 }
 

@@ -61,6 +61,27 @@ Verification:
 - `node scripts/run-credential-boundary-proof.mjs --run-real-proof`
 - Confirm `valid_bound_decrypt` passes with status `pass` and overall verdict is `full_verified`.
 
+## Transient Physical Device Transport Drop & State Reset on Worker Restart
+
+Symptoms:
+- Step dispatch fails immediately on momentary USB/network jitter without reconnect retry.
+- In-memory action rate-limits and quarantined device statuses reset to 0 after worker container/process restarts, allowing faulty devices to receive dispatches immediately.
+
+Root Cause:
+- Absence of exponential backoff retry in direct transport clients (`LaixiDirectClient`, `MobilerunStepBackend`).
+- Lack of local state snapshot file persistence for `DeviceActionGuardrail` and `DeviceQuarantineCircuitBreaker`.
+
+Common Triggers:
+- Physical Android USB renegotiation, ADB daemon restart, or worker deployment restart.
+
+Solutions:
+- Wrapped device communication methods with `withExponentialBackoff` with random jitter.
+- Introduced `WorkerStatePersistence` saving snapshots to `.worker-state.json` on startup, shutdown, and every 30 seconds.
+
+Verification:
+- `npx.cmd vitest run services/execution-worker/src/laixi-direct-client.test.ts services/execution-worker/src/worker-state-persistence.test.ts`
+- Verified auto-retry on connection refusal and round-trip state restoration after process restart.
+
 ## Karpathy Coding Principles
 
 Four guardrails against common LLM coding failures.

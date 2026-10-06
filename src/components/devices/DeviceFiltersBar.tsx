@@ -45,6 +45,7 @@ export function DeviceFiltersBar({
         <option value="ALL">All lifecycle risk</option>
         <option value="STALE_HEARTBEAT">Stale heartbeat</option>
         <option value="LOCKED_DEVICE">Locked device</option>
+        <option value="QUARANTINED">Quarantined</option>
       </FilterSelect>
       {hasFilters && (
         <button

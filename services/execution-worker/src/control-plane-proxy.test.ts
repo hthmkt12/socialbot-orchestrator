@@ -85,6 +85,23 @@ describe('control-plane proxy contracts', () => {
   });
 
   it('handles device quarantine state and lift requests', async () => {
+    const listReq = {
+      method: 'GET',
+      url: '/control/devices/quarantine',
+      headers: { origin: 'http://localhost:5173' },
+    } as never;
+    const listRes = { writeHead: vi.fn(), end: vi.fn() } as never;
+    await handleControlPlaneProxy(listReq, listRes, {
+      supabaseUrl: 'http://supabase',
+      supabaseServiceRoleKey: 'service',
+      mobileMcpBridgeUrl: 'http://bridge',
+      gatewayBaseUrl: 'http://gateway',
+      corsOrigin: 'http://localhost:5173',
+      authorizeRequest: async () => ({ status: 200 }),
+    });
+    expect(listRes.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
+    expect(listRes.end).toHaveBeenCalledWith(expect.stringContaining('"quarantinedDeviceIds":[]'));
+
     const getReq = {
       method: 'GET',
       url: '/control/devices/quarantine/device-xyz',

@@ -1,4 +1,4 @@
-import { Search, Signal, Smartphone } from 'lucide-react';
+import { Search, ShieldAlert, Signal, Smartphone } from 'lucide-react';
 import Badge from '../ui/Badge';
 import EmptyState from '../ui/EmptyState';
 import Spinner from '../ui/Spinner';
@@ -75,6 +75,7 @@ function DeviceCard({
   device,
   health,
   lockState,
+  isQuarantined,
   onSelectDevice,
 }: DeviceCardModel & { onSelectDevice: (device: Device) => void }) {
   const sc = health.appearance;
@@ -100,6 +101,12 @@ function DeviceCard({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
+          {isQuarantined && (
+            <Badge variant="red" className="animate-pulse">
+              <ShieldAlert className="w-3 h-3 mr-1" />
+              Quarantined
+            </Badge>
+          )}
           <Badge variant={sc.variant as 'green'}>
             <StatusIcon className="w-3 h-3 mr-1" />
             {sc.label}

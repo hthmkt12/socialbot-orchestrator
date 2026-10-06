@@ -1,5 +1,13 @@
 # Project Changelog
 
+## 2026-10-06
+
+- **Device Auto-Retry, Worker State Persistence, and Quarantine Circuit Breaker UX**:
+  - Implemented exponential backoff with jitter across all device backends (`LaixiDirectClient`, `MobilerunStepBackend`, `MobileMcpStepBackend`, and `LaixiGatewayClient`) to handle transient network/socket disconnects gracefully.
+  - Implemented `WorkerStatePersistence` to save and restore daily action guardrail budgets (`DeviceActionGuardrail`) and quarantine circuit breaker states (`DeviceQuarantineCircuitBreaker`) to/from `.worker-state.json` on worker startup, shutdown, and every 30 seconds.
+  - Added `/control/devices/quarantine` (GET) endpoint to control-plane proxy returning list of currently quarantined devices.
+  - Enhanced operator frontend `DevicesPage.tsx`, `DeviceGrid.tsx`, `DeviceFiltersBar.tsx`, and `DispatchRiskPanel.tsx` with live quarantine badges (`ShieldAlert`), quarantine cohort filtering (`QUARANTINED`), and direct device recovery triggers.
+
 ## 2026-10-04
 
 - **Production Docker Compose Deployment Template Added**:

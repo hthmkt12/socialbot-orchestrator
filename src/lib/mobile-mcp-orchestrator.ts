@@ -224,6 +224,18 @@ export async function fetchDeviceQuarantineState(
   return authenticatedRequest<DeviceQuarantineStatus>(targetUrl, { method: 'GET' });
 }
 
+export async function fetchAllQuarantinedDeviceIds(
+  workerUrl = DEFAULT_WORKER_URL
+): Promise<string[]> {
+  const targetUrl = `${trimTrailingSlash(workerUrl.trim() || DEFAULT_WORKER_URL)}/control/devices/quarantine`;
+  try {
+    const res = await authenticatedRequest<{ quarantinedDeviceIds: string[] }>(targetUrl, { method: 'GET' });
+    return res.quarantinedDeviceIds ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function requestLiftDeviceQuarantine(
   deviceId: string,
   workerUrl = DEFAULT_WORKER_URL

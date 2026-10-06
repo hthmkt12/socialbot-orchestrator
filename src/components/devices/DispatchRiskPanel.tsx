@@ -1,4 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ShieldAlert } from 'lucide-react';
 import Badge from '../ui/Badge';
 import { describeDeviceLockState } from '../../lib/device-locks';
 import type { Device } from '../../lib/database.types';
@@ -13,6 +13,7 @@ interface DispatchRiskPanelProps {
 export function DispatchRiskPanel({ devices, onDrill, onSelect }: DispatchRiskPanelProps) {
   const staleDevices = devices.filter(({ health }) => health.lifecycle.isHeartbeatStale);
   const lockedDevices = devices.filter(({ lockState }) => lockState.activeLock);
+  const quarantinedDevices = devices.filter(({ isQuarantined }) => Boolean(isQuarantined));
 
   return (
     <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/70 p-4">
@@ -23,16 +24,19 @@ export function DispatchRiskPanel({ devices, onDrill, onSelect }: DispatchRiskPa
             <h2 className="text-sm font-semibold">Dispatch risk cohorts</h2>
           </div>
           <p className="mt-1 text-xs text-amber-700">
-            Devices below are the current stale-heartbeat or locked-device blockers for safe dispatch.
+            Devices below are the current stale-heartbeat, locked, or quarantined blockers for safe dispatch.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <RiskButton label="Stale heartbeat" count={staleDevices.length} onClick={() => onDrill('STALE_HEARTBEAT')} />
           <RiskButton label="Locked device" count={lockedDevices.length} danger onClick={() => onDrill('LOCKED_DEVICE')} />
+          {quarantinedDevices.length > 0 && (
+            <RiskButton label="Quarantined" count={quarantinedDevices.length} danger onClick={() => onDrill('QUARANTINED')} />
+          )}
         </div>
       </div>
       <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-        {devices.slice(0, 6).map(({ device, health, lockState }) => (
+        {devices.slice(0, 6).map(({ device, health, lockState, isQuarantined }) => (
           <button
             key={device.id}
             type="button"
@@ -45,6 +49,12 @@ export function DispatchRiskPanel({ devices, onDrill, onSelect }: DispatchRiskPa
                 <p className="truncate text-[11px] text-gray-500">{device.brand} {device.model}</p>
               </div>
               <div className="flex flex-col items-end gap-1">
+                {isQuarantined && (
+                  <Badge variant="red" className="animate-pulse">
+                    <ShieldAlert className="w-3 h-3 mr-1" />
+                    Quarantined
+                  </Badge>
+                )}
                 {health.lifecycle.isHeartbeatStale && <Badge variant="yellow">Stale heartbeat</Badge>}
                 {lockState.activeLock && <Badge variant="red">Locked device</Badge>}
               </div>

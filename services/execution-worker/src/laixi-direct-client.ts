@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import type { LaixiCommandRequest, LaixiCommandResponse } from '../../../packages/shared/src';
-import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client';
+import type { DeviceCommandClient, DeviceDispatchContext } from './device-command-client.js';
+import { withExponentialBackoff } from './retry-backoff.js';
 
 interface PendingRequest {
   resolve: (response: LaixiCommandResponse) => void;
@@ -70,35 +71,63 @@ export class LaixiDirectClient implements DeviceCommandClient {
     command: LaixiCommandRequest,
     context: DeviceDispatchContext
   ): Promise<LaixiCommandResponse> {
-    void context;
-    await this.connect();
-    const socket = this.socket;
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      return { success: false, error: 'Not connected to Laixi' };
+    const targetLabel = typeof command.deviceIds === 'string' ? command.deviceIds : (context.deviceId ?? 'device');
+
+    try {
+      return await withExponentialBackoff(
+        async () => {
+          await this.connect();
+          const socket = this.socket;
+          if (!socket || socket.readyState !== WebSocket.OPEN) {
+            throw new Error('Not connected to Laixi (socket not open)');
+          }
+
+          const requestId = `worker_${++this.requestCounter}_${Date.now()}`;
+          const payload = { ...command, _requestId: requestId };
+
+          return await new Promise<LaixiCommandResponse>((resolve, reject) => {
+            const timer = setTimeout(() => {
+              this.pendingRequests.delete(requestId);
+              reject(new Error(`Command timed out after ${this.commandTimeoutMs}ms`));
+            }, this.commandTimeoutMs);
+
+            this.pendingRequests.set(requestId, { resolve, timer });
+
+            try {
+              socket.send(JSON.stringify(payload));
+            } catch (error) {
+              clearTimeout(timer);
+              this.pendingRequests.delete(requestId);
+              reject(error instanceof Error ? error : new Error(String(error)));
+            }
+          });
+        },
+        {
+          operation: `laixi-direct-command:${targetLabel}`,
+          maxRetries: 2,
+          initialDelayMs: 300,
+          shouldRetry: (err) => {
+            if (err instanceof Error) {
+              const msg = err.message.toLowerCase();
+              return (
+                msg.includes('not connected') ||
+                msg.includes('socket not open') ||
+                msg.includes('closed') ||
+                msg.includes('connection error') ||
+                msg.includes('econnrefused') ||
+                msg.includes('socket hang up')
+              );
+            }
+            return false;
+          },
+        }
+      );
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to send command to Laixi',
+      };
     }
-
-    const requestId = `worker_${++this.requestCounter}_${Date.now()}`;
-    const payload = { ...command, _requestId: requestId };
-
-    return new Promise<LaixiCommandResponse>((resolve) => {
-      const timer = setTimeout(() => {
-        this.pendingRequests.delete(requestId);
-        resolve({ success: false, error: `Command timed out after ${this.commandTimeoutMs}ms` });
-      }, this.commandTimeoutMs);
-
-      this.pendingRequests.set(requestId, { resolve, timer });
-
-      try {
-        socket.send(JSON.stringify(payload));
-      } catch (error) {
-        clearTimeout(timer);
-        this.pendingRequests.delete(requestId);
-        resolve({
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to send command',
-        });
-      }
-    });
   }
 
   async sendCommands(commands: LaixiCommandRequest[], context: DeviceDispatchContext) {

@@ -89,10 +89,63 @@ export class DeviceQuarantineCircuitBreaker {
     this.recordSuccess(deviceId);
   }
 
+  getQuarantinedDeviceIds(): string[] {
+    const quarantined: string[] = [];
+    for (const deviceId of this.quarantineTimestamps.keys()) {
+      if (this.getState(deviceId).isQuarantined) {
+        quarantined.push(deviceId);
+      }
+    }
+    return quarantined;
+  }
+
   clear(): void {
     this.failureCounts.clear();
     this.quarantineTimestamps.clear();
     this.quarantineReasons.clear();
+  }
+
+  dumpSnapshot(): {
+    failureCounts: Record<string, number>;
+    quarantineTimestamps: Record<string, number>;
+    quarantineReasons: Record<string, string>;
+  } {
+    const failureCounts: Record<string, number> = {};
+    for (const [k, v] of this.failureCounts.entries()) failureCounts[k] = v;
+
+    const quarantineTimestamps: Record<string, number> = {};
+    for (const [k, v] of this.quarantineTimestamps.entries()) quarantineTimestamps[k] = v;
+
+    const quarantineReasons: Record<string, string> = {};
+    for (const [k, v] of this.quarantineReasons.entries()) quarantineReasons[k] = v;
+
+    return { failureCounts, quarantineTimestamps, quarantineReasons };
+  }
+
+  restoreSnapshot(snapshot: {
+    failureCounts?: Record<string, number>;
+    quarantineTimestamps?: Record<string, number>;
+    quarantineReasons?: Record<string, string>;
+  }): void {
+    this.failureCounts.clear();
+    this.quarantineTimestamps.clear();
+    this.quarantineReasons.clear();
+
+    if (snapshot.failureCounts) {
+      for (const [k, v] of Object.entries(snapshot.failureCounts)) {
+        if (typeof v === 'number') this.failureCounts.set(k, v);
+      }
+    }
+    if (snapshot.quarantineTimestamps) {
+      for (const [k, v] of Object.entries(snapshot.quarantineTimestamps)) {
+        if (typeof v === 'number') this.quarantineTimestamps.set(k, v);
+      }
+    }
+    if (snapshot.quarantineReasons) {
+      for (const [k, v] of Object.entries(snapshot.quarantineReasons)) {
+        if (typeof v === 'string') this.quarantineReasons.set(k, v);
+      }
+    }
   }
 }
 
